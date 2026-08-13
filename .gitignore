@@ -1,0 +1,10 @@
+node_modules/
+.gradle/
+android/.gradle/
+android/**/build/
+android/local.properties
+*.apk
+*.aab
+edge-*
+figma-*
+browser-*
