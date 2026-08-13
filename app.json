@@ -1,4 +1,7 @@
 {
   "name": "SmartAppLockHide",
-  "displayName": "Smart App Lock + Hide"
+  "displayName": "Smart App Lock + Hide",
+  "android": {
+    "packageName": "com.smartapplockhide"
+  }
 }
