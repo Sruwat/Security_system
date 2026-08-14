@@ -3,8 +3,10 @@ import {ActivityIndicator, View} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {AppNavigator} from './navigation/AppNavigator';
 import {localDataRepository} from './storage/LocalDataRepository';
+import {useAppSecurityLifecycle} from './hooks/useAppSecurityLifecycle';
 
 export default function App() {
+  useAppSecurityLifecycle();
   const [initialRouteName, setInitialRouteName] = React.useState<'Welcome' | 'AuthGate'>('Welcome');
   const [ready, setReady] = React.useState(false);
 
