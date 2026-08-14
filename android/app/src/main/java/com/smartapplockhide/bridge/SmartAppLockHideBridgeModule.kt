@@ -12,6 +12,7 @@ import com.smartapplockhide.biometric.BiometricAuthenticator
 import com.smartapplockhide.device.DeviceCapabilityProvider
 import com.smartapplockhide.launcher.LaunchCoordinator
 import com.smartapplockhide.security.SecurityRepository
+import com.smartapplockhide.security.TransientAccessRepository
 import androidx.fragment.app.FragmentActivity
 
 class SmartAppLockHideBridgeModule(private val context: ReactApplicationContext) : ReactContextBaseJavaModule(context) {
@@ -19,6 +20,7 @@ class SmartAppLockHideBridgeModule(private val context: ReactApplicationContext)
   private val launchCoordinator = LaunchCoordinator(context.applicationContext)
   private val capabilityProvider = DeviceCapabilityProvider(context.applicationContext)
   private val biometricAuthenticator = BiometricAuthenticator(context.applicationContext)
+  private val transientAccessRepository = TransientAccessRepository(context.applicationContext)
 
   override fun getName(): String = "SmartAppLockHideBridge"
 
@@ -114,6 +116,26 @@ class SmartAppLockHideBridgeModule(private val context: ReactApplicationContext)
       promise.resolve(null)
     } catch (error: Throwable) {
       promise.reject("SECURE_SCREEN_FAILED", error)
+    }
+  }
+
+  @ReactMethod
+  fun persistTransientAccess(packageName: String?, vaultUnlocked: Boolean, expiresAt: Double, promise: Promise) {
+    try {
+      transientAccessRepository.persist(packageName, vaultUnlocked, expiresAt.toLong())
+      promise.resolve(null)
+    } catch (error: Throwable) {
+      promise.reject("TRANSIENT_ACCESS_PERSIST_FAILED", error)
+    }
+  }
+
+  @ReactMethod
+  fun clearTransientAccess(promise: Promise) {
+    try {
+      transientAccessRepository.clear()
+      promise.resolve(null)
+    } catch (error: Throwable) {
+      promise.reject("TRANSIENT_ACCESS_CLEAR_FAILED", error)
     }
   }
 

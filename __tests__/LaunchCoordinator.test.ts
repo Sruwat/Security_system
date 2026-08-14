@@ -13,6 +13,8 @@ describe('LaunchCoordinator', () => {
     sessionManager.clear();
     launchCoordinator.clearPendingLaunch();
     mockedNativeBridge.launchApp = jest.fn().mockResolvedValue(undefined);
+    mockedNativeBridge.persistTransientAccess = jest.fn().mockResolvedValue(undefined);
+    mockedNativeBridge.clearTransientAccess = jest.fn().mockResolvedValue(undefined);
     mockedLocalDataRepository.getSettings = jest.fn().mockResolvedValue({
       onboardingComplete: true,
       theme: 'SYSTEM',
@@ -52,6 +54,7 @@ describe('LaunchCoordinator', () => {
     expect(sessionManager.getState()).toMatchObject({
       vaultUnlocked: true,
     });
+    expect(mockedNativeBridge.persistTransientAccess).toHaveBeenCalledWith(null, true, expect.any(Number));
   });
 
   it('completes a pending protected launch after authentication', async () => {
@@ -111,11 +114,13 @@ describe('LaunchCoordinator', () => {
     expect(sessionManager.getState()).toMatchObject({
       vaultUnlocked: true,
     });
+    expect(mockedNativeBridge.persistTransientAccess).toHaveBeenCalledWith(null, true, expect.any(Number));
 
     const authResult = await launchCoordinator.completeAuthentication();
 
     expect(authResult).toBe('app_launched');
     expect(mockedNativeBridge.launchApp).toHaveBeenCalledWith('com.example.hidden');
+    expect(mockedNativeBridge.persistTransientAccess).toHaveBeenCalled();
     expect(launchCoordinator.getPendingLaunchPackageName()).toBeNull();
     expect(launchCoordinator.getPendingLaunchMode()).toBeNull();
   });
@@ -141,11 +146,13 @@ describe('LaunchCoordinator', () => {
     expect(sessionManager.getState()).toMatchObject({
       vaultUnlocked: true,
     });
+    expect(mockedNativeBridge.persistTransientAccess).toHaveBeenCalledWith(null, true, expect.any(Number));
 
     const authResult = await launchCoordinator.completeAuthentication();
 
     expect(authResult).toBe('app_launched');
     expect(mockedNativeBridge.launchApp).toHaveBeenCalledWith('com.example.lockhidden');
+    expect(mockedNativeBridge.persistTransientAccess).toHaveBeenCalledWith('com.example.lockhidden', false, expect.any(Number));
     expect(sessionManager.getState()).toMatchObject({
       packageName: 'com.example.lockhidden',
       vaultUnlocked: false,

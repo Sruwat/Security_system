@@ -1,15 +1,18 @@
+import {nativeBridge} from '../src/native';
 import {protectionManager} from '../src/services/protection/ProtectionManager';
 import {clearTransientAccess} from '../src/services/session/TransientAccessManager';
 import {launchCoordinator} from '../src/services/launch/LaunchCoordinator';
 import {sessionManager} from '../src/services/session/SessionManager';
 
 const mockedProtectionManager = protectionManager as jest.Mocked<typeof protectionManager>;
+const mockedNativeBridge = nativeBridge as jest.Mocked<typeof nativeBridge>;
 
 describe('TransientAccessManager', () => {
   beforeEach(() => {
     sessionManager.clear();
     launchCoordinator.clearPendingLaunch();
     mockedProtectionManager.getProtection = jest.fn();
+    mockedNativeBridge.clearTransientAccess = jest.fn().mockResolvedValue(undefined);
   });
 
   it('clears sessions and pending launches on background', () => {
@@ -29,6 +32,7 @@ describe('TransientAccessManager', () => {
       expect(sessionManager.getState()).toBeNull();
       expect(launchCoordinator.getPendingLaunchPackageName()).toBeNull();
       expect(launchCoordinator.getPendingLaunchMode()).toBeNull();
+      expect(mockedNativeBridge.clearTransientAccess).toHaveBeenCalled();
     });
   });
 });

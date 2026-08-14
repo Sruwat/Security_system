@@ -33,6 +33,16 @@ export class LaunchCoordinator {
     return 'launched';
   }
 
+  private async syncTransientAccess(): Promise<void> {
+    const state = sessionManager.getState();
+    if (!state) {
+      await nativeBridge.clearTransientAccess();
+      return;
+    }
+
+    await nativeBridge.persistTransientAccess(state.packageName ?? null, state.vaultUnlocked, state.expiresAt);
+  }
+
   getPendingLaunchPackageName(): string | null {
     return this.pendingLaunchPackageName;
   }
@@ -50,6 +60,7 @@ export class LaunchCoordinator {
       this.pendingLaunchPackageName = null;
       this.pendingLaunchMode = null;
       sessionManager.startVaultSession(settings.autoLockSecondsDefault);
+      await this.syncTransientAccess();
       return 'vault_unlocked';
     }
 
@@ -61,6 +72,7 @@ export class LaunchCoordinator {
     if (pendingMode === 'LOCK' || pendingMode === 'LOCK_HIDE') {
       sessionManager.startSession(pendingPackageName, autoLockSeconds);
     }
+    await this.syncTransientAccess();
     await nativeBridge.launchApp(pendingPackageName);
     this.pendingLaunchPackageName = null;
     this.pendingLaunchMode = null;
@@ -70,6 +82,7 @@ export class LaunchCoordinator {
   async completeSecretEntry(): Promise<'vault_opened'> {
     const settings = await localDataRepository.getSettings();
     sessionManager.startVaultSession(settings.autoLockSecondsDefault);
+    await this.syncTransientAccess();
     return 'vault_opened';
   }
 

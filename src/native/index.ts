@@ -20,6 +20,12 @@ const fallback: NativeBridge = {
   async setSecureScreen() {
     return;
   },
+  async persistTransientAccess() {
+    return;
+  },
+  async clearTransientAccess() {
+    return;
+  },
   async getDeviceCapabilities() {
     return {
       biometricsAvailable: false,
