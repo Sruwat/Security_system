@@ -69,7 +69,10 @@ class LegacyReactActivityDelegate(
     )
   }
 
-  override fun onNewIntent(intent: Intent): Boolean {
+  override fun onNewIntent(intent: Intent?): Boolean {
+    if (intent == null) {
+      return false
+    }
     getReactNativeHost().reactInstanceManager.onNewIntent(intent)
     return true
   }
