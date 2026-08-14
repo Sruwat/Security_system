@@ -178,12 +178,6 @@ export function AddAppsScreen() {
             },
           ]}
         />
-
-        <PrimaryButton
-          label={saving ? 'Saving...' : 'Save protection'}
-          onPress={() => void persistSelection()}
-          style={styles.saveButton}
-        />
       </View>
 
       {loading ? (
@@ -232,8 +226,24 @@ export function AddAppsScreen() {
               </Pressable>
             );
           }}
-            />
-          )}
+        />
+      )}
+
+      <View style={[styles.footer, {backgroundColor: palette.background, borderColor: palette.border}]}>
+        <View style={styles.footerCopy}>
+          <Text style={[styles.footerTitle, {color: palette.textPrimary}]}>
+            {selectedApp ? selectedApp.label : 'Ready to save a policy'}
+          </Text>
+          <Text style={[styles.footerText, {color: palette.textSecondary}]}>
+            {mode} protection with {authMethod} authentication.
+          </Text>
+        </View>
+        <PrimaryButton
+          label={saving ? 'Saving...' : 'Save protection'}
+          onPress={() => void persistSelection()}
+          style={styles.footerButton}
+        />
+      </View>
 
     </Screen>
   );
@@ -352,5 +362,23 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     marginTop: themeTokens.spacing.sm,
+  },
+  footer: {
+    gap: themeTokens.spacing.sm,
+    paddingTop: themeTokens.spacing.sm,
+    borderTopWidth: 1,
+  },
+  footerCopy: {
+    gap: 4,
+  },
+  footerTitle: {
+    fontSize: themeTokens.typography.body,
+    fontWeight: '800',
+  },
+  footerText: {
+    fontSize: themeTokens.typography.caption,
+  },
+  footerButton: {
+    width: '100%',
   },
 });
