@@ -29,7 +29,7 @@ class MainApplication : Application(), ReactApplication {
     SoLoader.init(this, false)
     TransientAccessRepository(this).clear()
     if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
-      DefaultNewArchitectureEntryPoint.load()
+      runCatching { DefaultNewArchitectureEntryPoint.load() }
     }
   }
 }
