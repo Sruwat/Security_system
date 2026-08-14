@@ -46,11 +46,19 @@ export function SecretEntryScreen() {
 
   return (
     <Screen>
-      <View style={styles.hero}>
+      <View style={[styles.heroCard, {backgroundColor: palette.surfaceElevated, borderColor: palette.border}]}>
+        <Text style={[styles.kicker, {color: palette.accent}]}>Hidden access</Text>
         <Text style={[styles.title, {color: palette.textPrimary}]}>Secret Entry</Text>
         <Text style={[styles.description, {color: palette.textSecondary}]}>
-          Enter the secret code or use the configured gesture path to reveal the vault.
+          Enter the secret code to unlock the vault and continue through the protected-launch path.
         </Text>
+
+        <View style={[styles.hintCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+          <Text style={[styles.hintTitle, {color: palette.textPrimary}]}>Accepted paths</Text>
+          <Text style={[styles.hintBody, {color: palette.textSecondary}]}>
+            Vault access stays local. Secret entry, biometric verification, and session reuse all resolve on-device.
+          </Text>
+        </View>
 
         <TextInput
           value={secret}
@@ -79,10 +87,20 @@ export function SecretEntryScreen() {
 }
 
 const styles = StyleSheet.create({
-  hero: {
-    flex: 1,
-    justifyContent: 'center',
+  heroCard: {
+    marginTop: 'auto',
+    marginBottom: 'auto',
     gap: themeTokens.spacing.md,
+    padding: themeTokens.spacing.lg,
+    borderRadius: themeTokens.radius.lg,
+    borderWidth: 1,
+    ...themeTokens.shadows.card,
+  },
+  kicker: {
+    fontSize: themeTokens.typography.caption,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
   title: {
     fontSize: themeTokens.typography.title,
@@ -91,6 +109,20 @@ const styles = StyleSheet.create({
   description: {
     fontSize: themeTokens.typography.body,
     lineHeight: 24,
+  },
+  hintCard: {
+    gap: themeTokens.spacing.xs,
+    padding: themeTokens.spacing.md,
+    borderRadius: themeTokens.radius.md,
+    borderWidth: 1,
+  },
+  hintTitle: {
+    fontSize: themeTokens.typography.body,
+    fontWeight: '800',
+  },
+  hintBody: {
+    fontSize: themeTokens.typography.caption,
+    lineHeight: 18,
   },
   input: {
     minHeight: 48,

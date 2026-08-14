@@ -19,6 +19,18 @@ class AdsManager {
     this.ready.add('interstitial');
   }
 
+  isReady(placement: AdPlacement): boolean {
+    return this.ready.has(placement);
+  }
+
+  getReadiness(): Record<AdPlacement, boolean> {
+    return {
+      banner: this.ready.has('banner'),
+      native: this.ready.has('native'),
+      interstitial: this.ready.has('interstitial'),
+    };
+  }
+
   showBanner(): boolean {
     return this.ready.has('banner');
   }

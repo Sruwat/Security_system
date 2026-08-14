@@ -20,6 +20,16 @@ export function GalleryScreen() {
         <Text style={[styles.description, {color: palette.textSecondary}]}>
           This protected surface is reserved for local gallery media and future vault-backed content.
         </Text>
+        <View style={styles.statRow}>
+          <View style={[styles.statPill, {backgroundColor: palette.accentSoft}]}>
+            <Text style={[styles.statValue, {color: palette.accent}]}>0</Text>
+            <Text style={[styles.statLabel, {color: palette.textSecondary}]}>locked albums</Text>
+          </View>
+          <View style={[styles.statPill, {backgroundColor: palette.surface}]}>
+            <Text style={[styles.statValue, {color: palette.textPrimary}]}>Local</Text>
+            <Text style={[styles.statLabel, {color: palette.textSecondary}]}>storage only</Text>
+          </View>
+        </View>
       </View>
 
       <View style={[styles.card, {backgroundColor: palette.surface, borderColor: palette.border}]}>
@@ -57,6 +67,25 @@ const styles = StyleSheet.create({
   description: {
     fontSize: themeTokens.typography.body,
     lineHeight: 24,
+  },
+  statRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: themeTokens.spacing.sm,
+  },
+  statPill: {
+    minWidth: 132,
+    padding: themeTokens.spacing.md,
+    borderRadius: themeTokens.radius.md,
+    gap: 4,
+  },
+  statValue: {
+    fontSize: themeTokens.typography.body,
+    fontWeight: '800',
+  },
+  statLabel: {
+    fontSize: themeTokens.typography.caption,
+    fontWeight: '700',
   },
   card: {
     gap: themeTokens.spacing.sm,

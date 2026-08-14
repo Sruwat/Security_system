@@ -5,6 +5,7 @@ import {localDataRepository} from '../../storage/LocalDataRepository';
 import type {AppSettings, SecretEntryMethod, ThemeMode} from '../../types/domain';
 import {PrimaryButton} from '../../components/PrimaryButton';
 import {Screen} from '../../components/Screen';
+import {adsManager} from '../../services/ads/AdsManager';
 
 const themeModes: ThemeMode[] = ['SYSTEM', 'LIGHT', 'DARK'];
 const secretEntryModes: SecretEntryMethod[] = ['DOUBLE_TAP', 'TRIPLE_TAP', 'LONG_PRESS', 'PINCH', 'CALCULATOR_CODE'];
@@ -15,6 +16,7 @@ export function SettingsScreen() {
   const [settings, setSettings] = React.useState<AppSettings | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
+  const adReadiness = adsManager.getReadiness();
 
   React.useEffect(() => {
     let mounted = true;
@@ -78,6 +80,20 @@ export function SettingsScreen() {
         <Text style={[styles.description, {color: palette.textSecondary}]}>
           Control theme, secret access, ad preference, and default auto-lock behavior.
         </Text>
+        <View style={styles.statRow}>
+          <View style={[styles.statPill, {backgroundColor: palette.accentSoft}]}>
+            <Text style={[styles.statValue, {color: palette.accent}]}>
+              {settings.bannerEnabled ? 'Banner' : 'No banner'}
+            </Text>
+            <Text style={[styles.statLabel, {color: palette.textSecondary}]}>home surface</Text>
+          </View>
+          <View style={[styles.statPill, {backgroundColor: palette.surface}]}>
+            <Text style={[styles.statValue, {color: palette.textPrimary}]}>
+              {settings.nativeAdEnabled ? 'Native' : 'No native'}
+            </Text>
+            <Text style={[styles.statLabel, {color: palette.textSecondary}]}>scroll surface</Text>
+          </View>
+        </View>
       </View>
 
       <View style={[styles.card, {backgroundColor: palette.surface, borderColor: palette.border}]}>
@@ -121,6 +137,30 @@ export function SettingsScreen() {
             variant={settings.nativeAdEnabled ? 'primary' : 'secondary'}
             style={styles.button}
           />
+        </View>
+
+        <View style={[styles.adCard, {backgroundColor: palette.surfaceElevated, borderColor: palette.border}]}>
+          <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Ad readiness</Text>
+          <Text style={[styles.helperText, {color: palette.textSecondary}]}>
+            Ads are never awaited before the core launcher flows continue.
+          </Text>
+          <View style={styles.badgeRow}>
+            <View style={[styles.badge, {backgroundColor: adReadiness.banner ? palette.accentSoft : palette.surface}]}>
+              <Text style={[styles.badgeText, {color: adReadiness.banner ? palette.accent : palette.textSecondary}]}>
+                Banner {adReadiness.banner ? 'ready' : 'idle'}
+              </Text>
+            </View>
+            <View style={[styles.badge, {backgroundColor: adReadiness.native ? palette.accentSoft : palette.surface}]}>
+              <Text style={[styles.badgeText, {color: adReadiness.native ? palette.accent : palette.textSecondary}]}>
+                Native {adReadiness.native ? 'ready' : 'idle'}
+              </Text>
+            </View>
+            <View style={[styles.badge, {backgroundColor: adReadiness.interstitial ? palette.accentSoft : palette.surface}]}>
+              <Text style={[styles.badgeText, {color: adReadiness.interstitial ? palette.accent : palette.textSecondary}]}>
+                Interstitial {adReadiness.interstitial ? 'ready' : 'idle'}
+              </Text>
+            </View>
+          </View>
         </View>
 
         <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Default auto-lock seconds</Text>
@@ -180,6 +220,25 @@ const styles = StyleSheet.create({
     fontSize: themeTokens.typography.body,
     lineHeight: 24,
   },
+  statRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: themeTokens.spacing.sm,
+  },
+  statPill: {
+    minWidth: 132,
+    padding: themeTokens.spacing.md,
+    borderRadius: themeTokens.radius.md,
+    gap: 4,
+  },
+  statValue: {
+    fontSize: themeTokens.typography.body,
+    fontWeight: '800',
+  },
+  statLabel: {
+    fontSize: themeTokens.typography.caption,
+    fontWeight: '700',
+  },
   card: {
     gap: themeTokens.spacing.md,
     padding: themeTokens.spacing.lg,
@@ -203,6 +262,26 @@ const styles = StyleSheet.create({
   },
   button: {
     minWidth: 108,
+  },
+  adCard: {
+    gap: themeTokens.spacing.sm,
+    padding: themeTokens.spacing.md,
+    borderRadius: themeTokens.radius.md,
+    borderWidth: 1,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: themeTokens.spacing.sm,
+  },
+  badge: {
+    paddingVertical: themeTokens.spacing.xs,
+    paddingHorizontal: themeTokens.spacing.sm,
+    borderRadius: themeTokens.radius.pill,
+  },
+  badgeText: {
+    fontSize: themeTokens.typography.caption,
+    fontWeight: '700',
   },
   input: {
     minHeight: 48,
