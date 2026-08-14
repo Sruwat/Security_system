@@ -2,9 +2,11 @@ import {nativeBridge} from '../../native';
 import {protectionManager} from '../protection/ProtectionManager';
 import {sessionManager} from '../session/SessionManager';
 import {localDataRepository} from '../../storage/LocalDataRepository';
+import type {ProtectionMode} from '../../types/domain';
 
 export class LaunchCoordinator {
   private pendingLaunchPackageName: string | null = null;
+  private pendingLaunchMode: ProtectionMode | null = null;
 
   async launch(packageName: string): Promise<'launched' | 'auth_required' | 'secret_required'> {
     const protection = await protectionManager.getProtection(packageName);
@@ -16,11 +18,14 @@ export class LaunchCoordinator {
     const decision = protectionManager.evaluateDecision(protection.mode, packageName);
 
     if (decision.requiresSecretEntry) {
+      this.pendingLaunchPackageName = packageName;
+      this.pendingLaunchMode = protection.mode;
       return 'secret_required';
     }
 
     if (decision.requiresAuthentication && !sessionManager.isValidFor(packageName)) {
       this.pendingLaunchPackageName = packageName;
+      this.pendingLaunchMode = protection.mode;
       return 'auth_required';
     }
 
@@ -32,26 +37,45 @@ export class LaunchCoordinator {
     return this.pendingLaunchPackageName;
   }
 
+  getPendingLaunchMode(): ProtectionMode | null {
+    return this.pendingLaunchMode;
+  }
+
   async completeAuthentication(): Promise<'vault_unlocked' | 'app_launched'> {
     const pendingPackageName = this.pendingLaunchPackageName;
+    const pendingMode = this.pendingLaunchMode;
     const settings = await localDataRepository.getSettings();
 
     if (!pendingPackageName) {
       this.pendingLaunchPackageName = null;
+      this.pendingLaunchMode = null;
       sessionManager.startVaultSession(settings.autoLockSecondsDefault);
       return 'vault_unlocked';
     }
 
     const protection = await protectionManager.getProtection(pendingPackageName);
     const autoLockSeconds = protection?.autoLockSeconds ?? settings.autoLockSecondsDefault;
-    sessionManager.startSession(pendingPackageName, autoLockSeconds);
+    if ((pendingMode === 'HIDE' || pendingMode === 'LOCK_HIDE') && !sessionManager.isValidFor(pendingPackageName)) {
+      return 'vault_unlocked';
+    }
+    if (pendingMode === 'LOCK' || pendingMode === 'LOCK_HIDE') {
+      sessionManager.startSession(pendingPackageName, autoLockSeconds);
+    }
     await nativeBridge.launchApp(pendingPackageName);
     this.pendingLaunchPackageName = null;
+    this.pendingLaunchMode = null;
     return 'app_launched';
+  }
+
+  async completeSecretEntry(): Promise<'vault_opened'> {
+    const settings = await localDataRepository.getSettings();
+    sessionManager.startVaultSession(settings.autoLockSecondsDefault);
+    return 'vault_opened';
   }
 
   clearPendingLaunch(): void {
     this.pendingLaunchPackageName = null;
+    this.pendingLaunchMode = null;
   }
 }
 

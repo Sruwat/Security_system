@@ -75,4 +75,82 @@ describe('LaunchCoordinator', () => {
     });
     expect(launchCoordinator.getPendingLaunchPackageName()).toBeNull();
   });
+
+  it('requires secret entry before opening a hidden app', async () => {
+    mockedProtectionManager.getProtection = jest.fn().mockResolvedValue({
+      packageName: 'com.example.hidden',
+      label: 'Hidden App',
+      mode: 'HIDE',
+      authMethod: 'BIOMETRIC',
+      autoLockSeconds: 60,
+      updatedAt: Date.now(),
+    });
+
+    const result = await launchCoordinator.launch('com.example.hidden');
+
+    expect(result).toBe('secret_required');
+    expect(launchCoordinator.getPendingLaunchPackageName()).toBe('com.example.hidden');
+    expect(launchCoordinator.getPendingLaunchMode()).toBe('HIDE');
+    expect(mockedNativeBridge.launchApp).not.toHaveBeenCalled();
+  });
+
+  it('opens the vault after secret entry and launches the hidden app after authentication', async () => {
+    mockedProtectionManager.getProtection = jest.fn().mockResolvedValue({
+      packageName: 'com.example.hidden',
+      label: 'Hidden App',
+      mode: 'HIDE',
+      authMethod: 'PIN',
+      autoLockSeconds: 120,
+      updatedAt: Date.now(),
+    });
+
+    await launchCoordinator.launch('com.example.hidden');
+
+    const secretResult = await launchCoordinator.completeSecretEntry();
+    expect(secretResult).toBe('vault_opened');
+    expect(sessionManager.getState()).toMatchObject({
+      vaultUnlocked: true,
+    });
+
+    const authResult = await launchCoordinator.completeAuthentication();
+
+    expect(authResult).toBe('app_launched');
+    expect(mockedNativeBridge.launchApp).toHaveBeenCalledWith('com.example.hidden');
+    expect(launchCoordinator.getPendingLaunchPackageName()).toBeNull();
+    expect(launchCoordinator.getPendingLaunchMode()).toBeNull();
+  });
+
+  it('keeps LOCK_HIDE launches gated until secret entry and authentication complete', async () => {
+    mockedProtectionManager.getProtection = jest.fn().mockResolvedValue({
+      packageName: 'com.example.lockhidden',
+      label: 'Locked Hidden App',
+      mode: 'LOCK_HIDE',
+      authMethod: 'BIOMETRIC',
+      autoLockSeconds: 180,
+      updatedAt: Date.now(),
+    });
+
+    const launchResult = await launchCoordinator.launch('com.example.lockhidden');
+
+    expect(launchResult).toBe('secret_required');
+    expect(launchCoordinator.getPendingLaunchPackageName()).toBe('com.example.lockhidden');
+    expect(launchCoordinator.getPendingLaunchMode()).toBe('LOCK_HIDE');
+
+    const secretResult = await launchCoordinator.completeSecretEntry();
+    expect(secretResult).toBe('vault_opened');
+    expect(sessionManager.getState()).toMatchObject({
+      vaultUnlocked: true,
+    });
+
+    const authResult = await launchCoordinator.completeAuthentication();
+
+    expect(authResult).toBe('app_launched');
+    expect(mockedNativeBridge.launchApp).toHaveBeenCalledWith('com.example.lockhidden');
+    expect(sessionManager.getState()).toMatchObject({
+      packageName: 'com.example.lockhidden',
+      vaultUnlocked: false,
+    });
+    expect(launchCoordinator.getPendingLaunchPackageName()).toBeNull();
+    expect(launchCoordinator.getPendingLaunchMode()).toBeNull();
+  });
 });
