@@ -86,7 +86,7 @@ class SmartAppLockHideBridgeModule(private val context: ReactApplicationContext)
   @ReactMethod
   fun setSecureScreen(enabled: Boolean, promise: Promise) {
     try {
-      val activity = currentActivity
+      val activity = context.currentActivity
       if (activity != null) {
         val window = activity.window
         if (enabled) {
