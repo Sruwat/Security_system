@@ -32,6 +32,9 @@ class SessionManager {
     }
 
     const notExpired = this.current.expiresAt > Date.now();
+    if (this.current.vaultUnlocked && notExpired) {
+      return true;
+    }
     const packageMatches = packageName ? this.current.packageName === packageName : true;
     return notExpired && packageMatches;
   }

@@ -1,52 +1,86 @@
 import React from 'react';
-import {FlatList, StyleSheet, Text, View, useColorScheme} from 'react-native';
+import {Alert, FlatList, StyleSheet, Text, View, useColorScheme} from 'react-native';
+import {useNavigation} from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AppCard} from '../../components/AppCard';
 import {PrimaryButton} from '../../components/PrimaryButton';
 import {Screen} from '../../components/Screen';
+import {launchCoordinator} from '../../services/launch/LaunchCoordinator';
 import {localDataRepository} from '../../storage/LocalDataRepository';
 import {themeTokens} from '../../theme';
 import type {AppProtection} from '../../types/domain';
+import type {RootStackParamList} from '../../navigation/routes';
 
 export function PrivateHomeScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [apps, setApps] = React.useState<AppProtection[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const scheme = useColorScheme();
   const palette = themeTokens.colors[scheme === 'dark' ? 'dark' : 'light'];
 
-  React.useEffect(() => {
-    let mounted = true;
-    localDataRepository.getProtectedApps().then(next => {
-      if (mounted) {
-        setApps(next);
-      }
-    });
-    return () => {
-      mounted = false;
-    };
+  const loadApps = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const next = await localDataRepository.getProtectedApps();
+      setApps(next);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  React.useEffect(() => {
+    void loadApps();
+  }, [loadApps]);
 
   return (
     <Screen>
       <View style={styles.header}>
         <Text style={[styles.title, {color: palette.textPrimary}]}>Private Apps Home</Text>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Selected protected apps, Gallery, Add Apps, Manage Apps, and Settings.</Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
+          Selected protected apps, Gallery, Add Apps, Manage Apps, and Settings.
+        </Text>
       </View>
 
       <View style={styles.actions}>
-        <PrimaryButton label="Add Apps" onPress={() => undefined} />
-        <PrimaryButton label="Manage Apps" onPress={() => undefined} variant="secondary" />
+        <PrimaryButton label="Add Apps" onPress={() => navigation.navigate('AddApps')} />
+        <PrimaryButton label="Manage Apps" onPress={() => navigation.navigate('ManageApps')} variant="secondary" />
+        <PrimaryButton label="Settings" onPress={() => navigation.navigate('Settings')} variant="secondary" />
       </View>
 
-      {apps.length === 0 ? (
+      {loading ? (
+        <Text style={[styles.emptyBody, {color: palette.textSecondary}]}>Loading protected apps...</Text>
+      ) : apps.length === 0 ? (
         <View style={styles.empty}>
           <Text style={[styles.emptyTitle, {color: palette.textPrimary}]}>No protected apps yet</Text>
-          <Text style={[styles.emptyBody, {color: palette.textSecondary}]}>Add your first app to start building a private app space.</Text>
+          <Text style={[styles.emptyBody, {color: palette.textSecondary}]}>
+            Add your first app to start building a private app space.
+          </Text>
         </View>
       ) : (
         <FlatList
           data={apps}
           keyExtractor={item => item.packageName}
           contentContainerStyle={styles.list}
-          renderItem={({item}) => <AppCard app={item} />}
+          renderItem={({item}) => (
+            <AppCard
+              app={item}
+              onPress={() => {
+                void launchCoordinator.launch(item.packageName).then(result => {
+                  if (result === 'auth_required') {
+                    navigation.navigate('AuthGate');
+                    return;
+                  }
+
+                  if (result === 'secret_required') {
+                    navigation.navigate('SecretEntry');
+                    return;
+                  }
+                }).catch(error => {
+                  Alert.alert('Launch failed', error instanceof Error ? error.message : 'Unable to launch app.');
+                });
+              }}
+            />
+          )}
         />
       )}
     </Screen>

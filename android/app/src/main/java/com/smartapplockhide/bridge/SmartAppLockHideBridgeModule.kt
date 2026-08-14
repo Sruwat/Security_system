@@ -3,21 +3,22 @@ package com.smartapplockhide.bridge
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
-import android.os.Build
-import android.provider.Settings
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
+import com.smartapplockhide.biometric.BiometricAuthenticator
 import com.smartapplockhide.device.DeviceCapabilityProvider
 import com.smartapplockhide.launcher.LaunchCoordinator
 import com.smartapplockhide.security.SecurityRepository
+import androidx.fragment.app.FragmentActivity
 
 class SmartAppLockHideBridgeModule(private val context: ReactApplicationContext) : ReactContextBaseJavaModule(context) {
   private val securityRepository = SecurityRepository(context.applicationContext)
   private val launchCoordinator = LaunchCoordinator(context.applicationContext)
   private val capabilityProvider = DeviceCapabilityProvider(context.applicationContext)
+  private val biometricAuthenticator = BiometricAuthenticator(context.applicationContext)
 
   override fun getName(): String = "SmartAppLockHideBridge"
 
@@ -80,7 +81,22 @@ class SmartAppLockHideBridgeModule(private val context: ReactApplicationContext)
 
   @ReactMethod
   fun authenticateBiometric(promise: Promise) {
-    promise.resolve("unavailable")
+    try {
+      val activity = context.currentActivity
+      if (activity !is FragmentActivity) {
+        promise.resolve("unavailable")
+        return
+      }
+
+      biometricAuthenticator.authenticate(
+        activity = activity,
+        onSuccess = { promise.resolve("success") },
+        onFailure = { promise.resolve("fail") },
+        onUnavailable = { promise.resolve("unavailable") },
+      )
+    } catch (error: Throwable) {
+      promise.resolve("unavailable")
+    }
   }
 
   @ReactMethod
