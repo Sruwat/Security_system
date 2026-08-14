@@ -9,6 +9,7 @@ plugins {
 android {
   namespace = "com.smartapplockhide"
   compileSdk = 36
+  ndkVersion = "27.1.12297006"
 
   defaultConfig {
     applicationId = "com.smartapplockhide"
