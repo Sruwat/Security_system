@@ -1,111 +1,137 @@
 import React from 'react';
-import {StyleSheet, Text, View, useColorScheme} from 'react-native';
+import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {PrimaryButton} from '../../components/PrimaryButton';
-import {Screen} from '../../components/Screen';
-import {themeTokens} from '../../theme';
+import {FigmaBanner, FigmaBottomNav, FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import type {RootStackParamList} from '../../navigation/routes';
 
 export function GalleryScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const scheme = useColorScheme();
-  const palette = themeTokens.colors[scheme === 'dark' ? 'dark' : 'light'];
+  const palette = figmaPalette.dark;
+  const recentTiles = Array.from({length: 6}, (_, index) => index);
 
   return (
-    <Screen>
-      <View style={[styles.heroCard, {backgroundColor: palette.surfaceElevated, borderColor: palette.border}]}>
-        <Text style={[styles.kicker, {color: palette.accent}]}>Private media</Text>
-        <Text style={[styles.title, {color: palette.textPrimary}]}>Private Gallery</Text>
-        <Text style={[styles.description, {color: palette.textSecondary}]}>
-          This protected surface is reserved for local gallery media and future vault-backed content.
-        </Text>
-        <View style={styles.statRow}>
-          <View style={[styles.statPill, {backgroundColor: palette.accentSoft}]}>
-            <Text style={[styles.statValue, {color: palette.accent}]}>0</Text>
-            <Text style={[styles.statLabel, {color: palette.textSecondary}]}>locked albums</Text>
-          </View>
-          <View style={[styles.statPill, {backgroundColor: palette.surface}]}>
-            <Text style={[styles.statValue, {color: palette.textPrimary}]}>Local</Text>
-            <Text style={[styles.statLabel, {color: palette.textSecondary}]}>storage only</Text>
-          </View>
-        </View>
-      </View>
+    <FigmaPage variant="dark">
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <Text style={[styles.time, {color: palette.textPrimary}]}>9:41</Text>
+        <Text style={[styles.title, {color: palette.textPrimary}]}>Gallery</Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Private Gallery / protected media.</Text>
 
-      <View style={[styles.card, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-        <Text style={[styles.cardTitle, {color: palette.textPrimary}]}>Gallery status</Text>
-        <Text style={[styles.cardBody, {color: palette.textSecondary}]}>
-          No private media has been added yet. Gallery content will remain local and tied to protected access.
-        </Text>
-        <View style={styles.actions}>
-          <PrimaryButton label="Back home" onPress={() => navigation.navigate('PrivateHome')} />
-          <PrimaryButton label="Open Settings" onPress={() => navigation.navigate('Settings')} variant="secondary" />
+        <FigmaBanner variant="dark" title="Banner ad" tone="surfaceElevated" />
+
+        <View style={styles.heroCard}>
+          <Text style={[styles.heroGlyph, {color: palette.accent}]}>◇</Text>
+          <View style={styles.heroCopy}>
+            <Text style={[styles.heroTitle, {color: palette.textPrimary}]}>Private Gallery</Text>
+            <Text style={[styles.heroBody, {color: palette.textSecondary}]}>Protected media on this device</Text>
+          </View>
         </View>
-      </View>
-    </Screen>
+
+        <Pressable style={({pressed}) => [styles.openButton, {backgroundColor: '#A78BFA', opacity: pressed ? 0.92 : 1}]}>
+          <Text style={styles.openButtonText}>Open Gallery</Text>
+        </Pressable>
+
+        <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Recent</Text>
+
+        <View style={styles.grid}>
+          {recentTiles.map(index => (
+            <View key={index} style={[styles.tile, {backgroundColor: index % 2 === 0 ? palette.surfaceElevated : palette.accentSoft}]} />
+          ))}
+        </View>
+
+        <FigmaBanner
+          variant="dark"
+          title="Native advertisement"
+          subtitle="Placed after functional content"
+          tone="surfaceElevated"
+        />
+
+        <View style={styles.bottomSpacer} />
+        <FigmaBottomNav variant="dark" active="gallery" />
+      </ScrollView>
+    </FigmaPage>
   );
 }
 
 const styles = StyleSheet.create({
-  heroCard: {
-    gap: themeTokens.spacing.sm,
-    padding: themeTokens.spacing.lg,
-    borderRadius: themeTokens.radius.lg,
-    borderWidth: 1,
-    ...themeTokens.shadows.card,
+  scrollContent: {
+    paddingBottom: 17,
   },
-  kicker: {
-    fontSize: themeTokens.typography.caption,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
+  time: {
+    fontSize: 9,
+    fontWeight: '600',
+    lineHeight: 11,
   },
   title: {
-    fontSize: themeTokens.typography.title,
-    fontWeight: '800',
-  },
-  description: {
-    fontSize: themeTokens.typography.body,
+    marginTop: 30,
+    fontSize: 20,
+    fontWeight: '700',
     lineHeight: 24,
   },
-  statRow: {
+  subtitle: {
+    marginTop: 6,
+    fontSize: 9,
+    lineHeight: 11,
+  },
+  heroCard: {
+    marginTop: 18,
+    minHeight: 94,
+    borderRadius: 21,
+    backgroundColor: '#211A3A',
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: themeTokens.spacing.sm,
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    gap: 16,
   },
-  statPill: {
-    minWidth: 132,
-    padding: themeTokens.spacing.md,
-    borderRadius: themeTokens.radius.md,
-    gap: 4,
-  },
-  statValue: {
-    fontSize: themeTokens.typography.body,
-    fontWeight: '800',
-  },
-  statLabel: {
-    fontSize: themeTokens.typography.caption,
+  heroGlyph: {
+    fontSize: 27,
     fontWeight: '700',
+    lineHeight: 30,
   },
-  card: {
-    gap: themeTokens.spacing.sm,
-    padding: themeTokens.spacing.lg,
-    borderRadius: themeTokens.radius.lg,
-    borderWidth: 1,
-    ...themeTokens.shadows.card,
+  heroCopy: {
+    gap: 6,
   },
-  cardTitle: {
-    fontSize: themeTokens.typography.body,
-    fontWeight: '800',
+  heroTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 15,
   },
-  cardBody: {
-    fontSize: themeTokens.typography.body,
-    lineHeight: 22,
+  heroBody: {
+    fontSize: 8,
+    lineHeight: 10,
   },
-  actions: {
+  openButton: {
+    marginTop: 20,
+    minHeight: 48,
+    borderRadius: 17,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+  },
+  openButtonText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 13,
+  },
+  sectionTitle: {
+    marginTop: 22,
+    marginBottom: 16,
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 14,
+  },
+  grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: themeTokens.spacing.sm,
-    marginTop: themeTokens.spacing.sm,
+    gap: 12,
+  },
+  tile: {
+    width: 96,
+    height: 78,
+    borderRadius: 15,
+  },
+  bottomSpacer: {
+    height: 16,
   },
 });

@@ -1,61 +1,36 @@
 import React from 'react';
-import {Alert, StyleSheet, Text, TextInput, View, useColorScheme} from 'react-native';
+import {Alert, Pressable, StyleSheet, Text, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {nativeBridge} from '../../native';
+import {FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import {launchCoordinator} from '../../services/launch/LaunchCoordinator';
-import {themeTokens} from '../../theme';
+import {nativeBridge} from '../../native';
 import type {RootStackParamList} from '../../navigation/routes';
-import {Screen} from '../../components/Screen';
-import {PrimaryButton} from '../../components/PrimaryButton';
 import {APP_UNLOCK_CREDENTIAL_TYPE} from '../../services/security/credentialTypes';
+
+const keypad = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
 export function AuthGateScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const scheme = useColorScheme();
-  const palette = themeTokens.colors[scheme === 'dark' ? 'dark' : 'light'];
-  const [loading, setLoading] = React.useState(false);
-  const [status, setStatus] = React.useState<'idle' | 'success' | 'fail' | 'unavailable'>('idle');
+  const palette = figmaPalette.dark;
   const [pin, setPin] = React.useState('');
-  const [pinLoading, setPinLoading] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
   const promptAttemptedRef = React.useRef(false);
   const pendingLaunchPackageName = launchCoordinator.getPendingLaunchPackageName();
 
   const completeAuthentication = React.useCallback(
-    async (method: 'biometric' | 'pin', pinValue?: string) => {
-      if (method === 'pin') {
-        const candidate = (pinValue ?? '').trim();
-        if (!candidate) {
-          Alert.alert('PIN required', 'Enter your app unlock PIN to continue.');
-          return;
-        }
-
-        setPinLoading(true);
-        try {
-          const verified = await nativeBridge.verifyCredential(APP_UNLOCK_CREDENTIAL_TYPE, candidate);
-          if (!verified) {
-            setStatus('fail');
-            Alert.alert('PIN mismatch', 'The PIN did not match the stored credential.');
-            return;
-          }
-        } catch (error) {
-          setStatus('fail');
-          Alert.alert('Authentication failed', error instanceof Error ? error.message : 'Unable to verify the PIN.');
-          return;
-        } finally {
-          setPinLoading(false);
+    async (pinValue?: string) => {
+      if (pinValue) {
+        const verified = await nativeBridge.verifyCredential(APP_UNLOCK_CREDENTIAL_TYPE, pinValue.trim());
+        if (!verified) {
+          throw new Error('The PIN did not match the stored credential.');
         }
       }
 
       const outcome = await launchCoordinator.completeAuthentication();
-      setStatus('success');
-
-      navigation.reset({
-        index: 0,
-        routes: [{name: 'PrivateHome'}],
-      });
-
-      return outcome;
+      if (outcome === 'app_launched' || outcome === 'vault_unlocked') {
+        navigation.reset({index: 0, routes: [{name: 'PrivateHome'}]});
+      }
     },
     [navigation],
   );
@@ -66,31 +41,33 @@ export function AuthGateScreen() {
     }
 
     setLoading(true);
-    setStatus('idle');
-
     try {
       const result = await nativeBridge.authenticateBiometric();
       if (result !== 'success') {
-        setStatus(result);
         return;
       }
 
-      await completeAuthentication('biometric');
+      await completeAuthentication();
     } catch (error) {
-      setStatus('fail');
       Alert.alert('Authentication failed', error instanceof Error ? error.message : 'Unable to authenticate.');
     } finally {
       setLoading(false);
     }
   }, [completeAuthentication, loading]);
 
-  const submitPin = React.useCallback(async () => {
-    if (pinLoading) {
-      return;
-    }
-
-    await completeAuthentication('pin', pin);
-  }, [completeAuthentication, pin, pinLoading]);
+  const submitDigit = React.useCallback(
+    (digit: string) => {
+      const next = `${pin}${digit}`.slice(0, 4);
+      setPin(next);
+      if (next.length === 4) {
+        void completeAuthentication(next).catch(error => {
+          Alert.alert('Authentication failed', error instanceof Error ? error.message : 'Unable to verify the PIN.');
+          setPin('');
+        });
+      }
+    },
+    [completeAuthentication, pin],
+  );
 
   React.useEffect(() => {
     if (!promptAttemptedRef.current) {
@@ -100,80 +77,115 @@ export function AuthGateScreen() {
   }, [authenticate]);
 
   return (
-    <Screen>
-      <View style={styles.hero}>
-        <Text style={[styles.title, {color: palette.textPrimary}]}>Unlock Private Apps</Text>
-        <Text style={[styles.description, {color: palette.textSecondary}]}>
-          {pendingLaunchPackageName
-            ? `Authenticate to open ${pendingLaunchPackageName}.`
-            : 'Authenticate to return to Private Apps Home.'}
+    <FigmaPage variant="dark">
+      <View style={styles.fill}>
+        <Text style={[styles.time, {color: palette.textPrimary}]}>9:41</Text>
+        <Text style={[styles.title, {color: palette.textPrimary}]}>Unlock</Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
+          {pendingLaunchPackageName ? 'Authenticate to continue.' : 'Authenticate to continue.'}
         </Text>
 
-        {status === 'unavailable' ? (
-          <Text style={[styles.message, {color: palette.danger}]}>Biometric authentication is unavailable on this device.</Text>
-        ) : status === 'fail' ? (
-          <Text style={[styles.message, {color: palette.danger}]}>Authentication did not complete. Try again.</Text>
-        ) : status === 'success' ? (
-          <Text style={[styles.message, {color: palette.accent}]}>Authentication succeeded.</Text>
-        ) : null}
-
-        <TextInput
-          value={pin}
-          onChangeText={setPin}
-          placeholder="App unlock PIN"
-          placeholderTextColor={palette.textSecondary}
-          secureTextEntry
-          keyboardType="number-pad"
-          returnKeyType="done"
-          blurOnSubmit
-          autoFocus
-          onSubmitEditing={() => void submitPin()}
-          style={[
-            styles.input,
-            {
-              color: palette.textPrimary,
-              backgroundColor: palette.surface,
-              borderColor: palette.border,
-            },
-          ]}
-        />
-
-        <View style={styles.actions}>
-          <PrimaryButton label={loading ? 'Authenticating...' : 'Authenticate'} onPress={() => void authenticate()} />
-          <PrimaryButton label={pinLoading ? 'Checking PIN...' : 'Use PIN'} onPress={() => void submitPin()} variant="secondary" />
+        <View style={styles.lockOrb}>
+          <Text style={[styles.lockGlyph, {color: palette.accent}]}>◈</Text>
         </View>
+
+        <View style={styles.dotsRow}>
+          {[0, 1, 2, 3].map(index => (
+            <View key={index} style={[styles.dot, {backgroundColor: pin.length > index ? palette.accent : palette.accent}]} />
+          ))}
+        </View>
+
+        <View style={styles.keypad}>
+          {keypad.map(value => (
+            <Pressable key={value} onPress={() => submitDigit(value)} style={[styles.key, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+              <Text style={[styles.keyText, {color: palette.textPrimary}]}>{value}</Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <Pressable onPress={() => void authenticate()} style={styles.fingerprint}>
+          <Text style={[styles.fingerprintText, {color: palette.accent}]}>Use fingerprint</Text>
+        </Pressable>
       </View>
-    </Screen>
+    </FigmaPage>
   );
 }
 
 const styles = StyleSheet.create({
-  hero: {
+  fill: {
     flex: 1,
-    justifyContent: 'center',
-    gap: themeTokens.spacing.md,
+  },
+  time: {
+    fontSize: 9,
+    fontWeight: '600',
+    lineHeight: 11,
   },
   title: {
-    fontSize: themeTokens.typography.title,
-    fontWeight: '800',
-  },
-  description: {
-    fontSize: themeTokens.typography.body,
+    marginTop: 30,
+    fontSize: 20,
+    fontWeight: '700',
     lineHeight: 24,
   },
-  message: {
-    fontSize: themeTokens.typography.body,
-    fontWeight: '600',
+  subtitle: {
+    marginTop: 6,
+    fontSize: 9,
+    lineHeight: 11,
   },
-  input: {
-    minHeight: 48,
-    borderRadius: themeTokens.radius.md,
+  lockOrb: {
+    marginTop: 52,
+    width: 196,
+    height: 196,
+    borderRadius: 98,
+    backgroundColor: '#211A3A',
+    alignSelf: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lockGlyph: {
+    fontSize: 56,
+    lineHeight: 62,
+    fontWeight: '700',
+  },
+  dotsRow: {
+    marginTop: 38,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    gap: 15,
+  },
+  dot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+  },
+  keypad: {
+    marginTop: 43,
+    alignSelf: 'center',
+    width: 240,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 32,
+    justifyContent: 'center',
+  },
+  key: {
+    width: 66,
+    height: 48,
+    borderRadius: 17,
     borderWidth: 1,
-    paddingHorizontal: themeTokens.spacing.md,
-    fontSize: themeTokens.typography.body,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  actions: {
-    gap: themeTokens.spacing.sm,
-    marginTop: themeTokens.spacing.sm,
+  keyText: {
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 16,
+  },
+  fingerprint: {
+    marginTop: 39,
+    alignSelf: 'center',
+  },
+  fingerprintText: {
+    fontSize: 9,
+    fontWeight: '600',
+    lineHeight: 11,
   },
 });

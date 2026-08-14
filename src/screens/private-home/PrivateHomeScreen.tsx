@@ -1,13 +1,10 @@
 import React from 'react';
-import {Alert, FlatList, StyleSheet, Text, View, useColorScheme} from 'react-native';
+import {Alert, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {AppCard} from '../../components/AppCard';
-import {PrimaryButton} from '../../components/PrimaryButton';
-import {Screen} from '../../components/Screen';
+import {FigmaActionButton, FigmaBanner, FigmaBottomNav, FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import {launchCoordinator} from '../../services/launch/LaunchCoordinator';
 import {localDataRepository} from '../../storage/LocalDataRepository';
-import {themeTokens} from '../../theme';
 import type {AppProtection} from '../../types/domain';
 import type {RootStackParamList} from '../../navigation/routes';
 
@@ -15,15 +12,12 @@ export function PrivateHomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [apps, setApps] = React.useState<AppProtection[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const scheme = useColorScheme();
-  const palette = themeTokens.colors[scheme === 'dark' ? 'dark' : 'light'];
-  const protectedCount = apps.length;
+  const palette = figmaPalette.dark;
 
   const loadApps = React.useCallback(async () => {
     setLoading(true);
     try {
-      const next = await localDataRepository.getProtectedApps();
-      setApps(next);
+      setApps(await localDataRepository.getProtectedApps());
     } finally {
       setLoading(false);
     }
@@ -33,145 +27,187 @@ export function PrivateHomeScreen() {
     void loadApps();
   }, [loadApps]);
 
+  const visibleApps = apps.slice(0, 3);
+
   return (
-    <Screen>
-      <View style={[styles.heroCard, {backgroundColor: palette.surfaceElevated, borderColor: palette.border}]}>
-        <View style={styles.heroTop}>
-          <View style={styles.heroCopy}>
-            <Text style={[styles.kicker, {color: palette.accent}]}>Protected space</Text>
-            <Text style={[styles.title, {color: palette.textPrimary}]}>Private Apps Home</Text>
-            <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
-              Discover, lock, hide, and open protected apps from a single controlled surface.
-            </Text>
+    <FigmaPage variant="dark">
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <Text style={[styles.time, {color: palette.textPrimary}]}>9:41</Text>
+        <Text style={[styles.title, {color: palette.textPrimary}]}>Private Apps</Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Your selected private apps.</Text>
+
+        <FigmaBanner variant="dark" title="Banner ad" tone="surfaceElevated" />
+
+        <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>My Private Apps</Text>
+
+        {loading ? (
+          <View style={[styles.emptyCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+            <Text style={[styles.emptyText, {color: palette.textSecondary}]}>Loading protected apps...</Text>
           </View>
-          <View style={[styles.countBubble, {backgroundColor: palette.accentSoft}]}>
-            <Text style={[styles.countValue, {color: palette.accent}]}>{protectedCount}</Text>
-            <Text style={[styles.countLabel, {color: palette.textSecondary}]}>protected</Text>
+        ) : (
+          <View style={styles.grid}>
+            {visibleApps.map((app, index) => (
+              <Pressable
+                key={app.packageName}
+                onPress={() => {
+                  void launchCoordinator.launch(app.packageName).catch(error => {
+                    Alert.alert('Launch failed', error instanceof Error ? error.message : 'Unable to launch app.');
+                  });
+                }}
+                style={({pressed}) => [styles.gridCard, {backgroundColor: index % 2 === 0 ? palette.surface : palette.accentSoft, borderColor: palette.border, opacity: pressed ? 0.92 : 1}]}>
+                <View style={[styles.iconBox, {backgroundColor: palette.accentSoft}]}>
+                  <Text style={[styles.iconText, {color: palette.accent}]}>{app.label.slice(0, 2).toUpperCase()}</Text>
+                </View>
+                <Text style={[styles.appLabel, {color: palette.textPrimary}]}>{app.label}</Text>
+                <View style={[styles.modePill, {backgroundColor: palette.accentSoft}]}>
+                  <Text style={[styles.modeText, {color: palette.accent}]}>{app.mode}</Text>
+                </View>
+              </Pressable>
+            ))}
+
+            <Pressable onPress={() => navigation.navigate('AddApps')} style={({pressed}) => [styles.addCard, {borderColor: palette.accent, backgroundColor: palette.accentSoft, opacity: pressed ? 0.92 : 1}]}>
+              <Text style={[styles.addGlyph, {color: palette.accent}]}>＋</Text>
+              <Text style={[styles.addLabel, {color: palette.accent}]}>Add Apps</Text>
+            </Pressable>
           </View>
-        </View>
+        )}
 
-        <View style={styles.actions}>
-          <PrimaryButton label="Add Apps" onPress={() => navigation.navigate('AddApps')} />
-          <PrimaryButton label="Manage Apps" onPress={() => navigation.navigate('ManageApps')} variant="secondary" />
-          <PrimaryButton label="Gallery" onPress={() => navigation.navigate('Gallery')} variant="secondary" />
-          <PrimaryButton label="Settings" onPress={() => navigation.navigate('Settings')} variant="secondary" />
-        </View>
-      </View>
+        <Pressable onPress={() => navigation.navigate('ManageApps')} style={[styles.manageRow, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+          <Text style={[styles.manageText, {color: palette.textPrimary}]}>Manage Apps</Text>
+        </Pressable>
 
-      {loading ? (
-        <View style={[styles.emptyState, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-          <Text style={[styles.emptyTitle, {color: palette.textPrimary}]}>Loading protected apps...</Text>
-          <Text style={[styles.emptyBody, {color: palette.textSecondary}]}>Preparing your private launcher surface.</Text>
-        </View>
-      ) : apps.length === 0 ? (
-        <View style={[styles.emptyState, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-          <Text style={[styles.emptyTitle, {color: palette.textPrimary}]}>No protected apps yet</Text>
-          <Text style={[styles.emptyBody, {color: palette.textSecondary}]}>
-            Add your first app to start building a private app space.
-          </Text>
-          <PrimaryButton label="Add your first app" onPress={() => navigation.navigate('AddApps')} />
-        </View>
-      ) : (
-        <FlatList
-          data={apps}
-          keyExtractor={item => item.packageName}
-          contentContainerStyle={styles.list}
-          renderItem={({item}) => (
-            <AppCard
-              app={item}
-              onPress={() => {
-                void launchCoordinator.launch(item.packageName).then(result => {
-                  if (result === 'auth_required') {
-                    navigation.navigate('AuthGate');
-                    return;
-                  }
-
-                  if (result === 'secret_required') {
-                    navigation.navigate('SecretEntry');
-                    return;
-                  }
-                }).catch(error => {
-                  Alert.alert('Launch failed', error instanceof Error ? error.message : 'Unable to launch app.');
-                });
-              }}
-            />
-          )}
+        <FigmaBanner
+          variant="dark"
+          title="Native advertisement"
+          subtitle="Placed after functional content"
+          tone="surfaceElevated"
         />
-      )}
-    </Screen>
+
+        <View style={styles.bottomSpacer} />
+
+        <FigmaBottomNav variant="dark" active="home" />
+      </ScrollView>
+    </FigmaPage>
   );
 }
 
 const styles = StyleSheet.create({
-  heroCard: {
-    gap: themeTokens.spacing.sm,
-    padding: themeTokens.spacing.lg,
-    borderRadius: themeTokens.radius.lg,
-    borderWidth: 1,
-    ...themeTokens.shadows.card,
+  scrollContent: {
+    paddingBottom: 17,
   },
-  heroTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: themeTokens.spacing.md,
-  },
-  heroCopy: {
-    flex: 1,
-    gap: themeTokens.spacing.sm,
-  },
-  kicker: {
-    fontSize: themeTokens.typography.caption,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
+  time: {
+    fontSize: 9,
+    fontWeight: '600',
+    lineHeight: 11,
   },
   title: {
-    fontSize: themeTokens.typography.title,
-    fontWeight: '800',
+    marginTop: 30,
+    fontSize: 20,
+    fontWeight: '700',
+    lineHeight: 24,
   },
   subtitle: {
-    fontSize: themeTokens.typography.body,
-    lineHeight: 22,
+    marginTop: 6,
+    fontSize: 9,
+    lineHeight: 11,
   },
-  countBubble: {
-    minWidth: 92,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: themeTokens.radius.lg,
-    paddingVertical: themeTokens.spacing.md,
-    paddingHorizontal: themeTokens.spacing.sm,
-  },
-  countValue: {
-    fontSize: 32,
-    fontWeight: '900',
-  },
-  countLabel: {
-    fontSize: themeTokens.typography.caption,
+  sectionTitle: {
+    marginTop: 18,
+    marginBottom: 16,
+    fontSize: 13,
     fontWeight: '700',
+    lineHeight: 15,
   },
-  actions: {
+  grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: themeTokens.spacing.sm,
+    gap: 16,
   },
-  list: {
-    gap: themeTokens.spacing.sm,
-    paddingBottom: themeTokens.spacing.xl,
-  },
-  emptyState: {
-    padding: themeTokens.spacing.lg,
-    borderRadius: themeTokens.radius.lg,
+  gridCard: {
+    width: 148,
+    minHeight: 112,
+    borderRadius: 21,
     borderWidth: 1,
-    gap: themeTokens.spacing.sm,
+    padding: 14,
+    justifyContent: 'space-between',
   },
-  emptyTitle: {
-    fontSize: themeTokens.typography.headline,
+  addCard: {
+    width: 148,
+    minHeight: 112,
+    borderRadius: 21,
+    borderWidth: 1,
+    padding: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconText: {
+    fontSize: 10,
     fontWeight: '700',
   },
-  emptyBody: {
-    marginTop: themeTokens.spacing.xs,
-    fontSize: themeTokens.typography.body,
-    lineHeight: 22,
+  appLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    lineHeight: 13,
+    marginTop: 6,
+  },
+  modePill: {
+    minWidth: 54,
+    alignSelf: 'flex-start',
+    minHeight: 26,
+    paddingHorizontal: 10,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modeText: {
+    fontSize: 8,
+    fontWeight: '700',
+    lineHeight: 10,
+  },
+  addGlyph: {
+    fontSize: 25,
+    lineHeight: 28,
+    fontWeight: '400',
+  },
+  addLabel: {
+    marginTop: 18,
+    fontSize: 10,
+    fontWeight: '700',
+    lineHeight: 13,
+  },
+  manageRow: {
+    marginTop: 16,
+    minHeight: 48,
+    borderWidth: 1,
+    borderRadius: 17,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+  },
+  manageText: {
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 13,
+  },
+  bottomSpacer: {
+    height: 16,
+  },
+  emptyCard: {
+    minHeight: 60,
+    borderWidth: 1,
+    borderRadius: 17,
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+  },
+  emptyText: {
+    fontSize: 10,
+    lineHeight: 13,
   },
 });

@@ -1,54 +1,31 @@
 import React from 'react';
-import {ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View, useColorScheme} from 'react-native';
+import {Alert, FlatList, Pressable, StyleSheet, Text, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {FigmaActionButton, FigmaHeader, FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import {nativeBridge} from '../../native';
+import {buildProtectionPolicy} from './buildProtectionPolicy';
 import {protectionManager} from '../../services/protection/ProtectionManager';
 import {localDataRepository} from '../../storage/LocalDataRepository';
-import {themeTokens} from '../../theme';
-import type {AuthMethod, LaunchableApp, ProtectionMode} from '../../types/domain';
+import type {LaunchableApp} from '../../types/domain';
 import type {RootStackParamList} from '../../navigation/routes';
-import {Screen} from '../../components/Screen';
-import {PrimaryButton} from '../../components/PrimaryButton';
-import {buildProtectionPolicy} from './buildProtectionPolicy';
-
-const protectionModes: ProtectionMode[] = ['LOCK', 'HIDE', 'LOCK_HIDE'];
-const authMethods: AuthMethod[] = ['PIN', 'PASSWORD', 'PATTERN', 'BIOMETRIC', 'BIOMETRIC_FALLBACK'];
 
 export function AddAppsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const scheme = useColorScheme();
-  const palette = themeTokens.colors[scheme === 'dark' ? 'dark' : 'light'];
+  const palette = figmaPalette.light;
   const [apps, setApps] = React.useState<LaunchableApp[]>([]);
+  const [selectedPackageName, setSelectedPackageName] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
-  const [query, setQuery] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);
-  const [selectedPackageName, setSelectedPackageName] = React.useState<string | null>(null);
-  const [mode, setMode] = React.useState<ProtectionMode>('LOCK');
-  const [authMethod, setAuthMethod] = React.useState<AuthMethod>('BIOMETRIC_FALLBACK');
-  const [autoLockSeconds, setAutoLockSeconds] = React.useState('300');
-
-  const selectedApp = React.useMemo(() => {
-    return apps.find(app => app.packageName === selectedPackageName) ?? null;
-  }, [apps, selectedPackageName]);
 
   const loadApps = React.useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [discovered, settings] = await Promise.all([
-        nativeBridge.getLaunchableApps(),
-        localDataRepository.getSettings(),
-      ]);
+      const discovered = await nativeBridge.getLaunchableApps();
       setApps(discovered);
-      setAutoLockSeconds(String(settings.autoLockSecondsDefault));
-      setSelectedPackageName(current => {
-        if (current && discovered.some(app => app.packageName === current)) {
-          return current;
-        }
-        return discovered[0]?.packageName ?? null;
-      });
+      setSelectedPackageName(current => current ?? discovered[0]?.packageName ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load installed apps.');
     } finally {
@@ -60,26 +37,13 @@ export function AddAppsScreen() {
     void loadApps();
   }, [loadApps]);
 
-  const filteredApps = React.useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle) {
-      return apps;
-    }
+  const visibleApps = apps.slice(0, 5);
+  const selectedCount = visibleApps.filter(app => app.packageName === selectedPackageName).length;
 
-    return apps.filter(app => {
-      return app.label.toLowerCase().includes(needle) || app.packageName.toLowerCase().includes(needle);
-    });
-  }, [apps, query]);
-
-  const persistSelection = React.useCallback(async () => {
-    if (!selectedApp) {
+  const continueNext = React.useCallback(async () => {
+    const selected = apps.find(app => app.packageName === selectedPackageName);
+    if (!selected) {
       Alert.alert('Select an app', 'Choose an installed app first.');
-      return;
-    }
-
-    const autoLock = Number.parseInt(autoLockSeconds, 10);
-    if (!Number.isFinite(autoLock) || autoLock < 0) {
-      Alert.alert('Invalid timer', 'Auto-lock must be a valid non-negative number of seconds.');
       return;
     }
 
@@ -87,304 +51,164 @@ export function AddAppsScreen() {
     try {
       await protectionManager.upsertProtection(
         buildProtectionPolicy({
-          app: selectedApp,
-          mode,
-          authMethod,
-          autoLockSeconds: autoLock,
+          app: selected,
+          mode: 'LOCK_HIDE',
+          authMethod: 'BIOMETRIC_FALLBACK',
+          autoLockSeconds: 300,
         }),
       );
-      navigation.navigate('PrivateHome');
+      navigation.navigate('ProtectionMode');
     } catch (err) {
       Alert.alert('Save failed', err instanceof Error ? err.message : 'Unable to save protection.');
     } finally {
       setSaving(false);
     }
-  }, [authMethod, autoLockSeconds, mode, navigation, selectedApp]);
+  }, [apps, navigation, selectedPackageName]);
 
   return (
-    <Screen>
-      <View style={[styles.heroCard, {backgroundColor: palette.surfaceElevated, borderColor: palette.border}]}>
-        <Text style={[styles.kicker, {color: palette.accent}]}>Installed apps</Text>
-        <Text style={[styles.title, {color: palette.textPrimary}]}>Add Apps</Text>
-        <Text style={[styles.description, {color: palette.textSecondary}]}>
-          Discover installed apps, choose a protection mode, and save a local policy for Private Apps Home.
-        </Text>
-      </View>
+    <FigmaPage variant="light">
+      <View style={styles.fill}>
+        <FigmaHeader variant="light" title="Select apps" subtitle="Choose apps to protect." />
 
-      <TextInput
-        value={query}
-        onChangeText={setQuery}
-        placeholder="Search apps"
-        placeholderTextColor={palette.textSecondary}
-        style={[
-          styles.search,
-          {
-            color: palette.textPrimary,
-            backgroundColor: palette.surface,
-            borderColor: palette.border,
-          },
-        ]}
-      />
-
-      <PrimaryButton label="Refresh apps" onPress={() => void loadApps()} variant="secondary" />
-
-      <View style={[styles.policyCard, {backgroundColor: palette.surfaceElevated, borderColor: palette.border}]}>
-        <Text style={[styles.policyTitle, {color: palette.textPrimary}]}>
-          {selectedApp ? selectedApp.label : 'Select an app to continue'}
-        </Text>
-        <Text style={[styles.policyMeta, {color: palette.textSecondary}]}>
-          Choose protection mode, auth method, and auto-lock timer before saving the policy.
-        </Text>
-
-        <Text style={[styles.sectionLabel, {color: palette.textPrimary}]}>Protection mode</Text>
-        <View style={styles.optionRow}>
-          {protectionModes.map(nextMode => (
-            <PrimaryButton
-              key={nextMode}
-              label={nextMode}
-              onPress={() => setMode(nextMode)}
-              variant={mode === nextMode ? 'primary' : 'secondary'}
-              style={styles.optionButton}
-            />
-          ))}
+        <View style={styles.searchBar}>
+          <Text style={[styles.searchText, {color: palette.textSecondary}]}>⌕  Search installed apps</Text>
         </View>
 
-        <Text style={[styles.sectionLabel, {color: palette.textPrimary}]}>Authentication</Text>
-        <View style={styles.optionRow}>
-          {authMethods.map(nextAuth => (
-            <PrimaryButton
-              key={nextAuth}
-              label={nextAuth}
-              onPress={() => setAuthMethod(nextAuth)}
-              variant={authMethod === nextAuth ? 'primary' : 'secondary'}
-              style={styles.optionButton}
-            />
-          ))}
-        </View>
+        {loading ? (
+          <View style={styles.stateBox}>
+            <Text style={[styles.stateText, {color: palette.textSecondary}]}>Loading installed apps...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.stateBox}>
+            <Text style={[styles.stateText, {color: '#D92D20'}]}>{error}</Text>
+            <Pressable onPress={() => void loadApps()} style={[styles.retryButton, {borderColor: palette.border}]}>
+              <Text style={[styles.retryText, {color: palette.accent}]}>Try again</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <FlatList
+            data={visibleApps}
+            keyExtractor={item => item.packageName}
+            scrollEnabled={false}
+            contentContainerStyle={styles.list}
+            renderItem={({item}) => {
+              const isSelected = item.packageName === selectedPackageName;
+              const label = isSelected ? 'Selected' : 'Add';
+              const icon = item.label.slice(0, 2).toUpperCase();
+              return (
+                <Pressable
+                  onPress={() => setSelectedPackageName(item.packageName)}
+                  style={({pressed}) => [styles.appRow, {borderColor: isSelected ? palette.accentSoft : palette.border, opacity: pressed ? 0.94 : 1}]}>
+                  <View style={styles.appIcon}>
+                    <Text style={[styles.appIconText, {color: palette.accent}]}>{icon}</Text>
+                  </View>
+                  <Text style={[styles.appName, {color: palette.textPrimary}]}>{item.label}</Text>
+                  <View style={[styles.statusPill, {backgroundColor: isSelected ? palette.accentSoft : '#F1EEFF'}]}>
+                    <Text style={[styles.statusText, {color: palette.accent}]}>{label}</Text>
+                  </View>
+                </Pressable>
+              );
+            }}
+          />
+        )}
 
-        <Text style={[styles.sectionLabel, {color: palette.textPrimary}]}>Auto-lock seconds</Text>
-        <TextInput
-          value={autoLockSeconds}
-          onChangeText={setAutoLockSeconds}
-          keyboardType="number-pad"
-          placeholder="300"
-          placeholderTextColor={palette.textSecondary}
-          style={[
-            styles.timerInput,
-            {
-              color: palette.textPrimary,
-              backgroundColor: palette.surface,
-              borderColor: palette.border,
-            },
-          ]}
+        <View style={styles.spacer} />
+
+        <FigmaActionButton
+          variant="light"
+          label={saving ? 'Saving...' : `Continue with ${Math.max(selectedCount, 1)} apps`}
+          onPress={() => void continueNext()}
         />
       </View>
-
-      {loading ? (
-        <View style={[styles.stateCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-          <ActivityIndicator />
-          <Text style={[styles.stateText, {color: palette.textSecondary}]}>Loading installed apps...</Text>
-        </View>
-      ) : error ? (
-        <View style={[styles.stateCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-          <Text style={[styles.errorText, {color: palette.danger}]}>{error}</Text>
-          <PrimaryButton label="Try again" onPress={() => void loadApps()} variant="secondary" />
-        </View>
-      ) : (
-        <FlatList
-          data={filteredApps}
-          keyExtractor={item => item.packageName}
-          contentContainerStyle={styles.listContent}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-          ListEmptyComponent={
-            <View style={[styles.stateCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-              <Text style={[styles.stateText, {color: palette.textSecondary}]}>No launchable apps matched your search.</Text>
-            </View>
-          }
-          renderItem={({item}) => {
-            const isSelected = item.packageName === selectedPackageName;
-            return (
-              <Pressable
-                onPress={() => setSelectedPackageName(item.packageName)}
-                style={[
-                  styles.row,
-                  {
-                    backgroundColor: palette.surface,
-                    borderColor: isSelected ? palette.accent : palette.border,
-                  },
-                ]}>
-                <View style={styles.rowBody}>
-                  <Text style={[styles.rowTitle, {color: palette.textPrimary}]}>{item.label}</Text>
-                  <Text style={[styles.rowMeta, {color: palette.textSecondary}]}>{item.packageName}</Text>
-                  <Text style={[styles.rowMeta, {color: palette.textSecondary}]}>
-                    {item.systemApp ? 'System app' : 'User app'}
-                  </Text>
-                </View>
-                <Text style={[styles.selectedBadge, {color: isSelected ? palette.accent : palette.textSecondary}]}>
-                  {isSelected ? 'Selected' : 'Tap to select'}
-                </Text>
-              </Pressable>
-            );
-          }}
-        />
-      )}
-
-      <View style={[styles.footer, {backgroundColor: palette.background, borderColor: palette.border}]}>
-        <View style={styles.footerCopy}>
-          <Text style={[styles.footerTitle, {color: palette.textPrimary}]}>
-            {selectedApp ? selectedApp.label : 'Ready to save a policy'}
-          </Text>
-          <Text style={[styles.footerText, {color: palette.textSecondary}]}>
-            {mode} protection with {authMethod} authentication.
-          </Text>
-        </View>
-        <PrimaryButton
-          label={saving ? 'Saving...' : 'Save protection'}
-          onPress={() => void persistSelection()}
-          style={styles.footerButton}
-        />
-      </View>
-
-    </Screen>
+    </FigmaPage>
   );
 }
 
 const styles = StyleSheet.create({
-  heroCard: {
-    gap: themeTokens.spacing.sm,
-    padding: themeTokens.spacing.lg,
-    borderRadius: themeTokens.radius.lg,
+  fill: {
+    flex: 1,
+  },
+  searchBar: {
+    minHeight: 40,
+    borderRadius: 15,
     borderWidth: 1,
-    ...themeTokens.shadows.card,
+    borderColor: '#E4E7EC',
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+    marginTop: 20,
   },
-  kicker: {
-    fontSize: themeTokens.typography.caption,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
+  searchText: {
+    fontSize: 9,
+    lineHeight: 11,
   },
-  title: {
-    fontSize: themeTokens.typography.title,
-    fontWeight: '800',
+  list: {
+    marginTop: 18,
+    gap: 12,
   },
-  description: {
-    fontSize: themeTokens.typography.body,
-    lineHeight: 24,
-  },
-  search: {
-    minHeight: 48,
-    borderRadius: themeTokens.radius.md,
+  appRow: {
+    minHeight: 50,
     borderWidth: 1,
-    paddingHorizontal: themeTokens.spacing.md,
-    fontSize: themeTokens.typography.body,
-  },
-  stateCard: {
-    gap: themeTokens.spacing.sm,
-    padding: themeTokens.spacing.lg,
-    borderRadius: themeTokens.radius.lg,
-    borderWidth: 1,
-    alignItems: 'flex-start',
-  },
-  stateRow: {
-    gap: themeTokens.spacing.md,
-    alignItems: 'flex-start',
-  },
-  stateText: {
-    fontSize: themeTokens.typography.body,
-  },
-  errorText: {
-    fontSize: themeTokens.typography.body,
-    fontWeight: '600',
-  },
-  listContent: {
-    paddingBottom: 168,
-  },
-  separator: {
-    height: themeTokens.spacing.sm,
-  },
-  row: {
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: themeTokens.spacing.md,
-    borderWidth: 1,
-    borderRadius: themeTokens.radius.lg,
-    padding: themeTokens.spacing.md,
+    paddingHorizontal: 12,
+    gap: 12,
   },
-  rowBody: {
+  appIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    backgroundColor: '#F1EEFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  appIconText: {
+    fontSize: 8,
+    fontWeight: '700',
+    lineHeight: 10,
+  },
+  appName: {
     flex: 1,
-    gap: 4,
+    fontSize: 10,
+    fontWeight: '600',
+    lineHeight: 13,
   },
-  rowTitle: {
-    fontSize: themeTokens.typography.body,
+  statusPill: {
+    minWidth: 66,
+    minHeight: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  statusText: {
+    fontSize: 8,
     fontWeight: '700',
+    lineHeight: 10,
   },
-  rowMeta: {
-    fontSize: themeTokens.typography.caption,
+  stateBox: {
+    marginTop: 18,
+    minHeight: 60,
+    justifyContent: 'center',
+    gap: 12,
   },
-  selectedBadge: {
-    fontSize: themeTokens.typography.caption,
-    fontWeight: '700',
+  stateText: {
+    fontSize: 10,
   },
-  policyCard: {
-    gap: themeTokens.spacing.sm,
-    padding: themeTokens.spacing.lg,
-    borderRadius: themeTokens.radius.lg,
+  retryButton: {
+    alignSelf: 'flex-start',
     borderWidth: 1,
-    ...themeTokens.shadows.card,
+    borderRadius: 13,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
-  policyTitle: {
-    fontSize: themeTokens.typography.body,
-    fontWeight: '800',
-  },
-  policyMeta: {
-    fontSize: themeTokens.typography.caption,
-    lineHeight: 18,
-  },
-  sectionLabel: {
-    marginTop: themeTokens.spacing.xs,
-    fontSize: themeTokens.typography.caption,
+  retryText: {
+    fontSize: 8,
     fontWeight: '700',
   },
-  optionRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: themeTokens.spacing.sm,
-  },
-  optionButton: {
-    minWidth: 98,
-  },
-  timerInput: {
-    minHeight: 48,
-    borderRadius: themeTokens.radius.md,
-    borderWidth: 1,
-    paddingHorizontal: themeTokens.spacing.md,
-    fontSize: themeTokens.typography.body,
-  },
-  saveButton: {
-    marginTop: themeTokens.spacing.sm,
-  },
-  footer: {
-    gap: themeTokens.spacing.sm,
-    position: 'absolute',
-    left: themeTokens.spacing.lg,
-    right: themeTokens.spacing.lg,
-    bottom: themeTokens.spacing.lg,
-    padding: themeTokens.spacing.md,
-    borderTopWidth: 1,
-    borderRadius: themeTokens.radius.lg,
-    ...themeTokens.shadows.card,
-  },
-  footerCopy: {
-    gap: 4,
-  },
-  footerTitle: {
-    fontSize: themeTokens.typography.body,
-    fontWeight: '800',
-  },
-  footerText: {
-    fontSize: themeTokens.typography.caption,
-  },
-  footerButton: {
-    width: '100%',
+  spacer: {
+    flex: 1,
   },
 });

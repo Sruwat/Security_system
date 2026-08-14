@@ -1,125 +1,86 @@
 import React from 'react';
-import {Alert, StyleSheet, Text, TextInput, View, useColorScheme} from 'react-native';
+import {StyleSheet, Text, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {PrimaryButton} from '../../components/PrimaryButton';
-import {Screen} from '../../components/Screen';
+import {FigmaActionButton, FigmaCard, FigmaHeader, FigmaPage} from '../../components/FigmaKit';
 import {nativeBridge} from '../../native';
-import {localDataRepository} from '../../storage/LocalDataRepository';
-import {themeTokens} from '../../theme';
 import type {RootStackParamList} from '../../navigation/routes';
 import {APP_UNLOCK_CREDENTIAL_TYPE, VAULT_SECRET_CREDENTIAL_TYPE} from '../../services/security/credentialTypes';
 
 export function WelcomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const scheme = useColorScheme();
-  const palette = themeTokens.colors[scheme === 'dark' ? 'dark' : 'light'];
-  const [pin, setPin] = React.useState('');
-  const [confirmPin, setConfirmPin] = React.useState('');
-  const [secretCode, setSecretCode] = React.useState('');
-  const [loading, setLoading] = React.useState(false);
 
-  const completeSetup = React.useCallback(async () => {
-    if (loading) {
-      return;
-    }
-
-    const trimmedPin = pin.trim();
-    const trimmedConfirm = confirmPin.trim();
-    const trimmedSecret = secretCode.trim();
-    if (trimmedPin.length < 4) {
-      Alert.alert('PIN required', 'Choose a PIN with at least 4 digits.');
-      return;
-    }
-    if (trimmedPin !== trimmedConfirm) {
-      Alert.alert('PIN mismatch', 'Confirm the same PIN to continue.');
-      return;
-    }
-    if (trimmedSecret.length < 4) {
-      Alert.alert('Secret required', 'Choose a vault secret code with at least 4 characters.');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await nativeBridge.createCredential(APP_UNLOCK_CREDENTIAL_TYPE, trimmedPin);
-      await nativeBridge.createCredential(VAULT_SECRET_CREDENTIAL_TYPE, trimmedSecret);
-      await localDataRepository.setOnboardingComplete(true);
-      navigation.reset({
-        index: 0,
-        routes: [{name: 'AuthGate'}],
-      });
-    } catch (error) {
-      Alert.alert('Setup failed', error instanceof Error ? error.message : 'Unable to complete setup.');
-    } finally {
-      setLoading(false);
-    }
-  }, [confirmPin, loading, navigation, pin, secretCode]);
+  const persistSetupCredentials = React.useCallback(async (appUnlockPin: string, vaultSecret: string) => {
+    await nativeBridge.createCredential(APP_UNLOCK_CREDENTIAL_TYPE, appUnlockPin);
+    await nativeBridge.createCredential(VAULT_SECRET_CREDENTIAL_TYPE, vaultSecret);
+  }, []);
 
   return (
-    <Screen>
-      <View style={styles.hero}>
-        <Text style={[styles.title, {color: palette.textPrimary}]}>Welcome</Text>
-        <Text style={[styles.description, {color: palette.textSecondary}]}>
-          Set up your app unlock PIN and vault secret before entering the protected launcher.
-        </Text>
+    <FigmaPage variant="dark">
+      <View style={styles.fill}>
+        <FigmaHeader variant="dark" title="Welcome" subtitle="Private apps stay on this device." />
 
-        <TextInput
-          value={pin}
-          onChangeText={setPin}
-          placeholder="App unlock PIN"
-          placeholderTextColor={palette.textSecondary}
-          secureTextEntry
-          keyboardType="number-pad"
-          returnKeyType="next"
-          autoFocus
-          style={[styles.input, {color: palette.textPrimary, backgroundColor: palette.surface, borderColor: palette.border}]}
-        />
-        <TextInput
-          value={confirmPin}
-          onChangeText={setConfirmPin}
-          placeholder="Confirm PIN"
-          placeholderTextColor={palette.textSecondary}
-          secureTextEntry
-          keyboardType="number-pad"
-          returnKeyType="next"
-          style={[styles.input, {color: palette.textPrimary, backgroundColor: palette.surface, borderColor: palette.border}]}
-        />
-        <TextInput
-          value={secretCode}
-          onChangeText={setSecretCode}
-          placeholder="Vault secret code"
-          placeholderTextColor={palette.textSecondary}
-          secureTextEntry
-          returnKeyType="done"
-          style={[styles.input, {color: palette.textPrimary, backgroundColor: palette.surface, borderColor: palette.border}]}
-        />
+        <View style={styles.heroCard}>
+          <View style={styles.heroInner}>
+            <Text style={styles.heroGlyph}>◈</Text>
+          </View>
+        </View>
 
-        <PrimaryButton label={loading ? 'Saving setup...' : 'Start setup'} onPress={() => void completeSetup()} />
+        <View style={styles.copy}>
+          <Text style={styles.copyTitle}>Lock. Hide. Keep private.</Text>
+          <Text style={styles.copyBody}>No account • No cloud • Local protection</Text>
+        </View>
+
+        <View style={styles.spacer} />
+
+        <FigmaActionButton variant="dark" label="Start setup" onPress={() => navigation.navigate('LauncherSetup')} />
       </View>
-    </Screen>
+    </FigmaPage>
   );
 }
 
 const styles = StyleSheet.create({
-  hero: {
+  fill: {
     flex: 1,
+  },
+  heroCard: {
+    height: 210,
+    borderRadius: 30,
+    backgroundColor: '#A78BFA',
+    marginTop: 2,
+    alignItems: 'center',
     justifyContent: 'center',
-    gap: themeTokens.spacing.md,
   },
-  title: {
-    fontSize: themeTokens.typography.title,
-    fontWeight: '800',
+  heroInner: {
+    width: 144,
+    height: 128,
+    borderRadius: 32,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  description: {
-    fontSize: themeTokens.typography.body,
-    lineHeight: 24,
+  heroGlyph: {
+    color: '#6D5BD0',
+    fontSize: 46,
+    fontWeight: '700',
+    lineHeight: 50,
   },
-  input: {
-    minHeight: 48,
-    borderRadius: themeTokens.radius.md,
-    borderWidth: 1,
-    paddingHorizontal: themeTokens.spacing.md,
-    fontSize: themeTokens.typography.body,
+  copy: {
+    marginTop: 40,
+  },
+  copyTitle: {
+    color: '#F8FAFC',
+    fontSize: 22,
+    fontWeight: '700',
+    lineHeight: 26,
+  },
+  copyBody: {
+    marginTop: 11,
+    color: '#94A3B8',
+    fontSize: 9,
+    lineHeight: 11,
+  },
+  spacer: {
+    flex: 1,
   },
 });

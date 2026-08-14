@@ -1,17 +1,14 @@
 import React from 'react';
-import {Alert, FlatList, StyleSheet, Text, View, useColorScheme} from 'react-native';
+import {Alert, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {AppCard} from '../../components/AppCard';
-import {PrimaryButton} from '../../components/PrimaryButton';
-import {Screen} from '../../components/Screen';
-import {protectionManager} from '../../services/protection/ProtectionManager';
+import {FigmaBanner, FigmaBottomNav, FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import {localDataRepository} from '../../storage/LocalDataRepository';
-import {themeTokens} from '../../theme';
+import {protectionManager} from '../../services/protection/ProtectionManager';
 import type {AppProtection, ProtectionMode} from '../../types/domain';
 import type {RootStackParamList} from '../../navigation/routes';
 
-const protectionModes: ProtectionMode[] = ['LOCK', 'HIDE', 'LOCK_HIDE', 'NONE'];
+const protectionModes: ProtectionMode[] = ['LOCK_HIDE', 'HIDE', 'LOCK', 'NONE'];
 
 function cycleMode(mode: ProtectionMode): ProtectionMode {
   const index = protectionModes.indexOf(mode);
@@ -20,11 +17,10 @@ function cycleMode(mode: ProtectionMode): ProtectionMode {
 
 export function ManageAppsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const palette = figmaPalette.dark;
   const [apps, setApps] = React.useState<AppProtection[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [busyPackage, setBusyPackage] = React.useState<string | null>(null);
-  const scheme = useColorScheme();
-  const palette = themeTokens.colors[scheme === 'dark' ? 'dark' : 'light'];
 
   const loadApps = React.useCallback(async () => {
     setLoading(true);
@@ -43,8 +39,7 @@ export function ManageAppsScreen() {
     async (app: AppProtection) => {
       setBusyPackage(app.packageName);
       try {
-        const nextMode = cycleMode(app.mode);
-        await protectionManager.upsertProtection({...app, mode: nextMode, updatedAt: Date.now()});
+        await protectionManager.upsertProtection({...app, mode: cycleMode(app.mode), updatedAt: Date.now()});
         await loadApps();
       } catch (error) {
         Alert.alert('Update failed', error instanceof Error ? error.message : 'Unable to change protection mode.');
@@ -71,136 +66,149 @@ export function ManageAppsScreen() {
   );
 
   return (
-    <Screen>
-      <View style={[styles.heroCard, {backgroundColor: palette.surfaceElevated, borderColor: palette.border}]}>
-        <Text style={[styles.kicker, {color: palette.accent}]}>Policy control</Text>
+    <FigmaPage variant="dark">
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <Text style={[styles.time, {color: palette.textPrimary}]}>9:41</Text>
         <Text style={[styles.title, {color: palette.textPrimary}]}>Manage Apps</Text>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
-          Change protection, authentication, timers, or remove protection.
-        </Text>
-      </View>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Change, add or remove apps.</Text>
 
-      <View style={styles.actionsRow}>
-        <PrimaryButton
-          label={loading ? 'Refreshing...' : 'Refresh'}
-          onPress={() => void loadApps()}
-          variant="secondary"
-        />
-        <PrimaryButton label="Back home" onPress={() => navigation.navigate('PrivateHome')} variant="secondary" />
-      </View>
+        <FigmaBanner variant="dark" title="Banner ad" tone="surfaceElevated" />
 
-      {loading ? (
-        <View style={[styles.empty, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-          <Text style={[styles.emptyTitle, {color: palette.textPrimary}]}>Loading managed apps...</Text>
-          <Text style={[styles.emptyBody, {color: palette.textSecondary}]}>
-            Rebuilding your local protection list.
-          </Text>
-        </View>
-      ) : apps.length === 0 ? (
-        <View style={[styles.empty, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-          <Text style={[styles.emptyTitle, {color: palette.textPrimary}]}>Nothing to manage yet</Text>
-          <Text style={[styles.emptyBody, {color: palette.textSecondary}]}>
-            Add an app first, then you can update protection modes and timers here.
-          </Text>
-          <PrimaryButton label="Add Apps" onPress={() => navigation.navigate('AddApps')} />
-        </View>
-      ) : (
-        <FlatList
-          data={apps}
-          keyExtractor={item => item.packageName}
-          contentContainerStyle={styles.list}
-          renderItem={({item}) => (
-            <View style={[styles.cardWrap, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-              <AppCard app={item} />
-              <View style={styles.cardActions}>
-                <PrimaryButton
-                  label={busyPackage === item.packageName ? 'Updating...' : `Mode: ${item.mode}`}
-                  onPress={() => void updateMode(item)}
-                  variant="secondary"
-                  style={styles.actionButton}
-                />
-                <PrimaryButton
-                  label={busyPackage === item.packageName ? 'Removing...' : 'Remove protection'}
-                  onPress={() => void removeProtection(item)}
-                  variant="danger"
-                  style={styles.actionButton}
-                />
+        {loading ? (
+          <View style={[styles.emptyCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+            <Text style={[styles.emptyText, {color: palette.textSecondary}]}>Loading managed apps...</Text>
+          </View>
+        ) : apps.length === 0 ? (
+          <View style={[styles.emptyCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+            <Text style={[styles.emptyText, {color: palette.textSecondary}]}>Nothing to manage yet</Text>
+          </View>
+        ) : (
+          <View style={styles.list}>
+            {apps.map(app => (
+              <View key={app.packageName} style={[styles.row, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+                <View style={styles.rowBody}>
+                  <Text style={[styles.rowTitle, {color: palette.textPrimary}]}>{app.label}</Text>
+                  <Text style={[styles.rowSubtitle, {color: palette.textSecondary}]}>{app.mode === 'LOCK_HIDE' ? 'Lock + Hide' : app.mode}</Text>
+                </View>
+                <Pressable onPress={() => void updateMode(app)} style={styles.actionPill}>
+                  <Text style={[styles.actionText, {color: palette.accent}]}>
+                    {busyPackage === app.packageName ? 'Updating...' : 'Change'}
+                  </Text>
+                </Pressable>
+                <Pressable onPress={() => void removeProtection(app)} style={styles.actionPill}>
+                  <Text style={[styles.actionText, {color: palette.accent}]}>
+                    {busyPackage === app.packageName ? 'Removing...' : 'Remove'}
+                  </Text>
+                </Pressable>
               </View>
-              <Text style={[styles.cardMeta, {color: palette.textSecondary}]}>
-                Auth: {item.authMethod} - Auto-lock {item.autoLockSeconds}s
-              </Text>
-            </View>
-          )}
+            ))}
+          </View>
+        )}
+
+        <Pressable onPress={() => navigation.navigate('AddApps')} style={[styles.addRow, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+          <Text style={[styles.addText, {color: palette.textPrimary}]}>+ Add more apps</Text>
+        </Pressable>
+
+        <FigmaBanner
+          variant="dark"
+          title="Native advertisement"
+          subtitle="Placed after functional content"
+          tone="surfaceElevated"
         />
-      )}
-    </Screen>
+
+        <View style={styles.bottomSpacer} />
+        <FigmaBottomNav variant="dark" active="home" />
+      </ScrollView>
+    </FigmaPage>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    gap: themeTokens.spacing.sm,
+  scrollContent: {
+    paddingBottom: 17,
   },
-  heroCard: {
-    gap: themeTokens.spacing.sm,
-    padding: themeTokens.spacing.lg,
-    borderRadius: themeTokens.radius.lg,
-    borderWidth: 1,
-    ...themeTokens.shadows.card,
-  },
-  kicker: {
-    fontSize: themeTokens.typography.caption,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
+  time: {
+    fontSize: 9,
+    fontWeight: '600',
+    lineHeight: 11,
   },
   title: {
-    fontSize: themeTokens.typography.title,
-    fontWeight: '800',
+    marginTop: 30,
+    fontSize: 20,
+    fontWeight: '700',
+    lineHeight: 24,
   },
   subtitle: {
-    fontSize: themeTokens.typography.body,
-    lineHeight: 22,
+    marginTop: 6,
+    fontSize: 9,
+    lineHeight: 11,
   },
-  actionsRow: {
-    flexDirection: 'row',
-    gap: themeTokens.spacing.sm,
-  },
-  empty: {
-    padding: themeTokens.spacing.lg,
-    borderRadius: themeTokens.radius.lg,
+  emptyCard: {
+    marginTop: 18,
+    minHeight: 52,
+    borderRadius: 17,
     borderWidth: 1,
-    gap: themeTokens.spacing.sm,
+    justifyContent: 'center',
+    paddingHorizontal: 14,
   },
-  emptyTitle: {
-    fontSize: themeTokens.typography.body,
-    fontWeight: '700',
-  },
-  emptyBody: {
-    marginTop: themeTokens.spacing.xs,
-    fontSize: themeTokens.typography.body,
-    lineHeight: 22,
+  emptyText: {
+    fontSize: 10,
   },
   list: {
-    gap: themeTokens.spacing.sm,
-    paddingBottom: themeTokens.spacing.xl,
+    gap: 12,
+    marginTop: 18,
   },
-  cardWrap: {
-    gap: themeTokens.spacing.sm,
-    padding: themeTokens.spacing.sm,
-    borderRadius: themeTokens.radius.lg,
+  row: {
     borderWidth: 1,
-    ...themeTokens.shadows.card,
-  },
-  cardActions: {
+    borderRadius: 18,
+    minHeight: 68,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: themeTokens.spacing.sm,
+    alignItems: 'center',
+    gap: 8,
   },
-  actionButton: {
-    flexGrow: 1,
+  rowBody: {
+    flex: 1,
   },
-  cardMeta: {
-    fontSize: themeTokens.typography.caption,
+  rowTitle: {
+    fontSize: 10,
+    fontWeight: '700',
+    lineHeight: 12,
+  },
+  rowSubtitle: {
+    marginTop: 6,
+    fontSize: 8,
+    lineHeight: 10,
+  },
+  actionPill: {
+    minWidth: 54,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#211A3A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  actionText: {
+    fontSize: 8,
+    fontWeight: '700',
+    lineHeight: 10,
+  },
+  addRow: {
+    marginTop: 14,
+    minHeight: 48,
+    borderWidth: 1,
+    borderRadius: 17,
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+  },
+  addText: {
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 13,
+  },
+  bottomSpacer: {
+    height: 16,
   },
 });
