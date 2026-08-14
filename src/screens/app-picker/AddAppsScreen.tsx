@@ -1,25 +1,54 @@
 import React from 'react';
-import {ActivityIndicator, Alert, FlatList, StyleSheet, Text, TextInput, View, useColorScheme} from 'react-native';
+import {ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View, useColorScheme} from 'react-native';
+import {useNavigation} from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {nativeBridge} from '../../native';
-import type {LaunchableApp} from '../../types/domain';
+import {protectionManager} from '../../services/protection/ProtectionManager';
+import {localDataRepository} from '../../storage/LocalDataRepository';
 import {themeTokens} from '../../theme';
+import type {AuthMethod, LaunchableApp, ProtectionMode} from '../../types/domain';
+import type {RootStackParamList} from '../../navigation/routes';
 import {Screen} from '../../components/Screen';
 import {PrimaryButton} from '../../components/PrimaryButton';
+import {buildProtectionPolicy} from './buildProtectionPolicy';
+
+const protectionModes: ProtectionMode[] = ['LOCK', 'HIDE', 'LOCK_HIDE'];
+const authMethods: AuthMethod[] = ['PIN', 'PASSWORD', 'PATTERN', 'BIOMETRIC', 'BIOMETRIC_FALLBACK'];
 
 export function AddAppsScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const scheme = useColorScheme();
   const palette = themeTokens.colors[scheme === 'dark' ? 'dark' : 'light'];
   const [apps, setApps] = React.useState<LaunchableApp[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [saving, setSaving] = React.useState(false);
   const [query, setQuery] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);
+  const [selectedPackageName, setSelectedPackageName] = React.useState<string | null>(null);
+  const [mode, setMode] = React.useState<ProtectionMode>('LOCK');
+  const [authMethod, setAuthMethod] = React.useState<AuthMethod>('BIOMETRIC_FALLBACK');
+  const [autoLockSeconds, setAutoLockSeconds] = React.useState('300');
+
+  const selectedApp = React.useMemo(() => {
+    return apps.find(app => app.packageName === selectedPackageName) ?? null;
+  }, [apps, selectedPackageName]);
 
   const loadApps = React.useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const discovered = await nativeBridge.getLaunchableApps();
+      const [discovered, settings] = await Promise.all([
+        nativeBridge.getLaunchableApps(),
+        localDataRepository.getSettings(),
+      ]);
       setApps(discovered);
+      setAutoLockSeconds(String(settings.autoLockSecondsDefault));
+      setSelectedPackageName(current => {
+        if (current && discovered.some(app => app.packageName === current)) {
+          return current;
+        }
+        return discovered[0]?.packageName ?? null;
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load installed apps.');
     } finally {
@@ -42,12 +71,42 @@ export function AddAppsScreen() {
     });
   }, [apps, query]);
 
+  const persistSelection = React.useCallback(async () => {
+    if (!selectedApp) {
+      Alert.alert('Select an app', 'Choose an installed app first.');
+      return;
+    }
+
+    const autoLock = Number.parseInt(autoLockSeconds, 10);
+    if (!Number.isFinite(autoLock) || autoLock < 0) {
+      Alert.alert('Invalid timer', 'Auto-lock must be a valid non-negative number of seconds.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await protectionManager.upsertProtection(
+        buildProtectionPolicy({
+          app: selectedApp,
+          mode,
+          authMethod,
+          autoLockSeconds: autoLock,
+        }),
+      );
+      navigation.navigate('PrivateHome');
+    } catch (err) {
+      Alert.alert('Save failed', err instanceof Error ? err.message : 'Unable to save protection.');
+    } finally {
+      setSaving(false);
+    }
+  }, [authMethod, autoLockSeconds, mode, navigation, selectedApp]);
+
   return (
     <Screen>
       <View style={styles.header}>
         <Text style={[styles.title, {color: palette.textPrimary}]}>Add Apps</Text>
         <Text style={[styles.description, {color: palette.textSecondary}]}>
-          Discover installed launchable apps and choose which ones to protect.
+          Discover installed apps, choose a protection mode, and save a local policy for Private Apps Home.
         </Text>
       </View>
 
@@ -66,7 +125,7 @@ export function AddAppsScreen() {
         ]}
       />
 
-      <PrimaryButton label="Refresh apps" onPress={() => void loadApps()} />
+      <PrimaryButton label="Refresh apps" onPress={() => void loadApps()} variant="secondary" />
 
       {loading ? (
         <View style={styles.stateRow}>
@@ -87,29 +146,91 @@ export function AddAppsScreen() {
           ListEmptyComponent={
             <Text style={[styles.stateText, {color: palette.textSecondary}]}>No launchable apps matched your search.</Text>
           }
-          renderItem={({item}) => (
-            <View style={[styles.row, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-              <View style={styles.rowBody}>
-                <Text style={[styles.rowTitle, {color: palette.textPrimary}]}>{item.label}</Text>
-                <Text style={[styles.rowMeta, {color: palette.textSecondary}]}>{item.packageName}</Text>
-                <Text style={[styles.rowMeta, {color: palette.textSecondary}]}>
-                  {item.systemApp ? 'System app' : 'User app'}
+          renderItem={({item}) => {
+            const isSelected = item.packageName === selectedPackageName;
+            return (
+              <Pressable
+                onPress={() => setSelectedPackageName(item.packageName)}
+                style={[
+                  styles.row,
+                  {
+                    backgroundColor: palette.surface,
+                    borderColor: isSelected ? palette.accent : palette.border,
+                  },
+                ]}>
+                <View style={styles.rowBody}>
+                  <Text style={[styles.rowTitle, {color: palette.textPrimary}]}>{item.label}</Text>
+                  <Text style={[styles.rowMeta, {color: palette.textSecondary}]}>{item.packageName}</Text>
+                  <Text style={[styles.rowMeta, {color: palette.textSecondary}]}>
+                    {item.systemApp ? 'System app' : 'User app'}
+                  </Text>
+                </View>
+                <Text style={[styles.selectedBadge, {color: isSelected ? palette.accent : palette.textSecondary}]}>
+                  {isSelected ? 'Selected' : 'Tap to select'}
                 </Text>
-              </View>
-              <PrimaryButton
-                label="Open"
-                onPress={() => {
-                  void nativeBridge.launchApp(item.packageName).catch(err => {
-                    Alert.alert('Launch failed', err instanceof Error ? err.message : 'Unable to launch app.');
-                  });
-                }}
-                variant="secondary"
-                style={styles.launchButton}
-              />
-            </View>
-          )}
+              </Pressable>
+            );
+          }}
         />
       )}
+
+      <View style={[styles.policyCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+        <Text style={[styles.policyTitle, {color: palette.textPrimary}]}>
+          {selectedApp ? selectedApp.label : 'Select an app to continue'}
+        </Text>
+        <Text style={[styles.policyMeta, {color: palette.textSecondary}]}>
+          Choose protection mode, auth method, and auto-lock timer before saving the policy.
+        </Text>
+
+        <Text style={[styles.sectionLabel, {color: palette.textPrimary}]}>Protection mode</Text>
+        <View style={styles.optionRow}>
+          {protectionModes.map(nextMode => (
+            <PrimaryButton
+              key={nextMode}
+              label={nextMode}
+              onPress={() => setMode(nextMode)}
+              variant={mode === nextMode ? 'primary' : 'secondary'}
+              style={styles.optionButton}
+            />
+          ))}
+        </View>
+
+        <Text style={[styles.sectionLabel, {color: palette.textPrimary}]}>Authentication</Text>
+        <View style={styles.optionRow}>
+          {authMethods.map(nextAuth => (
+            <PrimaryButton
+              key={nextAuth}
+              label={nextAuth}
+              onPress={() => setAuthMethod(nextAuth)}
+              variant={authMethod === nextAuth ? 'primary' : 'secondary'}
+              style={styles.optionButton}
+            />
+          ))}
+        </View>
+
+        <Text style={[styles.sectionLabel, {color: palette.textPrimary}]}>Auto-lock seconds</Text>
+        <TextInput
+          value={autoLockSeconds}
+          onChangeText={setAutoLockSeconds}
+          keyboardType="number-pad"
+          placeholder="300"
+          placeholderTextColor={palette.textSecondary}
+          style={[
+            styles.timerInput,
+            {
+              color: palette.textPrimary,
+              backgroundColor: palette.surface,
+              borderColor: palette.border,
+            },
+          ]}
+        />
+
+        <PrimaryButton
+          label={saving ? 'Saving...' : 'Save protection'}
+          onPress={() => void persistSelection()}
+          style={styles.saveButton}
+        />
+      </View>
     </Screen>
   );
 }
@@ -145,7 +266,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   listContent: {
-    paddingBottom: themeTokens.spacing.lg,
+    paddingBottom: themeTokens.spacing.md,
   },
   separator: {
     height: themeTokens.spacing.sm,
@@ -169,7 +290,45 @@ const styles = StyleSheet.create({
   rowMeta: {
     fontSize: themeTokens.typography.caption,
   },
-  launchButton: {
-    minWidth: 88,
+  selectedBadge: {
+    fontSize: themeTokens.typography.caption,
+    fontWeight: '700',
+  },
+  policyCard: {
+    gap: themeTokens.spacing.sm,
+    padding: themeTokens.spacing.lg,
+    borderRadius: themeTokens.radius.lg,
+    borderWidth: 1,
+  },
+  policyTitle: {
+    fontSize: themeTokens.typography.body,
+    fontWeight: '800',
+  },
+  policyMeta: {
+    fontSize: themeTokens.typography.caption,
+    lineHeight: 18,
+  },
+  sectionLabel: {
+    marginTop: themeTokens.spacing.xs,
+    fontSize: themeTokens.typography.caption,
+    fontWeight: '700',
+  },
+  optionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: themeTokens.spacing.sm,
+  },
+  optionButton: {
+    minWidth: 98,
+  },
+  timerInput: {
+    minHeight: 48,
+    borderRadius: themeTokens.radius.md,
+    borderWidth: 1,
+    paddingHorizontal: themeTokens.spacing.md,
+    fontSize: themeTokens.typography.body,
+  },
+  saveButton: {
+    marginTop: themeTokens.spacing.sm,
   },
 });
