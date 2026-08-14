@@ -5,7 +5,6 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AppCard} from '../../components/AppCard';
 import {PrimaryButton} from '../../components/PrimaryButton';
 import {Screen} from '../../components/Screen';
-import {launchCoordinator} from '../../services/launch/LaunchCoordinator';
 import {protectionManager} from '../../services/protection/ProtectionManager';
 import {localDataRepository} from '../../storage/LocalDataRepository';
 import {themeTokens} from '../../theme';
@@ -39,25 +38,6 @@ export function ManageAppsScreen() {
   React.useEffect(() => {
     void loadApps();
   }, [loadApps]);
-
-  const openApp = React.useCallback(
-    async (packageName: string) => {
-      try {
-        const result = await launchCoordinator.launch(packageName);
-        if (result === 'auth_required') {
-          navigation.navigate('AuthGate');
-          return;
-        }
-
-        if (result === 'secret_required') {
-          navigation.navigate('SecretEntry');
-        }
-      } catch (error) {
-        Alert.alert('Launch failed', error instanceof Error ? error.message : 'Unable to launch app.');
-      }
-    },
-    [navigation],
-  );
 
   const updateMode = React.useCallback(
     async (app: AppProtection) => {
@@ -129,7 +109,7 @@ export function ManageAppsScreen() {
           contentContainerStyle={styles.list}
           renderItem={({item}) => (
             <View style={[styles.cardWrap, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-              <AppCard app={item} onPress={() => void openApp(item.packageName)} />
+              <AppCard app={item} />
               <View style={styles.cardActions}>
                 <PrimaryButton
                   label={busyPackage === item.packageName ? 'Updating...' : `Mode: ${item.mode}`}
