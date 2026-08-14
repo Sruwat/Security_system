@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.view.WindowManager
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
-import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint
 import com.facebook.react.defaults.DefaultReactActivityDelegate
 
 class MainActivity : ReactActivity() {
@@ -26,10 +25,12 @@ class MainActivity : ReactActivity() {
   }
 
   override fun createReactActivityDelegate(): ReactActivityDelegate {
+    // Keep the activity on the stable delegate path if the new-architecture
+    // feature flags cannot initialize on the connected device.
     return DefaultReactActivityDelegate(
       this,
       mainComponentName,
-      DefaultNewArchitectureEntryPoint.fabricEnabled
+      false
     )
   }
 }
