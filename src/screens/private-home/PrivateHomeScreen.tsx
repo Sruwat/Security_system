@@ -44,6 +44,7 @@ export function PrivateHomeScreen() {
       <View style={styles.actions}>
         <PrimaryButton label="Add Apps" onPress={() => navigation.navigate('AddApps')} />
         <PrimaryButton label="Manage Apps" onPress={() => navigation.navigate('ManageApps')} variant="secondary" />
+        <PrimaryButton label="Gallery" onPress={() => navigation.navigate('Gallery')} variant="secondary" />
         <PrimaryButton label="Settings" onPress={() => navigation.navigate('Settings')} variant="secondary" />
       </View>
 
