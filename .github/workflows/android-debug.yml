@@ -85,6 +85,22 @@ jobs:
         working-directory: android
         run: chmod +x ./gradlew
 
+      - name: Generate debug keystore
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f android/debug.keystore ]; then
+            keytool -genkeypair \
+              -keystore android/debug.keystore \
+              -alias androiddebugkey \
+              -storepass android \
+              -keypass android \
+              -dname "CN=Android Debug,O=Android,C=US" \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000
+          fi
+
       - name: Run Android unit tests
         shell: bash
         working-directory: android
