@@ -71,6 +71,8 @@ export function WelcomeScreen() {
           placeholderTextColor={palette.textSecondary}
           secureTextEntry
           keyboardType="number-pad"
+          returnKeyType="next"
+          autoFocus
           style={[styles.input, {color: palette.textPrimary, backgroundColor: palette.surface, borderColor: palette.border}]}
         />
         <TextInput
@@ -80,6 +82,7 @@ export function WelcomeScreen() {
           placeholderTextColor={palette.textSecondary}
           secureTextEntry
           keyboardType="number-pad"
+          returnKeyType="next"
           style={[styles.input, {color: palette.textPrimary, backgroundColor: palette.surface, borderColor: palette.border}]}
         />
         <TextInput
@@ -88,6 +91,7 @@ export function WelcomeScreen() {
           placeholder="Vault secret code"
           placeholderTextColor={palette.textSecondary}
           secureTextEntry
+          returnKeyType="done"
           style={[styles.input, {color: palette.textPrimary, backgroundColor: palette.surface, borderColor: palette.border}]}
         />
 

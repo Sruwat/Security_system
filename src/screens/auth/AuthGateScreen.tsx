@@ -124,6 +124,10 @@ export function AuthGateScreen() {
           placeholderTextColor={palette.textSecondary}
           secureTextEntry
           keyboardType="number-pad"
+          returnKeyType="done"
+          blurOnSubmit
+          autoFocus
+          onSubmitEditing={() => void submitPin()}
           style={[
             styles.input,
             {

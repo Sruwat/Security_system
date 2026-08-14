@@ -58,6 +58,10 @@ export function SecretEntryScreen() {
           placeholder="Secret code"
           placeholderTextColor={palette.textSecondary}
           secureTextEntry
+          returnKeyType="done"
+          blurOnSubmit
+          autoFocus
+          onSubmitEditing={() => void submitSecret()}
           style={[
             styles.input,
             {
