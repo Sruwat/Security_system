@@ -11,7 +11,7 @@ import com.facebook.soloader.SoLoader
 import com.smartapplockhide.bridge.SmartAppLockHideBridgePackage
 
 class MainApplication : Application(), ReactApplication {
-  private val reactNativeHost = object : DefaultReactNativeHost(this) {
+  override val reactNativeHost: ReactNativeHost = object : DefaultReactNativeHost(this) {
     override fun getUseDeveloperSupport(): Boolean = BuildConfig.DEBUG
 
     override fun getPackages(): List<ReactPackage> {
@@ -21,11 +21,7 @@ class MainApplication : Application(), ReactApplication {
     override fun getJSMainModuleName(): String = "index"
 
     override fun getJSBundleFile(): String? = null
-
-    override fun isNewArchEnabled(): Boolean = BuildConfig.IS_NEW_ARCHITECTURE_ENABLED
   }
-
-  override fun getReactNativeHost(): ReactNativeHost = reactNativeHost
 
   override fun onCreate() {
     super.onCreate()
