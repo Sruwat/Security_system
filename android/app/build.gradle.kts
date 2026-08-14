@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
   id("com.android.application")
   id("org.jetbrains.kotlin.android")
@@ -43,10 +45,6 @@ android {
     targetCompatibility = JavaVersion.VERSION_21
   }
 
-  kotlinOptions {
-    jvmTarget = "21"
-  }
-
   buildFeatures {
     buildConfig = true
   }
@@ -59,6 +57,12 @@ android {
 
   lint {
     abortOnError = false
+  }
+}
+
+kotlin {
+  compilerOptions {
+    jvmTarget.set(JvmTarget.JVM_21)
   }
 }
 
