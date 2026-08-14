@@ -88,7 +88,7 @@ export function VaultScreen() {
       {loading ? (
         <Text style={[styles.emptyBody, {color: palette.textSecondary}]}>Loading hidden apps...</Text>
       ) : hiddenApps.length === 0 ? (
-        <View style={styles.empty}>
+        <View style={[styles.empty, {backgroundColor: palette.surface}]}>
           <Text style={[styles.emptyTitle, {color: palette.textPrimary}]}>No hidden apps yet</Text>
           <Text style={[styles.emptyBody, {color: palette.textSecondary}]}>
             Add an app with HIDE or LOCK_HIDE protection to populate the vault.

@@ -123,20 +123,20 @@ export function AddAppsScreen() {
             borderColor: palette.border,
           },
         ]}
-      />
+          />
 
-      <PrimaryButton label="Refresh apps" onPress={() => void loadApps()} variant="secondary" />
+          <PrimaryButton label="Refresh apps" onPress={() => void loadApps()} variant="secondary" />
 
-      {loading ? (
+          {loading ? (
         <View style={styles.stateRow}>
           <ActivityIndicator />
           <Text style={[styles.stateText, {color: palette.textSecondary}]}>Loading installed apps...</Text>
         </View>
-      ) : error ? (
-        <View style={styles.stateRow}>
-          <Text style={[styles.errorText, {color: palette.danger}]}>{error}</Text>
-          <PrimaryButton label="Try again" onPress={() => void loadApps()} variant="secondary" />
-        </View>
+          ) : error ? (
+            <View style={styles.stateRow}>
+              <Text style={[styles.errorText, {color: palette.danger}]}>{error}</Text>
+              <PrimaryButton label="Try again" onPress={() => void loadApps()} variant="secondary" />
+            </View>
       ) : (
         <FlatList
           data={filteredApps}
@@ -171,8 +171,8 @@ export function AddAppsScreen() {
               </Pressable>
             );
           }}
-        />
-      )}
+            />
+          )}
 
       <View style={[styles.policyCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
         <Text style={[styles.policyTitle, {color: palette.textPrimary}]}>

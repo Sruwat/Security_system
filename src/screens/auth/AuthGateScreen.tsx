@@ -1,5 +1,5 @@
 import React from 'react';
-import {Alert, StyleSheet, Text, View, useColorScheme} from 'react-native';
+import {Alert, StyleSheet, Text, TextInput, View, useColorScheme} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {nativeBridge} from '../../native';
@@ -8,6 +8,7 @@ import {themeTokens} from '../../theme';
 import type {RootStackParamList} from '../../navigation/routes';
 import {Screen} from '../../components/Screen';
 import {PrimaryButton} from '../../components/PrimaryButton';
+import {APP_UNLOCK_CREDENTIAL_TYPE} from '../../services/security/credentialTypes';
 
 export function AuthGateScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -15,8 +16,49 @@ export function AuthGateScreen() {
   const palette = themeTokens.colors[scheme === 'dark' ? 'dark' : 'light'];
   const [loading, setLoading] = React.useState(false);
   const [status, setStatus] = React.useState<'idle' | 'success' | 'fail' | 'unavailable'>('idle');
+  const [pin, setPin] = React.useState('');
+  const [pinLoading, setPinLoading] = React.useState(false);
   const promptAttemptedRef = React.useRef(false);
   const pendingLaunchPackageName = launchCoordinator.getPendingLaunchPackageName();
+
+  const completeAuthentication = React.useCallback(
+    async (method: 'biometric' | 'pin', pinValue?: string) => {
+      if (method === 'pin') {
+        const candidate = (pinValue ?? '').trim();
+        if (!candidate) {
+          Alert.alert('PIN required', 'Enter your app unlock PIN to continue.');
+          return;
+        }
+
+        setPinLoading(true);
+        try {
+          const verified = await nativeBridge.verifyCredential(APP_UNLOCK_CREDENTIAL_TYPE, candidate);
+          if (!verified) {
+            setStatus('fail');
+            Alert.alert('PIN mismatch', 'The PIN did not match the stored credential.');
+            return;
+          }
+        } catch (error) {
+          setStatus('fail');
+          Alert.alert('Authentication failed', error instanceof Error ? error.message : 'Unable to verify the PIN.');
+          return;
+        } finally {
+          setPinLoading(false);
+        }
+      }
+
+      const outcome = await launchCoordinator.completeAuthentication();
+      setStatus('success');
+
+      navigation.reset({
+        index: 0,
+        routes: [{name: 'PrivateHome'}],
+      });
+
+      return outcome;
+    },
+    [navigation],
+  );
 
   const authenticate = React.useCallback(async () => {
     if (loading) {
@@ -33,22 +75,22 @@ export function AuthGateScreen() {
         return;
       }
 
-      const outcome = await launchCoordinator.completeAuthentication();
-      setStatus('success');
-
-      if (outcome === 'vault_unlocked' || outcome === 'app_launched') {
-        navigation.reset({
-          index: 0,
-          routes: [{name: 'PrivateHome'}],
-        });
-      }
+      await completeAuthentication('biometric');
     } catch (error) {
       setStatus('fail');
       Alert.alert('Authentication failed', error instanceof Error ? error.message : 'Unable to authenticate.');
     } finally {
       setLoading(false);
     }
-  }, [loading, navigation]);
+  }, [completeAuthentication, loading]);
+
+  const submitPin = React.useCallback(async () => {
+    if (pinLoading) {
+      return;
+    }
+
+    await completeAuthentication('pin', pin);
+  }, [completeAuthentication, pin, pinLoading]);
 
   React.useEffect(() => {
     if (!promptAttemptedRef.current) {
@@ -75,8 +117,26 @@ export function AuthGateScreen() {
           <Text style={[styles.message, {color: palette.accent}]}>Authentication succeeded.</Text>
         ) : null}
 
+        <TextInput
+          value={pin}
+          onChangeText={setPin}
+          placeholder="App unlock PIN"
+          placeholderTextColor={palette.textSecondary}
+          secureTextEntry
+          keyboardType="number-pad"
+          style={[
+            styles.input,
+            {
+              color: palette.textPrimary,
+              backgroundColor: palette.surface,
+              borderColor: palette.border,
+            },
+          ]}
+        />
+
         <View style={styles.actions}>
           <PrimaryButton label={loading ? 'Authenticating...' : 'Authenticate'} onPress={() => void authenticate()} />
+          <PrimaryButton label={pinLoading ? 'Checking PIN...' : 'Use PIN'} onPress={() => void submitPin()} variant="secondary" />
         </View>
       </View>
     </Screen>
@@ -100,6 +160,13 @@ const styles = StyleSheet.create({
   message: {
     fontSize: themeTokens.typography.body,
     fontWeight: '600',
+  },
+  input: {
+    minHeight: 48,
+    borderRadius: themeTokens.radius.md,
+    borderWidth: 1,
+    paddingHorizontal: themeTokens.spacing.md,
+    fontSize: themeTokens.typography.body,
   },
   actions: {
     gap: themeTokens.spacing.sm,

@@ -2,11 +2,13 @@ import React from 'react';
 import {Alert, StyleSheet, Text, TextInput, View, useColorScheme} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {nativeBridge} from '../../native';
 import {launchCoordinator} from '../../services/launch/LaunchCoordinator';
 import {themeTokens} from '../../theme';
 import type {RootStackParamList} from '../../navigation/routes';
 import {Screen} from '../../components/Screen';
 import {PrimaryButton} from '../../components/PrimaryButton';
+import {VAULT_SECRET_CREDENTIAL_TYPE} from '../../services/security/credentialTypes';
 
 export function SecretEntryScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -24,6 +26,12 @@ export function SecretEntryScreen() {
     try {
       if (!secret.trim()) {
         Alert.alert('Secret required', 'Enter the secret code or gesture label before continuing.');
+        return;
+      }
+
+      const verified = await nativeBridge.verifyCredential(VAULT_SECRET_CREDENTIAL_TYPE, secret.trim());
+      if (!verified) {
+        Alert.alert('Secret mismatch', 'The vault secret did not match the stored value.');
         return;
       }
 

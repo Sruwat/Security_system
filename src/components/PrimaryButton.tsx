@@ -11,8 +11,10 @@ export function PrimaryButton(props: {
   const variant = props.variant ?? 'primary';
   const scheme = useColorScheme();
   const palette = themeTokens.colors[scheme === 'dark' ? 'dark' : 'light'];
+  const backgroundColor =
+    variant === 'primary' ? palette.accent : variant === 'secondary' ? palette.accentSoft : palette.danger;
   return (
-    <Pressable onPress={props.onPress} style={[styles.base, styles[variant], props.style]}>
+    <Pressable onPress={props.onPress} style={[styles.base, {backgroundColor}, props.style]}>
       <Text style={[styles.text, {color: variant === 'secondary' ? palette.accent : '#FFFFFF'}]}>{props.label}</Text>
     </Pressable>
   );
@@ -25,15 +27,6 @@ const styles = StyleSheet.create({
     borderRadius: themeTokens.radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  primary: {
-    backgroundColor: themeTokens.colors.light.accent,
-  },
-  secondary: {
-    backgroundColor: themeTokens.colors.light.accentSoft,
-  },
-  danger: {
-    backgroundColor: themeTokens.colors.light.danger,
   },
   text: {
     fontSize: themeTokens.typography.body,

@@ -51,7 +51,7 @@ export function PrivateHomeScreen() {
       {loading ? (
         <Text style={[styles.emptyBody, {color: palette.textSecondary}]}>Loading protected apps...</Text>
       ) : apps.length === 0 ? (
-        <View style={styles.empty}>
+        <View style={[styles.empty, {backgroundColor: palette.surface}]}>
           <Text style={[styles.emptyTitle, {color: palette.textPrimary}]}>No protected apps yet</Text>
           <Text style={[styles.emptyBody, {color: palette.textSecondary}]}>
             Add your first app to start building a private app space.

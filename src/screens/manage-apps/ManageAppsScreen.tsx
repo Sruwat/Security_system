@@ -96,7 +96,7 @@ export function ManageAppsScreen() {
           </Text>
         </View>
       ) : apps.length === 0 ? (
-        <View style={styles.empty}>
+        <View style={[styles.empty, {backgroundColor: palette.surface}]}>
           <Text style={[styles.emptyTitle, {color: palette.textPrimary}]}>Nothing to manage yet</Text>
           <Text style={[styles.emptyBody, {color: palette.textSecondary}]}>
             Add an app first, then you can update protection modes and timers here.
