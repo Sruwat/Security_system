@@ -72,7 +72,8 @@ export function ManageAppsScreen() {
 
   return (
     <Screen>
-      <View style={styles.header}>
+      <View style={[styles.heroCard, {backgroundColor: palette.surfaceElevated, borderColor: palette.border}]}>
+        <Text style={[styles.kicker, {color: palette.accent}]}>Policy control</Text>
         <Text style={[styles.title, {color: palette.textPrimary}]}>Manage Apps</Text>
         <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
           Change protection, authentication, timers, or remove protection.
@@ -89,18 +90,19 @@ export function ManageAppsScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.empty}>
+        <View style={[styles.empty, {backgroundColor: palette.surface, borderColor: palette.border}]}>
           <Text style={[styles.emptyTitle, {color: palette.textPrimary}]}>Loading managed apps...</Text>
           <Text style={[styles.emptyBody, {color: palette.textSecondary}]}>
             Rebuilding your local protection list.
           </Text>
         </View>
       ) : apps.length === 0 ? (
-        <View style={[styles.empty, {backgroundColor: palette.surface}]}>
+        <View style={[styles.empty, {backgroundColor: palette.surface, borderColor: palette.border}]}>
           <Text style={[styles.emptyTitle, {color: palette.textPrimary}]}>Nothing to manage yet</Text>
           <Text style={[styles.emptyBody, {color: palette.textSecondary}]}>
             Add an app first, then you can update protection modes and timers here.
           </Text>
+          <PrimaryButton label="Add Apps" onPress={() => navigation.navigate('AddApps')} />
         </View>
       ) : (
         <FlatList
@@ -139,6 +141,19 @@ const styles = StyleSheet.create({
   header: {
     gap: themeTokens.spacing.sm,
   },
+  heroCard: {
+    gap: themeTokens.spacing.sm,
+    padding: themeTokens.spacing.lg,
+    borderRadius: themeTokens.radius.lg,
+    borderWidth: 1,
+    ...themeTokens.shadows.card,
+  },
+  kicker: {
+    fontSize: themeTokens.typography.caption,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
   title: {
     fontSize: themeTokens.typography.title,
     fontWeight: '800',
@@ -154,7 +169,8 @@ const styles = StyleSheet.create({
   empty: {
     padding: themeTokens.spacing.lg,
     borderRadius: themeTokens.radius.lg,
-    backgroundColor: themeTokens.colors.light.surface,
+    borderWidth: 1,
+    gap: themeTokens.spacing.sm,
   },
   emptyTitle: {
     fontSize: themeTokens.typography.body,
@@ -174,6 +190,7 @@ const styles = StyleSheet.create({
     padding: themeTokens.spacing.sm,
     borderRadius: themeTokens.radius.lg,
     borderWidth: 1,
+    ...themeTokens.shadows.card,
   },
   cardActions: {
     flexDirection: 'row',

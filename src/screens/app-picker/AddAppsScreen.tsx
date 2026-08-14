@@ -103,7 +103,8 @@ export function AddAppsScreen() {
 
   return (
     <Screen>
-      <View style={styles.header}>
+      <View style={[styles.heroCard, {backgroundColor: palette.surfaceElevated, borderColor: palette.border}]}>
+        <Text style={[styles.kicker, {color: palette.accent}]}>Installed apps</Text>
         <Text style={[styles.title, {color: palette.textPrimary}]}>Add Apps</Text>
         <Text style={[styles.description, {color: palette.textSecondary}]}>
           Discover installed apps, choose a protection mode, and save a local policy for Private Apps Home.
@@ -123,58 +124,11 @@ export function AddAppsScreen() {
             borderColor: palette.border,
           },
         ]}
-          />
+      />
 
-          <PrimaryButton label="Refresh apps" onPress={() => void loadApps()} variant="secondary" />
+      <PrimaryButton label="Refresh apps" onPress={() => void loadApps()} variant="secondary" />
 
-          {loading ? (
-        <View style={styles.stateRow}>
-          <ActivityIndicator />
-          <Text style={[styles.stateText, {color: palette.textSecondary}]}>Loading installed apps...</Text>
-        </View>
-          ) : error ? (
-            <View style={styles.stateRow}>
-              <Text style={[styles.errorText, {color: palette.danger}]}>{error}</Text>
-              <PrimaryButton label="Try again" onPress={() => void loadApps()} variant="secondary" />
-            </View>
-      ) : (
-        <FlatList
-          data={filteredApps}
-          keyExtractor={item => item.packageName}
-          contentContainerStyle={styles.listContent}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-          ListEmptyComponent={
-            <Text style={[styles.stateText, {color: palette.textSecondary}]}>No launchable apps matched your search.</Text>
-          }
-          renderItem={({item}) => {
-            const isSelected = item.packageName === selectedPackageName;
-            return (
-              <Pressable
-                onPress={() => setSelectedPackageName(item.packageName)}
-                style={[
-                  styles.row,
-                  {
-                    backgroundColor: palette.surface,
-                    borderColor: isSelected ? palette.accent : palette.border,
-                  },
-                ]}>
-                <View style={styles.rowBody}>
-                  <Text style={[styles.rowTitle, {color: palette.textPrimary}]}>{item.label}</Text>
-                  <Text style={[styles.rowMeta, {color: palette.textSecondary}]}>{item.packageName}</Text>
-                  <Text style={[styles.rowMeta, {color: palette.textSecondary}]}>
-                    {item.systemApp ? 'System app' : 'User app'}
-                  </Text>
-                </View>
-                <Text style={[styles.selectedBadge, {color: isSelected ? palette.accent : palette.textSecondary}]}>
-                  {isSelected ? 'Selected' : 'Tap to select'}
-                </Text>
-              </Pressable>
-            );
-          }}
-            />
-          )}
-
-      <View style={[styles.policyCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+      <View style={[styles.policyCard, {backgroundColor: palette.surfaceElevated, borderColor: palette.border}]}>
         <Text style={[styles.policyTitle, {color: palette.textPrimary}]}>
           {selectedApp ? selectedApp.label : 'Select an app to continue'}
         </Text>
@@ -231,13 +185,73 @@ export function AddAppsScreen() {
           style={styles.saveButton}
         />
       </View>
+
+      {loading ? (
+        <View style={[styles.stateCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+          <ActivityIndicator />
+          <Text style={[styles.stateText, {color: palette.textSecondary}]}>Loading installed apps...</Text>
+        </View>
+      ) : error ? (
+        <View style={[styles.stateCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+          <Text style={[styles.errorText, {color: palette.danger}]}>{error}</Text>
+          <PrimaryButton label="Try again" onPress={() => void loadApps()} variant="secondary" />
+        </View>
+      ) : (
+        <FlatList
+          data={filteredApps}
+          keyExtractor={item => item.packageName}
+          contentContainerStyle={styles.listContent}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          ListEmptyComponent={
+            <View style={[styles.stateCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+              <Text style={[styles.stateText, {color: palette.textSecondary}]}>No launchable apps matched your search.</Text>
+            </View>
+          }
+          renderItem={({item}) => {
+            const isSelected = item.packageName === selectedPackageName;
+            return (
+              <Pressable
+                onPress={() => setSelectedPackageName(item.packageName)}
+                style={[
+                  styles.row,
+                  {
+                    backgroundColor: palette.surface,
+                    borderColor: isSelected ? palette.accent : palette.border,
+                  },
+                ]}>
+                <View style={styles.rowBody}>
+                  <Text style={[styles.rowTitle, {color: palette.textPrimary}]}>{item.label}</Text>
+                  <Text style={[styles.rowMeta, {color: palette.textSecondary}]}>{item.packageName}</Text>
+                  <Text style={[styles.rowMeta, {color: palette.textSecondary}]}>
+                    {item.systemApp ? 'System app' : 'User app'}
+                  </Text>
+                </View>
+                <Text style={[styles.selectedBadge, {color: isSelected ? palette.accent : palette.textSecondary}]}>
+                  {isSelected ? 'Selected' : 'Tap to select'}
+                </Text>
+              </Pressable>
+            );
+          }}
+            />
+          )}
+
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
+  heroCard: {
     gap: themeTokens.spacing.sm,
+    padding: themeTokens.spacing.lg,
+    borderRadius: themeTokens.radius.lg,
+    borderWidth: 1,
+    ...themeTokens.shadows.card,
+  },
+  kicker: {
+    fontSize: themeTokens.typography.caption,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
   title: {
     fontSize: themeTokens.typography.title,
@@ -253,6 +267,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: themeTokens.spacing.md,
     fontSize: themeTokens.typography.body,
+  },
+  stateCard: {
+    gap: themeTokens.spacing.sm,
+    padding: themeTokens.spacing.lg,
+    borderRadius: themeTokens.radius.lg,
+    borderWidth: 1,
+    alignItems: 'flex-start',
   },
   stateRow: {
     gap: themeTokens.spacing.md,
@@ -299,6 +320,7 @@ const styles = StyleSheet.create({
     padding: themeTokens.spacing.lg,
     borderRadius: themeTokens.radius.lg,
     borderWidth: 1,
+    ...themeTokens.shadows.card,
   },
   policyTitle: {
     fontSize: themeTokens.typography.body,

@@ -14,7 +14,8 @@ export function GalleryScreen() {
 
   return (
     <Screen>
-      <View style={styles.hero}>
+      <View style={[styles.heroCard, {backgroundColor: palette.surfaceElevated, borderColor: palette.border}]}>
+        <Text style={[styles.kicker, {color: palette.accent}]}>Private media</Text>
         <Text style={[styles.title, {color: palette.textPrimary}]}>Private Gallery</Text>
         <Text style={[styles.description, {color: palette.textSecondary}]}>
           This protected surface is reserved for local gallery media and future vault-backed content.
@@ -36,8 +37,18 @@ export function GalleryScreen() {
 }
 
 const styles = StyleSheet.create({
-  hero: {
+  heroCard: {
     gap: themeTokens.spacing.sm,
+    padding: themeTokens.spacing.lg,
+    borderRadius: themeTokens.radius.lg,
+    borderWidth: 1,
+    ...themeTokens.shadows.card,
+  },
+  kicker: {
+    fontSize: themeTokens.typography.caption,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
   title: {
     fontSize: themeTokens.typography.title,
@@ -52,6 +63,7 @@ const styles = StyleSheet.create({
     padding: themeTokens.spacing.lg,
     borderRadius: themeTokens.radius.lg,
     borderWidth: 1,
+    ...themeTokens.shadows.card,
   },
   cardTitle: {
     fontSize: themeTokens.typography.body,

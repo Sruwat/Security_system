@@ -64,7 +64,8 @@ export function VaultScreen() {
 
   return (
     <Screen>
-      <View style={styles.header}>
+      <View style={[styles.heroCard, {backgroundColor: palette.surfaceElevated, borderColor: palette.border}]}>
+        <Text style={[styles.kicker, {color: palette.accent}]}>Hidden access</Text>
         <Text style={[styles.title, {color: palette.textPrimary}]}>Private Vault</Text>
         <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
           Hidden apps and private content live here after secret access and authentication.
@@ -78,6 +79,9 @@ export function VaultScreen() {
             {pendingPackageName}
             {pendingMode ? ` is waiting in ${pendingMode} mode.` : ' is waiting for vault access.'}
           </Text>
+          <Text style={[styles.pendingHint, {color: palette.textSecondary}]}>
+            Hidden launches stay routed through the vault, then back through LaunchCoordinator.
+          </Text>
           <PrimaryButton
             label={pendingMode === 'LOCK_HIDE' ? 'Authenticate and open' : 'Open hidden app'}
             onPress={() => void openPendingApp()}
@@ -86,13 +90,17 @@ export function VaultScreen() {
       ) : null}
 
       {loading ? (
-        <Text style={[styles.emptyBody, {color: palette.textSecondary}]}>Loading hidden apps...</Text>
+        <View style={[styles.empty, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+          <Text style={[styles.emptyTitle, {color: palette.textPrimary}]}>Loading hidden apps...</Text>
+          <Text style={[styles.emptyBody, {color: palette.textSecondary}]}>Checking protected surfaces and access state.</Text>
+        </View>
       ) : hiddenApps.length === 0 ? (
-        <View style={[styles.empty, {backgroundColor: palette.surface}]}>
+        <View style={[styles.empty, {backgroundColor: palette.surface, borderColor: palette.border}]}>
           <Text style={[styles.emptyTitle, {color: palette.textPrimary}]}>No hidden apps yet</Text>
           <Text style={[styles.emptyBody, {color: palette.textSecondary}]}>
             Add an app with HIDE or LOCK_HIDE protection to populate the vault.
           </Text>
+          <PrimaryButton label="Add hidden app" onPress={() => navigation.navigate('AddApps')} />
         </View>
       ) : (
         <FlatList
@@ -128,6 +136,19 @@ const styles = StyleSheet.create({
   header: {
     gap: themeTokens.spacing.sm,
   },
+  heroCard: {
+    gap: themeTokens.spacing.sm,
+    padding: themeTokens.spacing.lg,
+    borderRadius: themeTokens.radius.lg,
+    borderWidth: 1,
+    ...themeTokens.shadows.card,
+  },
+  kicker: {
+    fontSize: themeTokens.typography.caption,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
   title: {
     fontSize: themeTokens.typography.title,
     fontWeight: '800',
@@ -141,6 +162,7 @@ const styles = StyleSheet.create({
     padding: themeTokens.spacing.lg,
     borderRadius: themeTokens.radius.lg,
     borderWidth: 1,
+    ...themeTokens.shadows.card,
   },
   pendingTitle: {
     fontSize: themeTokens.typography.body,
@@ -150,6 +172,10 @@ const styles = StyleSheet.create({
     fontSize: themeTokens.typography.body,
     lineHeight: 22,
   },
+  pendingHint: {
+    fontSize: themeTokens.typography.caption,
+    lineHeight: 18,
+  },
   list: {
     gap: themeTokens.spacing.sm,
     paddingBottom: themeTokens.spacing.lg,
@@ -157,7 +183,8 @@ const styles = StyleSheet.create({
   empty: {
     padding: themeTokens.spacing.lg,
     borderRadius: themeTokens.radius.lg,
-    backgroundColor: themeTokens.colors.light.surface,
+    borderWidth: 1,
+    gap: themeTokens.spacing.sm,
   },
   emptyTitle: {
     fontSize: themeTokens.typography.body,

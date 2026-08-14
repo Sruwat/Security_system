@@ -61,7 +61,8 @@ export function SettingsScreen() {
   if (loading || !settings) {
     return (
       <Screen>
-        <View style={styles.hero}>
+        <View style={[styles.heroCard, {backgroundColor: palette.surfaceElevated, borderColor: palette.border}]}>
+          <Text style={[styles.kicker, {color: palette.accent}]}>Preferences</Text>
           <Text style={[styles.title, {color: palette.textPrimary}]}>Settings</Text>
           <Text style={[styles.description, {color: palette.textSecondary}]}>Loading launcher preferences...</Text>
         </View>
@@ -71,7 +72,8 @@ export function SettingsScreen() {
 
   return (
     <Screen>
-      <View style={styles.hero}>
+      <View style={[styles.heroCard, {backgroundColor: palette.surfaceElevated, borderColor: palette.border}]}>
+        <Text style={[styles.kicker, {color: palette.accent}]}>Preferences</Text>
         <Text style={[styles.title, {color: palette.textPrimary}]}>Settings</Text>
         <Text style={[styles.description, {color: palette.textSecondary}]}>
           Control theme, secret access, ad preference, and default auto-lock behavior.
@@ -122,6 +124,9 @@ export function SettingsScreen() {
         </View>
 
         <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Default auto-lock seconds</Text>
+        <Text style={[styles.helperText, {color: palette.textSecondary}]}>
+          This timer becomes the default temporary access window for protected apps and vault sessions.
+        </Text>
         <TextInput
           value={String(settings.autoLockSecondsDefault)}
           keyboardType="number-pad"
@@ -154,8 +159,18 @@ export function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  hero: {
+  heroCard: {
     gap: themeTokens.spacing.sm,
+    padding: themeTokens.spacing.lg,
+    borderRadius: themeTokens.radius.lg,
+    borderWidth: 1,
+    ...themeTokens.shadows.card,
+  },
+  kicker: {
+    fontSize: themeTokens.typography.caption,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
   title: {
     fontSize: themeTokens.typography.title,
@@ -170,11 +185,16 @@ const styles = StyleSheet.create({
     padding: themeTokens.spacing.lg,
     borderRadius: themeTokens.radius.lg,
     borderWidth: 1,
+    ...themeTokens.shadows.card,
   },
   sectionTitle: {
     marginTop: themeTokens.spacing.xs,
     fontSize: themeTokens.typography.caption,
     fontWeight: '700',
+  },
+  helperText: {
+    fontSize: themeTokens.typography.caption,
+    lineHeight: 18,
   },
   buttonRow: {
     flexDirection: 'row',
