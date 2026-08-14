@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   listContent: {
-    paddingBottom: themeTokens.spacing.md,
+    paddingBottom: 168,
   },
   separator: {
     height: themeTokens.spacing.sm,
@@ -365,8 +365,14 @@ const styles = StyleSheet.create({
   },
   footer: {
     gap: themeTokens.spacing.sm,
-    paddingTop: themeTokens.spacing.sm,
+    position: 'absolute',
+    left: themeTokens.spacing.lg,
+    right: themeTokens.spacing.lg,
+    bottom: themeTokens.spacing.lg,
+    padding: themeTokens.spacing.md,
     borderTopWidth: 1,
+    borderRadius: themeTokens.radius.lg,
+    ...themeTokens.shadows.card,
   },
   footerCopy: {
     gap: 4,
