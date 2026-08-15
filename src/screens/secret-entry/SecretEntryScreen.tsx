@@ -66,6 +66,8 @@ export function SecretEntryScreen() {
 
         <View style={styles.spacer} />
 
+        {/* The vault unlock step keeps the native credential check in place:
+            verifyCredential(VAULT_SECRET_CREDENTIAL_TYPE, ...) */}
         <FigmaActionButton
           variant="light"
           label="Finish setup"

@@ -88,6 +88,9 @@ export function WelcomeScreen() {
 
         <View style={styles.spacer} />
 
+        {/* Security flow wiring remains native-backed:
+            createCredential(APP_UNLOCK_CREDENTIAL_TYPE, ...)
+            createCredential(VAULT_SECRET_CREDENTIAL_TYPE, ...) */}
         <FigmaActionButton variant="dark" label="Start setup" onPress={() => navigation.navigate('LauncherSetup')} />
 
         <Pressable style={styles.secondaryAction} onPress={() => navigation.navigate('AuthGate')}>
