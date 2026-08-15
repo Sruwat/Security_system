@@ -35,6 +35,20 @@ export function FigmaPage(props: {variant: FigmaVariant; children: React.ReactNo
   return (
     <SafeAreaView style={[styles.page, {backgroundColor: palette.background}, props.style]}>
       <StatusBar barStyle={props.variant === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={palette.background} />
+      <View pointerEvents="none" style={styles.backdrop}>
+        {props.variant === 'dark' ? (
+          <>
+            <View style={[styles.glow, styles.glowTopLeft, {backgroundColor: 'rgba(167, 139, 250, 0.16)'}]} />
+            <View style={[styles.glow, styles.glowBottomRight, {backgroundColor: 'rgba(59, 130, 246, 0.08)'}]} />
+            <View style={[styles.haze, {backgroundColor: 'rgba(255, 255, 255, 0.03)'}]} />
+          </>
+        ) : (
+          <>
+            <View style={[styles.glow, styles.lightOrbTopLeft, {backgroundColor: 'rgba(167, 139, 250, 0.08)'}]} />
+            <View style={[styles.glow, styles.lightOrbBottomRight, {backgroundColor: 'rgba(59, 130, 246, 0.05)'}]} />
+          </>
+        )}
+      </View>
       <View style={styles.content}>{props.children}</View>
     </SafeAreaView>
   );
@@ -92,7 +106,17 @@ export function FigmaRowCard(props: {
   const borderColor = props.selected ? palette.accent : palette.border;
 
   return (
-    <Pressable onPress={props.onPress} style={({pressed}) => [styles.rowCard, {backgroundColor, borderColor, opacity: pressed ? 0.92 : 1}]}>
+    <Pressable
+      onPress={props.onPress}
+      style={({pressed}) => [
+        styles.rowCard,
+        {
+          backgroundColor,
+          borderColor,
+          opacity: pressed ? 0.94 : 1,
+          transform: [{scale: pressed ? 0.985 : 1}, {translateY: pressed ? 1 : 0}],
+        },
+      ]}>
       {props.icon ? (
         <View style={[styles.iconBox, {backgroundColor: palette.accentSoft}]}>
           <Text style={[styles.iconLabel, {color: palette.accent}]}>{props.icon}</Text>
@@ -124,7 +148,13 @@ export function FigmaActionButton(props: {variant: FigmaVariant; label: string; 
         {
           backgroundColor: isSecondary ? palette.surface : palette.accent,
           borderColor: isSecondary ? palette.border : 'transparent',
-          opacity: pressed ? 0.92 : 1,
+          opacity: pressed ? 0.94 : 1,
+          transform: [{scale: pressed ? 0.985 : 1}, {translateY: pressed ? 1 : 0}],
+          shadowColor: isSecondary ? 'transparent' : '#000000',
+          shadowOpacity: isSecondary ? 0 : 0.22,
+          shadowRadius: isSecondary ? 0 : 20,
+          shadowOffset: isSecondary ? {width: 0, height: 0} : {width: 0, height: 10},
+          elevation: isSecondary ? 0 : 4,
         },
       ]}>
       <Text style={[styles.actionText, {color: isSecondary ? palette.accent : '#FFFFFF'}]}>{props.label}</Text>
@@ -160,13 +190,54 @@ const styles = StyleSheet.create({
   page: {
     flex: 1,
   },
+  backdrop: {
+    ...StyleSheet.absoluteFill,
+    overflow: 'hidden',
+  },
   content: {
     flex: 1,
-    paddingHorizontal: 17,
-    paddingTop: 13,
+    paddingHorizontal: 18,
+    paddingTop: 12,
+  },
+  glow: {
+    position: 'absolute',
+    borderRadius: 999,
+  },
+  glowTopLeft: {
+    width: 280,
+    height: 280,
+    top: -120,
+    left: -110,
+  },
+  glowBottomRight: {
+    width: 240,
+    height: 240,
+    right: -100,
+    bottom: -96,
+  },
+  haze: {
+    position: 'absolute',
+    top: '18%',
+    alignSelf: 'center',
+    width: '72%',
+    height: 220,
+    borderRadius: 44,
+    transform: [{rotate: '-9deg'}],
+  },
+  lightOrbTopLeft: {
+    width: 220,
+    height: 220,
+    top: -90,
+    left: -88,
+  },
+  lightOrbBottomRight: {
+    width: 180,
+    height: 180,
+    right: -70,
+    bottom: -68,
   },
   header: {
-    marginBottom: 15,
+    marginBottom: 16,
   },
   time: {
     fontSize: 9,
@@ -189,19 +260,19 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   rowCard: {
-    minHeight: 50,
+    minHeight: 54,
     borderWidth: 1,
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   iconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 11,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -214,12 +285,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   rowTitle: {
-    fontSize: 10,
-    fontWeight: '600',
-    lineHeight: 13,
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 14,
   },
   rowSubtitle: {
-    marginTop: 4,
+    marginTop: 3,
     fontSize: 8,
     lineHeight: 10,
   },
@@ -244,22 +315,23 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   actionButton: {
-    minHeight: 48,
-    borderRadius: 17,
+    minHeight: 50,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
   },
   actionText: {
-    fontSize: 11,
-    fontWeight: '600',
-    lineHeight: 13,
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 14,
   },
   bottomNav: {
-    height: 54,
-    borderRadius: 22,
+    height: 60,
+    borderRadius: 24,
     borderWidth: 1,
+    marginTop: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
@@ -268,39 +340,40 @@ const styles = StyleSheet.create({
   },
   navPill: {
     position: 'absolute',
-    width: 86,
-    height: 34,
-    top: 10,
-    borderRadius: 17,
+    width: 90,
+    height: 38,
+    top: 11,
+    borderRadius: 19,
   },
   navIcon: {
     position: 'absolute',
-    top: 18,
+    top: 20,
     width: 28,
     textAlign: 'center',
-    fontSize: 13,
+    fontSize: 14,
     lineHeight: 16,
-    fontWeight: '400',
+    fontWeight: '700',
   },
   banner: {
-    minHeight: 52,
+    minHeight: 56,
     borderWidth: 1,
-    borderRadius: 17,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginTop: 16,
   },
   bannerKicker: {
     fontSize: 7,
     lineHeight: 9,
   },
   bannerTitle: {
-    marginTop: 6,
-    fontSize: 10,
-    lineHeight: 12,
-    fontWeight: '600',
+    marginTop: 5,
+    fontSize: 11,
+    lineHeight: 13,
+    fontWeight: '700',
   },
   bannerSubtitle: {
-    marginTop: 6,
+    marginTop: 4,
     fontSize: 8,
     lineHeight: 10,
   },

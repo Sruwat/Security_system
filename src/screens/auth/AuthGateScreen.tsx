@@ -10,6 +10,20 @@ import {APP_UNLOCK_CREDENTIAL_TYPE} from '../../services/security/credentialType
 
 const keypad = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
+function UnlockGlyph() {
+  return (
+    <View style={styles.unlockShell}>
+      <View style={styles.unlockOrb} />
+      <View style={styles.unlockCard}>
+        <View style={styles.unlockShackle} />
+        <View style={styles.unlockBody}>
+          <View style={styles.unlockKeyhole} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
 export function AuthGateScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const palette = figmaPalette.dark;
@@ -79,19 +93,38 @@ export function AuthGateScreen() {
   return (
     <FigmaPage variant="dark">
       <View style={styles.fill}>
-        <Text style={[styles.time, {color: palette.textPrimary}]}>9:41</Text>
-        <Text style={[styles.title, {color: palette.textPrimary}]}>Unlock</Text>
+        <View style={styles.headerRow}>
+          <Text style={[styles.time, {color: palette.textPrimary}]}>9:41</Text>
+          <View style={[styles.statePill, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+            <Text style={[styles.stateText, {color: palette.textSecondary}]}>Secure session</Text>
+          </View>
+        </View>
+
+        <Text style={[styles.title, {color: palette.textPrimary}]}>Unlock access</Text>
         <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
-          {pendingLaunchPackageName ? 'Authenticate to continue.' : 'Authenticate to continue.'}
+          {pendingLaunchPackageName ? `Continue to ${pendingLaunchPackageName}` : 'Authenticate to continue.'}
         </Text>
 
-        <View style={styles.lockOrb}>
-          <Text style={[styles.lockGlyph, {color: palette.accent}]}>◈</Text>
+        <View style={[styles.contextCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+          <View style={[styles.contextIcon, {backgroundColor: palette.accentSoft}]}>
+            <Text style={[styles.contextIconText, {color: palette.accent}]}>AP</Text>
+          </View>
+          <View style={styles.contextBody}>
+            <Text style={[styles.contextLabel, {color: palette.textPrimary}]}>
+              {pendingLaunchPackageName ?? 'Private space'}
+            </Text>
+            <Text style={[styles.contextHint, {color: palette.textSecondary}]}>Biometric or PIN required</Text>
+          </View>
+        </View>
+
+        <View style={styles.centerArea}>
+          <UnlockGlyph />
+          <Text style={[styles.instruction, {color: palette.textSecondary}]}>Use Face ID, fingerprint, or your 4-digit PIN.</Text>
         </View>
 
         <View style={styles.dotsRow}>
           {[0, 1, 2, 3].map(index => (
-            <View key={index} style={[styles.dot, {backgroundColor: pin.length > index ? palette.accent : palette.accent}]} />
+            <View key={index} style={[styles.dot, {backgroundColor: pin.length > index ? palette.accent : palette.accentSoft}]} />
           ))}
         </View>
 
@@ -103,9 +136,14 @@ export function AuthGateScreen() {
           ))}
         </View>
 
-        <Pressable onPress={() => void authenticate()} style={styles.fingerprint}>
-          <Text style={[styles.fingerprintText, {color: palette.accent}]}>Use fingerprint</Text>
-        </Pressable>
+        <View style={styles.footerRow}>
+          <Pressable onPress={() => setPin('')} style={[styles.footerPill, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+            <Text style={[styles.footerText, {color: palette.textSecondary}]}>Clear</Text>
+          </Pressable>
+          <Pressable onPress={() => void authenticate()} style={[styles.footerPill, styles.primaryPill, {backgroundColor: palette.accent}]}>
+            <Text style={[styles.footerText, {color: '#FFFFFF'}]}>{loading ? 'Checking...' : 'Use biometrics'}</Text>
+          </Pressable>
+        </View>
       </View>
     </FigmaPage>
   );
@@ -115,77 +153,178 @@ const styles = StyleSheet.create({
   fill: {
     flex: 1,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   time: {
-    fontSize: 9,
-    fontWeight: '600',
-    lineHeight: 11,
+    fontSize: 10,
+    fontWeight: '700',
+    lineHeight: 12,
+  },
+  statePill: {
+    minHeight: 30,
+    borderRadius: 15,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+  },
+  stateText: {
+    fontSize: 8,
+    fontWeight: '700',
+    lineHeight: 10,
   },
   title: {
-    marginTop: 30,
-    fontSize: 20,
-    fontWeight: '700',
-    lineHeight: 24,
+    marginTop: 28,
+    fontSize: 28,
+    fontWeight: '800',
+    lineHeight: 33,
+    letterSpacing: -0.2,
   },
   subtitle: {
-    marginTop: 6,
-    fontSize: 9,
-    lineHeight: 11,
+    marginTop: 10,
+    fontSize: 13,
+    lineHeight: 18,
   },
-  lockOrb: {
-    marginTop: 52,
-    width: 196,
-    height: 196,
-    borderRadius: 98,
-    backgroundColor: '#211A3A',
-    alignSelf: 'center',
+  contextCard: {
+    marginTop: 18,
+    borderWidth: 1,
+    borderRadius: 22,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  contextIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  lockGlyph: {
-    fontSize: 56,
-    lineHeight: 62,
+  contextIconText: {
+    fontSize: 9,
+    fontWeight: '800',
+    lineHeight: 11,
+  },
+  contextBody: {
+    flex: 1,
+  },
+  contextLabel: {
+    fontSize: 11,
     fontWeight: '700',
+    lineHeight: 14,
+  },
+  contextHint: {
+    marginTop: 4,
+    fontSize: 9,
+    lineHeight: 11,
+  },
+  centerArea: {
+    marginTop: 30,
+    alignItems: 'center',
+  },
+  unlockShell: {
+    width: 202,
+    height: 202,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unlockOrb: {
+    position: 'absolute',
+    width: 202,
+    height: 202,
+    borderRadius: 101,
+    backgroundColor: '#171F2F',
+  },
+  unlockCard: {
+    width: 80,
+    alignItems: 'center',
+  },
+  unlockShackle: {
+    width: 34,
+    height: 24,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderWidth: 4,
+    borderBottomWidth: 0,
+    borderColor: '#A78BFA',
+    marginBottom: -1,
+  },
+  unlockBody: {
+    width: 72,
+    height: 68,
+    borderRadius: 24,
+    backgroundColor: '#A78BFA',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unlockKeyhole: {
+    width: 13,
+    height: 20,
+    borderRadius: 6,
+    backgroundColor: '#FFFFFF',
+  },
+  instruction: {
+    marginTop: 14,
+    textAlign: 'center',
+    fontSize: 10,
+    lineHeight: 13,
   },
   dotsRow: {
-    marginTop: 38,
+    marginTop: 18,
     alignSelf: 'center',
     flexDirection: 'row',
-    gap: 15,
+    gap: 14,
   },
   dot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
   },
   keypad: {
-    marginTop: 43,
+    marginTop: 24,
     alignSelf: 'center',
-    width: 240,
+    width: 252,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 32,
+    gap: 14,
     justifyContent: 'center',
   },
   key: {
-    width: 66,
-    height: 48,
-    borderRadius: 17,
+    width: 70,
+    height: 52,
+    borderRadius: 18,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   keyText: {
-    fontSize: 13,
-    fontWeight: '600',
-    lineHeight: 16,
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 18,
   },
-  fingerprint: {
-    marginTop: 39,
-    alignSelf: 'center',
+  footerRow: {
+    marginTop: 24,
+    flexDirection: 'row',
+    gap: 12,
   },
-  fingerprintText: {
-    fontSize: 9,
-    fontWeight: '600',
-    lineHeight: 11,
+  footerPill: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryPill: {
+    borderColor: 'transparent',
+  },
+  footerText: {
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 13,
   },
 });
