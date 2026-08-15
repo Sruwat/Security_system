@@ -1,6 +1,6 @@
 import React from 'react';
 import {Alert, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaActionButton, FigmaBanner, FigmaBottomNav, FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import {launchCoordinator} from '../../services/launch/LaunchCoordinator';
@@ -46,9 +46,11 @@ export function VaultScreen() {
     }
   }, []);
 
-  React.useEffect(() => {
-    void loadVault();
-  }, [loadVault]);
+  useFocusEffect(
+    React.useCallback(() => {
+      void loadVault();
+    }, [loadVault]),
+  );
 
   const hiddenApps = React.useMemo(() => {
     return apps.filter(app => app.mode === 'HIDE' || app.mode === 'LOCK_HIDE');

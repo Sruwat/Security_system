@@ -1,6 +1,6 @@
 import React from 'react';
 import {Alert, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaBanner, FigmaBottomNav, FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import {localDataRepository} from '../../storage/LocalDataRepository';
@@ -44,9 +44,11 @@ export function ManageAppsScreen() {
     }
   }, []);
 
-  React.useEffect(() => {
-    void loadApps();
-  }, [loadApps]);
+  useFocusEffect(
+    React.useCallback(() => {
+      void loadApps();
+    }, [loadApps]),
+  );
 
   const updateMode = React.useCallback(
     async (app: AppProtection) => {

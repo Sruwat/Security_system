@@ -1,6 +1,6 @@
 import React from 'react';
 import {Alert, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaActionButton, FigmaBanner, FigmaBottomNav, FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import {launchCoordinator} from '../../services/launch/LaunchCoordinator';
@@ -40,9 +40,11 @@ export function PrivateHomeScreen() {
     }
   }, []);
 
-  React.useEffect(() => {
-    void loadApps();
-  }, [loadApps]);
+  useFocusEffect(
+    React.useCallback(() => {
+      void loadApps();
+    }, [loadApps]),
+  );
 
   const visibleApps = apps.filter(app => app.mode === 'NONE' || app.mode === 'LOCK').slice(0, 4);
   const hiddenCount = apps.filter(app => app.mode === 'HIDE' || app.mode === 'LOCK_HIDE').length;
