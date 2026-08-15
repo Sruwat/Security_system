@@ -148,7 +148,7 @@ export function VaultScreen() {
           </View>
         ) : null}
 
-        <FigmaBanner variant={variant} title="Banner ad" tone="surfaceElevated" />
+        <FigmaBanner screen="vault" variant={variant} title="Banner ad" tone="surfaceElevated" />
 
         <View style={styles.sectionRow}>
           <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>My Private Apps</Text>
@@ -237,7 +237,7 @@ export function VaultScreen() {
           <Text style={[styles.calloutBody, {color: palette.textSecondary}]}>Opening a hidden app keeps the user inside the protected route instead of bypassing it.</Text>
         </View>
 
-        <FigmaBanner variant={variant} placement="native" title="Native advertisement" subtitle="Placed after functional content" tone="surfaceElevated" />
+        <FigmaBanner screen="vault" variant={variant} placement="native" title="Native advertisement" subtitle="Placed after functional content" tone="surfaceElevated" />
 
         <View style={styles.bottomSpacer} />
         <FigmaBottomNav variant={variant} active="home" />

@@ -17,7 +17,7 @@ export function GalleryScreen() {
         <Text style={[styles.title, {color: palette.textPrimary}]}>Gallery</Text>
         <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Private Gallery / protected media.</Text>
 
-        <FigmaBanner variant="dark" title="Banner ad" tone="surfaceElevated" />
+        <FigmaBanner screen="gallery" variant="dark" title="Banner ad" tone="surfaceElevated" />
 
         <View style={styles.heroCard}>
           <Text style={[styles.heroGlyph, {color: palette.accent}]}>◇</Text>
@@ -39,7 +39,7 @@ export function GalleryScreen() {
           ))}
         </View>
 
-        <FigmaBanner variant="dark" placement="native" title="Native advertisement" subtitle="Placed after functional content" tone="surfaceElevated" />
+        <FigmaBanner screen="gallery" variant="dark" placement="native" title="Native advertisement" subtitle="Placed after functional content" tone="surfaceElevated" />
 
         <View style={styles.bottomSpacer} />
         <FigmaBottomNav variant="dark" active="gallery" />

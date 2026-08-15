@@ -24,7 +24,7 @@ export function UnlockSuccessScreen() {
   const palette = figmaPalette.dark;
 
   React.useEffect(() => {
-    adsManager.showInterstitialIfReady();
+    adsManager.showInterstitialIfReady('unlock-success');
     const timer = setTimeout(() => {
       navigation.reset({index: 0, routes: [{name: 'PrivateHome'}]});
     }, 700);
@@ -111,7 +111,7 @@ export function RebootRestoredScreen() {
   }, [activeSession?.vaultUnlocked, hasPendingApp, navigation, pendingMode]);
 
   React.useEffect(() => {
-    adsManager.showInterstitialIfReady();
+    adsManager.showInterstitialIfReady('reboot-restored');
     const timer = setTimeout(() => {
       continueNext();
     }, 900);

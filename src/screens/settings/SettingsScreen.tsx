@@ -4,28 +4,41 @@ import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaBanner, FigmaBottomNav, FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import type {RootStackParamList} from '../../navigation/routes';
+import {localDataRepository} from '../../storage/LocalDataRepository';
+import type {AppProtection, AppSettings} from '../../types/domain';
 
-const rows = [
-  ['Appearance', 'System / Light / Dark'],
-  ['Primary lock', 'Fingerprint + PIN'],
-  ['Secret access', 'Calculator code'],
-  ['Auto-lock', '30 seconds'],
-  ['Manage apps', '3 protected'],
-  ['Privacy info', 'On-device only'],
-  ['Privacy Center', 'Ads and local data'],
-  ['AdManager Rules', 'Banner + native ads'],
-];
+function formatPrimaryLock(settings: AppSettings): string {
+  return settings.primaryAuthMethod === 'PASSWORD'
+    ? 'Password'
+    : settings.primaryAuthMethod === 'PATTERN'
+      ? 'Pattern'
+      : 'PIN';
+}
 
-function SettingRow(props: {title: string; subtitle: string; palette: typeof figmaPalette.light; onPress?: () => void}) {
+function formatSecretAccess(settings: AppSettings): string {
+  return settings.secretEntryMethod === 'CALCULATOR_CODE'
+    ? 'Calculator code'
+    : settings.secretEntryMethod === 'DOUBLE_TAP'
+      ? 'Double tap'
+      : settings.secretEntryMethod === 'TRIPLE_TAP'
+        ? 'Triple tap'
+        : settings.secretEntryMethod === 'LONG_PRESS'
+          ? 'Long press'
+          : 'Pinch';
+}
+
+function formatAutoLock(seconds: number): string {
+  return seconds < 60 ? `${seconds} seconds` : `${seconds / 60} minutes`;
+}
+
+function SettingRow(props: {title: string; subtitle: string; onPress?: () => void; palette: typeof figmaPalette.light}) {
   return (
     <Pressable onPress={props.onPress} style={({pressed}) => [styles.row, {backgroundColor: props.palette.surface, borderColor: props.palette.border, opacity: pressed ? 0.94 : 1}]}>
       <View style={styles.rowBody}>
         <Text style={[styles.rowTitle, {color: props.palette.textPrimary}]}>{props.title}</Text>
         <Text style={[styles.rowSubtitle, {color: props.palette.textSecondary}]}>{props.subtitle}</Text>
       </View>
-      <View style={[styles.chevPill, {backgroundColor: props.palette.accentSoft}]}>
-        <Text style={[styles.chevron, {color: props.palette.accent}]}>›</Text>
-      </View>
+      <Text style={[styles.chevron, {color: props.palette.textSecondary}]}>›</Text>
     </Pressable>
   );
 }
@@ -33,42 +46,43 @@ function SettingRow(props: {title: string; subtitle: string; palette: typeof fig
 export function SettingsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const palette = figmaPalette.light;
+  const [settings, setSettings] = React.useState<AppSettings | null>(null);
+  const [protectedApps, setProtectedApps] = React.useState<AppProtection[]>([]);
+
+  React.useEffect(() => {
+    void localDataRepository.getSettings().then(setSettings);
+    void localDataRepository.getProtectedApps().then(setProtectedApps);
+    const unsubscribeSettings = localDataRepository.subscribeToSettings(next => {
+      setSettings(next);
+    });
+    const unsubscribeApps = localDataRepository.subscribeToProtectedApps(next => {
+      setProtectedApps(next);
+    });
+    return () => {
+      unsubscribeSettings();
+      unsubscribeApps();
+    };
+  }, []);
+
+  const rows = settings
+    ? [
+        ['Appearance', settings.theme === 'SYSTEM' ? 'System / Light / Dark' : settings.theme],
+        ['Primary lock', formatPrimaryLock(settings)],
+        ['Secret access', formatSecretAccess(settings)],
+        ['Auto-lock', formatAutoLock(settings.autoLockSecondsDefault)],
+        ['Manage apps', `${protectedApps.length} protected`],
+        ['Privacy info', 'On-device only'],
+      ]
+    : [];
 
   return (
     <FigmaPage variant="light">
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.topRow}>
-          <View>
-            <Text style={[styles.time, {color: palette.textSecondary}]}>9:41</Text>
-            <Text style={[styles.title, {color: palette.textPrimary}]}>Settings</Text>
-          </View>
-          <View style={[styles.pill, {backgroundColor: palette.accentSoft}]}>
-            <Text style={[styles.pillText, {color: palette.accent}]}>Privacy</Text>
-          </View>
-        </View>
+        <Text style={[styles.time, {color: palette.textPrimary}]}>9:41</Text>
+        <Text style={[styles.title, {color: palette.textPrimary}]}>Settings</Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Privacy & appearance.</Text>
 
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Keep the private launcher tuned to your preferences.</Text>
-
-        <View style={[styles.heroCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-          <View style={[styles.heroIcon, {backgroundColor: palette.accentSoft}]}>
-            <View style={[styles.heroDot, {backgroundColor: palette.accent}]} />
-          </View>
-          <Text style={[styles.heroTitle, {color: palette.textPrimary}]}>A few details, all in one place.</Text>
-          <Text style={[styles.heroBody, {color: palette.textSecondary}]}>Appearance, authentication, and privacy settings stay grouped together for quick changes.</Text>
-        </View>
-
-        <View style={styles.summaryRow}>
-          <View style={[styles.summaryCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-            <Text style={[styles.summaryLabel, {color: palette.textSecondary}]}>Protected apps</Text>
-            <Text style={[styles.summaryValue, {color: palette.textPrimary}]}>3</Text>
-          </View>
-          <View style={[styles.summaryCard, {backgroundColor: palette.accentSoft, borderColor: palette.border}]}>
-            <Text style={[styles.summaryLabel, {color: palette.textSecondary}]}>Secret access</Text>
-            <Text style={[styles.summaryValue, {color: palette.accent}]}>Ready</Text>
-          </View>
-        </View>
-
-        <FigmaBanner variant="light" title="Banner ad" tone="surfaceElevated" />
+        <FigmaBanner screen="settings" variant="light" title="Banner ad" tone="surface" />
 
         <View style={styles.list}>
           {rows.map(([title, subtitle]) => (
@@ -78,25 +92,20 @@ export function SettingsScreen() {
               subtitle={subtitle}
               palette={palette}
               onPress={
-                title === 'Auto-lock'
-                  ? () => navigation.navigate('AutoLockSettings')
-                  : title === 'Secret access'
-                    ? () => navigation.navigate('SecretEntry')
-                    : title === 'Manage apps'
-                      ? () => navigation.navigate('ManageApps')
-                      : title === 'Privacy Center'
-                  ? () => navigation.navigate('PrivacyCenter')
-                  : title === 'AdManager Rules'
-                    ? () => navigation.navigate('AdManagerRules')
-                    : undefined
+                title === 'Appearance'
+                  ? () => navigation.navigate('AppearanceSettings')
+                  : title === 'Primary lock'
+                    ? () => navigation.navigate('PrimaryLock')
+                    : title === 'Secret access'
+                      ? () => navigation.navigate('SecretEntry')
+                      : title === 'Auto-lock'
+                        ? () => navigation.navigate('AutoLockSettings')
+                        : title === 'Manage apps'
+                          ? () => navigation.navigate('ManageApps')
+                          : () => navigation.navigate('PrivacyCenter')
               }
             />
           ))}
-        </View>
-
-        <View style={[styles.callout, {backgroundColor: palette.accentSoft, borderColor: palette.border}]}>
-          <Text style={[styles.calloutTitle, {color: palette.accent}]}>Local only</Text>
-          <Text style={[styles.calloutBody, {color: palette.textSecondary}]}>Settings are stored on-device and reflect the current private launcher state.</Text>
         </View>
 
         <View style={styles.bottomSpacer} />
@@ -110,153 +119,55 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 18,
   },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
   time: {
     fontSize: 10,
     fontWeight: '700',
     lineHeight: 12,
   },
   title: {
-    marginTop: 10,
+    marginTop: 28,
     fontSize: 28,
     fontWeight: '800',
     lineHeight: 33,
     letterSpacing: -0.2,
-  },
-  pill: {
-    minHeight: 30,
-    borderRadius: 15,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pillText: {
-    fontSize: 8,
-    fontWeight: '700',
-    lineHeight: 10,
   },
   subtitle: {
     marginTop: 10,
     fontSize: 13,
     lineHeight: 18,
   },
-  heroCard: {
-    marginTop: 18,
-    borderRadius: 28,
-    borderWidth: 1,
-    paddingHorizontal: 18,
-    paddingVertical: 18,
-  },
-  heroIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroDot: {
-    width: 18,
-    height: 18,
-    borderRadius: 6,
-  },
-  heroTitle: {
-    marginTop: 16,
-    fontSize: 20,
-    fontWeight: '800',
-    lineHeight: 24,
-  },
-  heroBody: {
-    marginTop: 8,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  summaryRow: {
-    marginTop: 16,
-    flexDirection: 'row',
-    gap: 12,
-  },
-  summaryCard: {
-    flex: 1,
-    minHeight: 76,
-    borderRadius: 20,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    justifyContent: 'space-between',
-  },
-  summaryLabel: {
-    fontSize: 8,
-    lineHeight: 10,
-    fontWeight: '700',
-  },
-  summaryValue: {
-    fontSize: 18,
-    lineHeight: 22,
-    fontWeight: '800',
-  },
   list: {
     marginTop: 16,
-    gap: 12,
+    gap: 14,
   },
   row: {
-    minHeight: 58,
+    minHeight: 112,
     borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderRadius: 30,
+    paddingHorizontal: 24,
+    paddingVertical: 22,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
   },
   rowBody: {
     flex: 1,
+    gap: 10,
   },
   rowTitle: {
-    fontSize: 11,
-    fontWeight: '800',
-    lineHeight: 14,
+    fontSize: 18,
+    fontWeight: '700',
+    lineHeight: 22,
   },
   rowSubtitle: {
-    marginTop: 3,
-    fontSize: 8,
-    lineHeight: 10,
-  },
-  chevPill: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+    fontSize: 12,
+    lineHeight: 16,
   },
   chevron: {
-    width: 14,
-    textAlign: 'center',
-    fontSize: 15,
-    fontWeight: '800',
-    lineHeight: 18,
-  },
-  callout: {
-    marginTop: 16,
-    borderRadius: 22,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  calloutTitle: {
-    fontSize: 10,
-    fontWeight: '800',
-    lineHeight: 12,
-  },
-  calloutBody: {
-    marginTop: 8,
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 32,
+    lineHeight: 36,
+    fontWeight: '700',
   },
   bottomSpacer: {
-    height: 4,
+    height: 8,
   },
 });

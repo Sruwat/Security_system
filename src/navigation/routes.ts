@@ -18,10 +18,12 @@ export type RootStackParamList = {
   AddApps: undefined;
   ProtectionMode: {draft: ProtectionDraft; onboarding: boolean};
   ManageApps: undefined;
+  RemoveApp: {app: {packageName: string; label: string; mode: 'NONE' | 'LOCK' | 'HIDE' | 'LOCK_HIDE'}};
   Gallery: undefined;
   SecretEntry: undefined;
   Vault: undefined;
   Settings: undefined;
+  AppearanceSettings: undefined;
   PrivacyCenter: undefined;
   AdManagerRules: undefined;
   AppRemoved: {label: string};

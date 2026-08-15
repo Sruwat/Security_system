@@ -5,6 +5,7 @@ import {RebootRestoredScreen, UnlockSuccessScreen} from '../screens/auth/Transit
 import {AddAppsScreen} from '../screens/app-picker/AddAppsScreen';
 import {GalleryScreen} from '../screens/gallery/GalleryScreen';
 import {ManageAppsScreen} from '../screens/manage-apps/ManageAppsScreen';
+import {RemoveAppScreen} from '../screens/manage-apps/RemoveAppScreen';
 import {AppRemovedScreen} from '../screens/manage-apps/AppRemovedScreen';
 import {PrivateHomeScreen} from '../screens/private-home/PrivateHomeScreen';
 import {
@@ -19,7 +20,7 @@ import {PrimaryLockScreen} from '../screens/onboarding/PrimaryLockScreen';
 import {ProtectionModeScreen} from '../screens/onboarding/ProtectionModeScreen';
 import {CalculatorScreen} from '../screens/secret-entry/CalculatorScreen';
 import {SecretEntryScreen} from '../screens/secret-entry/SecretEntryScreen';
-import {AdManagerRulesScreen, AutoLockSettingsScreen, PrivacyCenterScreen} from '../screens/settings/SettingsDetailScreens';
+import {AdManagerRulesScreen, AppearanceSettingsScreen, AutoLockSettingsScreen, PrivacyCenterScreen} from '../screens/settings/SettingsDetailScreens';
 import {SettingsScreen} from '../screens/settings/SettingsScreen';
 import {VaultScreen} from '../screens/vault/VaultScreen';
 import {WelcomeScreen} from '../screens/onboarding/WelcomeScreen';
@@ -46,11 +47,13 @@ export function AppNavigator(props: {initialRouteName: keyof RootStackParamList}
       <Stack.Screen name="AddApps" component={AddAppsScreen} />
       <Stack.Screen name="ProtectionMode" component={ProtectionModeScreen} />
       <Stack.Screen name="ManageApps" component={ManageAppsScreen} />
+      <Stack.Screen name="RemoveApp" component={RemoveAppScreen} />
       <Stack.Screen name="AppRemoved" component={AppRemovedScreen} />
       <Stack.Screen name="Gallery" component={GalleryScreen} />
       <Stack.Screen name="SecretEntry" component={SecretEntryScreen} />
       <Stack.Screen name="Vault" component={VaultScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="AppearanceSettings" component={AppearanceSettingsScreen} />
       <Stack.Screen name="AutoLockSettings" component={AutoLockSettingsScreen} />
       <Stack.Screen name="PrivacyCenter" component={PrivacyCenterScreen} />
       <Stack.Screen name="AdManagerRules" component={AdManagerRulesScreen} />

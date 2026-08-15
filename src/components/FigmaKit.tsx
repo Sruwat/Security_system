@@ -175,7 +175,14 @@ export function FigmaBottomNav(props: {variant: FigmaVariant; active: 'home' | '
   );
 }
 
-export function FigmaBanner(props: {variant: FigmaVariant; title: string; subtitle?: string; tone?: 'surfaceElevated' | 'surface'; placement?: 'banner' | 'native'}) {
+export function FigmaBanner(props: {
+  variant: FigmaVariant;
+  screen: 'private-home' | 'vault' | 'add-apps' | 'manage-apps' | 'gallery' | 'settings';
+  title: string;
+  subtitle?: string;
+  tone?: 'surfaceElevated' | 'surface';
+  placement?: 'banner' | 'native';
+}) {
   const palette = useFigmaPalette(props.variant);
   const [ready, setReady] = React.useState(false);
   const placement = props.placement ?? 'banner';
@@ -184,7 +191,7 @@ export function FigmaBanner(props: {variant: FigmaVariant; title: string; subtit
     return () => clearTimeout(timer);
   }, []);
 
-  const isReady = placement === 'native' ? adsManager.showNative() : adsManager.showBanner();
+  const isReady = placement === 'native' ? adsManager.showNative(props.screen) : adsManager.showBanner(props.screen);
   if (!ready || !isReady) {
     return null;
   }

@@ -7,14 +7,8 @@ export function useAppVariant(): FigmaVariant {
   const [variant, setVariant] = React.useState<FigmaVariant>('dark');
 
   React.useEffect(() => {
-    let mounted = true;
-
-    void (async () => {
+    const syncVariant = async () => {
       const settings = await localDataRepository.getSettings();
-      if (!mounted) {
-        return;
-      }
-
       if (settings.theme === 'LIGHT') {
         setVariant('light');
         return;
@@ -26,10 +20,35 @@ export function useAppVariant(): FigmaVariant {
       }
 
       setVariant(Appearance.getColorScheme() === 'dark' ? 'dark' : 'light');
-    })();
+    };
+
+    void syncVariant();
+
+    const unsubscribeSettings = localDataRepository.subscribeToSettings(settings => {
+      if (settings.theme === 'LIGHT') {
+        setVariant('light');
+        return;
+      }
+
+      if (settings.theme === 'DARK') {
+        setVariant('dark');
+        return;
+      }
+
+      setVariant(Appearance.getColorScheme() === 'dark' ? 'dark' : 'light');
+    });
+
+    const appearanceSubscription = Appearance.addChangeListener(({colorScheme}) => {
+      void localDataRepository.getSettings().then(settings => {
+        if (settings.theme === 'SYSTEM') {
+          setVariant(colorScheme === 'dark' ? 'dark' : 'light');
+        }
+      });
+    });
 
     return () => {
-      mounted = false;
+      unsubscribeSettings();
+      appearanceSubscription.remove();
     };
   }, []);
 

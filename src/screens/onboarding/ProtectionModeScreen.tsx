@@ -45,6 +45,7 @@ export function ProtectionModeScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'ProtectionMode'>>();
   const palette = figmaPalette.dark;
   const [draft, setDraft] = React.useState<AppProtection>(() => buildProtectionPolicy(route.params.draft));
+  const selectedApps = route.params.draft.apps ?? [route.params.draft.app];
   const [saving, setSaving] = React.useState(false);
   const authOptions: AuthMethod[] = ['PIN', 'PASSWORD', 'PATTERN', 'BIOMETRIC_FALLBACK'];
   const autoLockOptions = [30, 60, 300, 900];
@@ -71,8 +72,8 @@ export function ProtectionModeScreen() {
             <Text style={[styles.appIconText, {color: palette.accent}]}>{draft.label.slice(0, 2).toUpperCase()}</Text>
           </View>
           <View style={styles.appBody}>
-            <Text style={[styles.appTitle, {color: palette.textPrimary}]}>{draft.label}</Text>
-            <Text style={[styles.appSubtitle, {color: palette.textSecondary}]}>Protected app profile</Text>
+          <Text style={[styles.appTitle, {color: palette.textPrimary}]}>{selectedApps.length === 1 ? draft.label : `${selectedApps.length} selected apps`}</Text>
+          <Text style={[styles.appSubtitle, {color: palette.textSecondary}]}>{selectedApps.length === 1 ? 'Protected app profile' : 'Shared protection profile'}</Text>
           </View>
         </View>
 
@@ -143,7 +144,16 @@ export function ProtectionModeScreen() {
             void (async () => {
               setSaving(true);
               try {
-                await protectionManager.upsertProtection({...draft, updatedAt: Date.now()});
+                await Promise.all(
+                  selectedApps.map(app =>
+                    protectionManager.upsertProtection({
+                      ...draft,
+                      packageName: app.packageName,
+                      label: app.label,
+                      updatedAt: Date.now(),
+                    }),
+                  ),
+                );
                 if (route.params.onboarding) {
                   navigation.navigate('SecretEntry');
                 } else {

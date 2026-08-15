@@ -2,6 +2,7 @@ import type {AppProtection, AuthMethod, LaunchableApp, ProtectionMode} from '../
 
 export interface ProtectionDraft {
   app: LaunchableApp;
+  apps?: LaunchableApp[];
   mode: ProtectionMode;
   authMethod: AuthMethod;
   autoLockSeconds: number;

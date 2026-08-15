@@ -13,6 +13,31 @@ const defaultSettings: AppSettings = {
 };
 
 export class LocalDataRepository {
+  private settingsListeners = new Set<(settings: AppSettings) => void>();
+  private protectionListeners = new Set<(apps: AppProtection[]) => void>();
+
+  private emitSettings(settings: AppSettings): void {
+    this.settingsListeners.forEach(listener => listener(settings));
+  }
+
+  private emitProtectedApps(apps: AppProtection[]): void {
+    this.protectionListeners.forEach(listener => listener(apps));
+  }
+
+  subscribeToSettings(listener: (settings: AppSettings) => void): () => void {
+    this.settingsListeners.add(listener);
+    return () => {
+      this.settingsListeners.delete(listener);
+    };
+  }
+
+  subscribeToProtectedApps(listener: (apps: AppProtection[]) => void): () => void {
+    this.protectionListeners.add(listener);
+    return () => {
+      this.protectionListeners.delete(listener);
+    };
+  }
+
   async getSettings(): Promise<AppSettings> {
     const raw = await AsyncStorage.getItem(storageKeys.settings);
     if (!raw) {
@@ -28,6 +53,7 @@ export class LocalDataRepository {
 
   async saveSettings(settings: AppSettings): Promise<void> {
     await AsyncStorage.setItem(storageKeys.settings, JSON.stringify(settings));
+    this.emitSettings(settings);
   }
 
   async getProtectedApps(): Promise<AppProtection[]> {
@@ -46,6 +72,7 @@ export class LocalDataRepository {
 
   async saveProtectedApps(apps: AppProtection[]): Promise<void> {
     await AsyncStorage.setItem(storageKeys.protections, JSON.stringify(apps));
+    this.emitProtectedApps(apps);
   }
 
   async addProtectedApp(policy: AppProtection): Promise<void> {

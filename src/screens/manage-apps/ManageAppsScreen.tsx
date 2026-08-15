@@ -67,29 +67,15 @@ export function ManageAppsScreen() {
 
   const removeProtection = React.useCallback(
     async (app: AppProtection) => {
-      Alert.alert('Remove app?', `Remove protection for ${app.label}?`, [
-        {text: 'Cancel', style: 'cancel'},
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: () => {
-            void (async () => {
-              setBusyPackage(app.packageName);
-              try {
-                await protectionManager.removeProtection(app.packageName);
-                await loadApps();
-                navigation.navigate('AppRemoved', {label: app.label});
-              } catch (error) {
-                Alert.alert('Remove failed', error instanceof Error ? error.message : 'Unable to remove protection.');
-              } finally {
-                setBusyPackage(null);
-              }
-            })();
-          },
+      navigation.navigate('RemoveApp', {
+        app: {
+          packageName: app.packageName,
+          label: app.label,
+          mode: app.mode,
         },
-      ]);
+      });
     },
-    [loadApps],
+    [navigation],
   );
 
   const protectedCount = apps.length;
@@ -101,19 +87,13 @@ export function ManageAppsScreen() {
         <View style={styles.topRow}>
           <View>
             <Text style={[styles.time, {color: palette.textPrimary}]}>9:41</Text>
-            <Text style={[styles.title, {color: palette.textPrimary}]}>Manage apps</Text>
+            <Text style={[styles.title, {color: palette.textPrimary}]}>Manage Apps</Text>
           </View>
-          <Pressable onPress={() => navigation.navigate('AddApps')} style={[styles.addChip, {backgroundColor: palette.accentSoft}]}>
-            <Text style={[styles.addChipText, {color: palette.accent}]}>Add new</Text>
-          </Pressable>
         </View>
 
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Adjust how each app behaves. Change the mode, hide it, or remove protection entirely.</Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Change, add or remove apps.</Text>
 
-        <View style={styles.statsRow}>
-          <StatCard label="Protected apps" value={`${protectedCount}`} palette={palette} tone="accent" />
-          <StatCard label="Hidden apps" value={`${hideCount}`} palette={palette} />
-        </View>
+        <FigmaBanner screen="manage-apps" variant="dark" title="Banner ad" tone="surfaceElevated" />
 
         {loading ? (
           <View style={[styles.emptyCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
@@ -149,15 +129,14 @@ export function ManageAppsScreen() {
                 </Pressable>
               </View>
             ))}
+
+            <Pressable onPress={() => navigation.navigate('AddApps')} style={[styles.addMoreRow, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+              <Text style={[styles.addMoreText, {color: palette.textPrimary}]}>+ Add more apps</Text>
+            </Pressable>
           </View>
         )}
 
-        <View style={[styles.callout, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-          <Text style={[styles.calloutTitle, {color: palette.textPrimary}]}>Tip</Text>
-          <Text style={[styles.calloutBody, {color: palette.textSecondary}]}>Lock + Hide keeps the app out of the launcher while still requiring authentication to open.</Text>
-        </View>
-
-        <FigmaBanner variant="dark" placement="native" title="Native advertisement" subtitle="Placed after functional content" tone="surfaceElevated" />
+        <FigmaBanner screen="manage-apps" variant="dark" placement="native" title="Native advertisement" subtitle="Placed after functional content" tone="surfaceElevated" />
 
         <View style={styles.bottomSpacer} />
         <FigmaBottomNav variant="dark" active="home" />
@@ -187,27 +166,16 @@ const styles = StyleSheet.create({
     lineHeight: 33,
     letterSpacing: -0.2,
   },
-  addChip: {
-    minHeight: 30,
-    borderRadius: 15,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  addChipText: {
-    fontSize: 8,
-    fontWeight: '700',
-    lineHeight: 10,
-  },
   subtitle: {
     marginTop: 10,
     fontSize: 13,
     lineHeight: 18,
   },
   statsRow: {
-    marginTop: 16,
+    display: 'none',
+    marginTop: 0,
     flexDirection: 'row',
-    gap: 12,
+    gap: 0,
   },
   statCard: {
     flex: 1,
@@ -309,22 +277,17 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 10,
   },
-  callout: {
-    marginTop: 16,
-    borderRadius: 22,
+  addMoreRow: {
     borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    borderRadius: 24,
+    minHeight: 78,
+    paddingHorizontal: 20,
+    justifyContent: 'center',
   },
-  calloutTitle: {
-    fontSize: 10,
-    fontWeight: '800',
-    lineHeight: 12,
-  },
-  calloutBody: {
-    marginTop: 8,
-    fontSize: 11,
-    lineHeight: 15,
+  addMoreText: {
+    fontSize: 16,
+    fontWeight: '700',
+    lineHeight: 20,
   },
   bottomSpacer: {
     height: 4,

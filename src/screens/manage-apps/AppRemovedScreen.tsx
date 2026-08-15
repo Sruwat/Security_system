@@ -1,10 +1,9 @@
 import React from 'react';
-import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import type {NativeStackNavigationProp, NativeStackScreenProps} from '@react-navigation/native-stack';
 import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import type {RootStackParamList} from '../../navigation/routes';
-import {adsManager} from '../../services/ads/AdsManager';
 
 type AppRemovedProps = NativeStackScreenProps<RootStackParamList, 'AppRemoved'>;
 
@@ -13,11 +12,6 @@ export function AppRemovedScreen() {
   const route = useRoute<AppRemovedProps['route']>();
   const palette = figmaPalette.dark;
   const label = route.params.label;
-  const [showAd, setShowAd] = React.useState(false);
-
-  React.useEffect(() => {
-    setShowAd(adsManager.showInterstitialIfReady());
-  }, []);
 
   return (
     <FigmaPage variant="dark">
@@ -44,14 +38,6 @@ export function AppRemovedScreen() {
           <Text style={[styles.statusTitle, {color: palette.textPrimary}]}>What changed</Text>
           <Text style={[styles.statusBody, {color: palette.textSecondary}]}>The protection mode and temporary session are cleared for this app.</Text>
         </View>
-
-        {showAd ? (
-          <View style={[styles.adCard, {backgroundColor: palette.surfaceElevated, borderColor: palette.border}]}>
-            <Text style={[styles.adKicker, {color: palette.textSecondary}]}>Sponsored</Text>
-            <Text style={[styles.adTitle, {color: palette.textPrimary}]}>Native advertisement</Text>
-            <Text style={[styles.adBody, {color: palette.textSecondary}]}>Placed after the removal state without blocking navigation.</Text>
-          </View>
-        ) : null}
 
         <View style={styles.spacer} />
 
@@ -145,28 +131,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 11,
     lineHeight: 15,
-  },
-  adCard: {
-    marginTop: 16,
-    borderWidth: 1,
-    borderRadius: 22,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  adKicker: {
-    fontSize: 7,
-    lineHeight: 9,
-  },
-  adTitle: {
-    marginTop: 5,
-    fontSize: 11,
-    lineHeight: 13,
-    fontWeight: '700',
-  },
-  adBody: {
-    marginTop: 4,
-    fontSize: 8,
-    lineHeight: 10,
   },
   spacer: {
     flex: 1,

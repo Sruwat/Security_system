@@ -26,6 +26,10 @@ function useSettings() {
 
   React.useEffect(() => {
     void localDataRepository.getSettings().then(setSettings);
+    const unsubscribe = localDataRepository.subscribeToSettings(next => {
+      setSettings(next);
+    });
+    return unsubscribe;
   }, []);
 
   const update = React.useCallback(async (patch: Partial<AppSettings>) => {
@@ -39,6 +43,59 @@ function useSettings() {
 }
 
 const autoLockOptions = [30, 60, 300, 900];
+
+export function AppearanceSettingsScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const palette = figmaPalette.light;
+  const {settings, update} = useSettings();
+  const rows: Array<{label: string; subtitle: string; value: AppSettings['theme']}> = [
+    {label: 'System', subtitle: 'Follow the device appearance', value: 'SYSTEM'},
+    {label: 'Light', subtitle: 'Use the bright launcher surface', value: 'LIGHT'},
+    {label: 'Dark', subtitle: 'Use the private dark launcher', value: 'DARK'},
+  ];
+
+  return (
+    <FigmaPage variant="light">
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <Text style={[styles.title, {color: palette.textPrimary}]}>Appearance</Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Switch between System, Light, and Dark presentation.</Text>
+
+        <View style={styles.list}>
+          {settings
+            ? rows.map(row => {
+                const selected = settings.theme === row.value;
+                return (
+                  <Pressable
+                    key={row.value}
+                    onPress={() => void update({theme: row.value})}
+                    style={({pressed}) => [
+                      styles.row,
+                      {
+                        backgroundColor: selected ? palette.accentSoft : palette.surface,
+                        borderColor: selected ? palette.accent : palette.border,
+                        opacity: pressed ? 0.94 : 1,
+                      },
+                    ]}>
+                    <View style={styles.rowBody}>
+                      <Text style={[styles.rowTitle, {color: palette.textPrimary}]}>{row.label}</Text>
+                      <Text style={[styles.rowSubtitle, {color: palette.textSecondary}]}>{row.subtitle}</Text>
+                    </View>
+                    <View style={[styles.toggle, {backgroundColor: selected ? palette.accent : palette.accentSoft}]}>
+                      <Text style={[styles.toggleText, {color: selected ? '#FFFFFF' : palette.accent}]}>{selected ? 'On' : 'Set'}</Text>
+                    </View>
+                  </Pressable>
+                );
+              })
+            : null}
+        </View>
+
+        <View style={styles.spacer} />
+
+        <FigmaActionButton variant="light" label="Back to settings" onPress={() => navigation.navigate('Settings')} />
+      </ScrollView>
+    </FigmaPage>
+  );
+}
 
 export function PrivacyCenterScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();

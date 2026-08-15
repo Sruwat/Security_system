@@ -155,7 +155,7 @@ export function PrivateHomeScreen() {
           <Text style={[styles.calloutBody, {color: palette.textSecondary}]}>Protected apps stay local to this device. No cloud unlock history is required.</Text>
         </View>
 
-        <FigmaBanner variant={variant} placement="native" title="Native advertisement" subtitle="Placed after functional content" tone="surfaceElevated" />
+        <FigmaBanner screen="private-home" variant={variant} placement="native" title="Native advertisement" subtitle="Placed after functional content" tone="surfaceElevated" />
 
         <View style={styles.bottomSpacer} />
         <FigmaBottomNav variant={variant} active="home" />
