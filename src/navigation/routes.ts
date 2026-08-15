@@ -1,3 +1,5 @@
+import type {ProtectionDraft} from '../screens/app-picker/buildProtectionPolicy';
+
 export type RootStackParamList = {
   Welcome: undefined;
   LauncherSetup: undefined;
@@ -14,7 +16,7 @@ export type RootStackParamList = {
   AuthGate: undefined;
   PrivateHome: undefined;
   AddApps: undefined;
-  ProtectionMode: undefined;
+  ProtectionMode: {draft: ProtectionDraft; onboarding: boolean};
   ManageApps: undefined;
   Gallery: undefined;
   SecretEntry: undefined;

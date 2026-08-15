@@ -1,11 +1,13 @@
 import React from 'react';
-import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {Pressable, ScrollView, StyleSheet, Text, TextInput, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
+import {nativeBridge} from '../../native';
 import {localDataRepository} from '../../storage/LocalDataRepository';
 import type {SecretEntryMethod} from '../../types/domain';
 import type {RootStackParamList} from '../../navigation/routes';
+import {VAULT_SECRET_CREDENTIAL_TYPE} from '../../services/security/credentialTypes';
 
 const entryMethods = [
   {title: 'Calculator code', subtitle: 'Most discreet', tag: 'Recommended'},
@@ -43,6 +45,9 @@ export function SecretEntryScreen() {
   const palette = figmaPalette.light;
   const [selectedMethod, setSelectedMethod] = React.useState<SecretEntryMethod>('CALCULATOR_CODE');
   const [loading, setLoading] = React.useState(true);
+  const [calculatorCode, setCalculatorCode] = React.useState('2468');
+  const [confirmCalculatorCode, setConfirmCalculatorCode] = React.useState('2468');
+  const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     void localDataRepository.getSettings().then(settings => {
@@ -52,10 +57,27 @@ export function SecretEntryScreen() {
   }, []);
 
   const saveAndFinish = React.useCallback(async () => {
+    if (selectedMethod === 'CALCULATOR_CODE') {
+      const normalizedCode = calculatorCode.trim();
+      const confirmedCode = confirmCalculatorCode.trim();
+
+      if (!/^\d{4,6}$/.test(normalizedCode)) {
+        setError('Enter a 4 to 6 digit calculator code.');
+        return;
+      }
+
+      if (normalizedCode !== confirmedCode) {
+        setError('Calculator code confirmation did not match.');
+        return;
+      }
+
+      await nativeBridge.createCredential(VAULT_SECRET_CREDENTIAL_TYPE, normalizedCode);
+    }
+
     const settings = await localDataRepository.getSettings();
     await localDataRepository.saveSettings({...settings, secretEntryMethod: selectedMethod, onboardingComplete: true});
     navigation.navigate(selectedMethod === 'CALCULATOR_CODE' ? 'Calculator' : 'Vault');
-  }, [navigation, selectedMethod]);
+  }, [calculatorCode, confirmCalculatorCode, navigation, selectedMethod]);
 
   return (
     <FigmaPage variant="light">
@@ -96,6 +118,43 @@ export function SecretEntryScreen() {
             />
           ))}
         </View>
+
+        {selectedMethod === 'CALCULATOR_CODE' ? (
+          <View style={styles.form}>
+            <View style={[styles.field, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+              <Text style={[styles.fieldLabel, {color: palette.textSecondary}]}>Calculator code</Text>
+              <TextInput
+                value={calculatorCode}
+                onChangeText={text => {
+                  setCalculatorCode(text.replace(/[^0-9]/g, '').slice(0, 6));
+                  setError(null);
+                }}
+                keyboardType="number-pad"
+                secureTextEntry
+                style={[styles.fieldInput, {color: palette.textPrimary}]}
+              />
+            </View>
+            <View style={[styles.field, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+              <Text style={[styles.fieldLabel, {color: palette.textSecondary}]}>Confirm code</Text>
+              <TextInput
+                value={confirmCalculatorCode}
+                onChangeText={text => {
+                  setConfirmCalculatorCode(text.replace(/[^0-9]/g, '').slice(0, 6));
+                  setError(null);
+                }}
+                keyboardType="number-pad"
+                secureTextEntry
+                style={[styles.fieldInput, {color: palette.textPrimary}]}
+              />
+            </View>
+          </View>
+        ) : null}
+
+        {error ? (
+          <View style={[styles.noteCard, {backgroundColor: '#FEF3F2', borderColor: '#FEE4E2'}]}>
+            <Text style={[styles.noteBody, {color: '#B42318', marginTop: 0}]}>{error}</Text>
+          </View>
+        ) : null}
 
         <View style={styles.spacer} />
 
@@ -212,6 +271,28 @@ const styles = StyleSheet.create({
   cards: {
     marginTop: 16,
     gap: 12,
+  },
+  form: {
+    marginTop: 16,
+    gap: 12,
+  },
+  field: {
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  fieldLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    lineHeight: 11,
+  },
+  fieldInput: {
+    marginTop: 8,
+    minHeight: 28,
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 1.5,
   },
   entryCard: {
     minHeight: 66,

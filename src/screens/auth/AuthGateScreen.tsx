@@ -1,5 +1,5 @@
 import React from 'react';
-import {Alert, Pressable, StyleSheet, Text, View} from 'react-native';
+import {Alert, Pressable, StyleSheet, Text, TextInput, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaPage, figmaPalette} from '../../components/FigmaKit';
@@ -8,6 +8,8 @@ import {nativeBridge} from '../../native';
 import {sessionManager} from '../../services/session/SessionManager';
 import type {RootStackParamList} from '../../navigation/routes';
 import {APP_UNLOCK_CREDENTIAL_TYPE} from '../../services/security/credentialTypes';
+import {localDataRepository} from '../../storage/LocalDataRepository';
+import type {PrimaryAuthMethod} from '../../types/domain';
 
 const keypad = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
@@ -29,10 +31,12 @@ export function AuthGateScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const palette = figmaPalette.dark;
   const [pin, setPin] = React.useState('');
+  const [manualValue, setManualValue] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const [attempts, setAttempts] = React.useState(0);
   const [cooldownUntil, setCooldownUntil] = React.useState<number | null>(null);
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
+  const [primaryAuthMethod, setPrimaryAuthMethod] = React.useState<PrimaryAuthMethod>('PIN');
   const promptAttemptedRef = React.useRef(false);
   const pendingLaunchPackageName = launchCoordinator.getPendingLaunchPackageName();
   const pendingLaunchMode = launchCoordinator.getPendingLaunchMode();
@@ -40,13 +44,14 @@ export function AuthGateScreen() {
   const activeSession = sessionManager.getState();
   const sessionExpired = Boolean(activeSession && activeSession.expiresAt <= Date.now());
   const cooldownRemaining = cooldownUntil ? Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000)) : 0;
+  const credentialLabel = primaryAuthMethod === 'PASSWORD' ? 'password' : primaryAuthMethod === 'PATTERN' ? 'pattern' : '4-digit PIN';
 
   const verifyPin = React.useCallback(async (pinValue: string) => {
     const verified = await nativeBridge.verifyCredential(APP_UNLOCK_CREDENTIAL_TYPE, pinValue.trim());
     if (!verified) {
-      throw new Error('The PIN did not match the stored credential.');
+      throw new Error(primaryAuthMethod === 'PASSWORD' ? 'The password did not match the stored credential.' : primaryAuthMethod === 'PATTERN' ? 'The pattern did not match the stored credential.' : 'The PIN did not match the stored credential.');
     }
-  }, []);
+  }, [primaryAuthMethod]);
 
   const finishAuthentication = React.useCallback(
     async (pinValue?: string) => {
@@ -123,6 +128,31 @@ export function AuthGateScreen() {
     }
   }, [authenticate]);
 
+  React.useEffect(() => {
+    void localDataRepository.getSettings().then(settings => {
+      setPrimaryAuthMethod(settings.primaryAuthMethod);
+    });
+  }, []);
+
+  const submitManualCredential = React.useCallback(() => {
+    if (cooldownRemaining > 0) {
+      return;
+    }
+
+    void finishAuthentication(manualValue).catch(error => {
+      const nextAttempts = attempts + 1;
+      setAttempts(nextAttempts);
+      setStatusMessage(primaryAuthMethod === 'PASSWORD' ? 'Wrong password. Try again.' : primaryAuthMethod === 'PATTERN' ? 'Wrong pattern. Try again.' : 'Wrong PIN. Try again.');
+      if (nextAttempts >= 3) {
+        setCooldownUntil(Date.now() + 30000);
+        setStatusMessage('Recovery required. Cooldown started for 30 seconds.');
+      }
+      Alert.alert('Authentication failed', error instanceof Error ? error.message : 'Unable to verify the credential.');
+      setManualValue('');
+      setPin('');
+    });
+  }, [attempts, cooldownRemaining, finishAuthentication, manualValue, primaryAuthMethod]);
+
   return (
     <FigmaPage variant="dark">
       <View style={styles.fill}>
@@ -161,35 +191,62 @@ export function AuthGateScreen() {
 
         <View style={styles.centerArea}>
           <UnlockGlyph />
-          <Text style={[styles.instruction, {color: palette.textSecondary}]}>Use Face ID, fingerprint, or your 4-digit PIN.</Text>
+          <Text style={[styles.instruction, {color: palette.textSecondary}]}>Use Face ID, fingerprint, or your {credentialLabel}.</Text>
           {statusMessage ? <Text style={[styles.errorLine, {color: '#FECACA'}]}>{statusMessage}</Text> : null}
           {cooldownRemaining > 0 ? <Text style={[styles.errorLine, {color: '#FECACA'}]}>Cooldown {cooldownRemaining}s remaining</Text> : null}
         </View>
 
-        <View style={styles.dotsRow}>
-          {[0, 1, 2, 3].map(index => (
-            <View key={index} style={[styles.dot, {backgroundColor: pin.length > index ? palette.accent : palette.accentSoft}]} />
-          ))}
-        </View>
+        {primaryAuthMethod === 'PIN' ? (
+          <>
+            <View style={styles.dotsRow}>
+              {[0, 1, 2, 3].map(index => (
+                <View key={index} style={[styles.dot, {backgroundColor: pin.length > index ? palette.accent : palette.accentSoft}]} />
+              ))}
+            </View>
 
-        <View style={styles.keypad}>
-          {keypad.map(value => (
-            <Pressable
-              key={value}
-              onPress={() => {
-                if (cooldownRemaining > 0) {
-                  return;
-                }
-                submitDigit(value);
-              }}
-              style={[styles.key, {backgroundColor: palette.surface, borderColor: palette.border, opacity: cooldownRemaining > 0 ? 0.5 : 1}]}>
-              <Text style={[styles.keyText, {color: palette.textPrimary}]}>{value}</Text>
+            <View style={styles.keypad}>
+              {keypad.map(value => (
+                <Pressable
+                  key={value}
+                  onPress={() => {
+                    if (cooldownRemaining > 0) {
+                      return;
+                    }
+                    submitDigit(value);
+                  }}
+                  style={[styles.key, {backgroundColor: palette.surface, borderColor: palette.border, opacity: cooldownRemaining > 0 ? 0.5 : 1}]}>
+                  <Text style={[styles.keyText, {color: palette.textPrimary}]}>{value}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </>
+        ) : (
+          <View style={[styles.manualCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+            <Text style={[styles.manualLabel, {color: palette.textSecondary}]}>
+              {primaryAuthMethod === 'PASSWORD' ? 'Password' : 'Pattern'}
+            </Text>
+            <TextInput
+              value={manualValue}
+              onChangeText={setManualValue}
+              editable={cooldownRemaining === 0}
+              secureTextEntry={primaryAuthMethod === 'PASSWORD'}
+              placeholder={primaryAuthMethod === 'PASSWORD' ? 'Enter password' : 'Example: 1-2-3-4'}
+              placeholderTextColor={palette.textSecondary}
+              style={[styles.manualInput, {color: palette.textPrimary}]}
+            />
+            <Pressable onPress={submitManualCredential} style={[styles.manualSubmit, {backgroundColor: palette.accent}]}>
+              <Text style={styles.manualSubmitText}>{loading ? 'Checking...' : 'Submit'}</Text>
             </Pressable>
-          ))}
-        </View>
+          </View>
+        )}
 
         <View style={styles.footerRow}>
-          <Pressable onPress={() => setPin('')} style={[styles.footerPill, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+          <Pressable
+            onPress={() => {
+              setPin('');
+              setManualValue('');
+            }}
+            style={[styles.footerPill, {backgroundColor: palette.surface, borderColor: palette.border}]}>
             <Text style={[styles.footerText, {color: palette.textSecondary}]}>Clear</Text>
           </Pressable>
           <Pressable onPress={() => void authenticate()} style={[styles.footerPill, styles.primaryPill, {backgroundColor: palette.accent}]}>
@@ -369,6 +426,40 @@ const styles = StyleSheet.create({
     marginTop: 24,
     flexDirection: 'row',
     gap: 12,
+  },
+  manualCard: {
+    marginTop: 22,
+    borderWidth: 1,
+    borderRadius: 22,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    gap: 10,
+  },
+  manualLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    lineHeight: 11,
+  },
+  manualInput: {
+    minHeight: 44,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#111827',
+    fontSize: 14,
+    lineHeight: 18,
+  },
+  manualSubmit: {
+    minHeight: 44,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  manualSubmitText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 13,
   },
   footerPill: {
     flex: 1,

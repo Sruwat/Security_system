@@ -1,6 +1,7 @@
 export type ProtectionMode = 'NONE' | 'LOCK' | 'HIDE' | 'LOCK_HIDE';
 
 export type AuthMethod = 'PIN' | 'PASSWORD' | 'PATTERN' | 'BIOMETRIC' | 'BIOMETRIC_FALLBACK';
+export type PrimaryAuthMethod = 'PIN' | 'PASSWORD' | 'PATTERN';
 
 export type ThemeMode = 'SYSTEM' | 'LIGHT' | 'DARK';
 
@@ -19,6 +20,7 @@ export interface AppSettings {
   onboardingComplete: boolean;
   theme: ThemeMode;
   secretEntryMethod: SecretEntryMethod;
+  primaryAuthMethod: PrimaryAuthMethod;
   bannerEnabled: boolean;
   nativeAdEnabled: boolean;
   autoLockSecondsDefault: number;

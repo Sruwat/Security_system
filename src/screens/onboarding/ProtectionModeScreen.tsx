@@ -1,9 +1,13 @@
 import React from 'react';
 import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useRoute} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import type {RootStackParamList} from '../../navigation/routes';
+import type {RouteProp} from '@react-navigation/native';
+import {protectionManager} from '../../services/protection/ProtectionManager';
+import type {AppProtection, AuthMethod, ProtectionMode} from '../../types/domain';
+import {buildProtectionPolicy} from '../app-picker/buildProtectionPolicy';
 
 function ModeCard(props: {
   title: string;
@@ -38,7 +42,16 @@ function ModeCard(props: {
 
 export function ProtectionModeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const route = useRoute<RouteProp<RootStackParamList, 'ProtectionMode'>>();
   const palette = figmaPalette.dark;
+  const [draft, setDraft] = React.useState<AppProtection>(() => buildProtectionPolicy(route.params.draft));
+  const [saving, setSaving] = React.useState(false);
+  const authOptions: AuthMethod[] = ['PIN', 'PASSWORD', 'PATTERN', 'BIOMETRIC_FALLBACK'];
+  const autoLockOptions = [30, 60, 300, 900];
+
+  const updateDraft = React.useCallback((patch: Partial<AppProtection>) => {
+    setDraft(current => ({...current, ...patch}));
+  }, []);
 
   return (
     <FigmaPage variant="dark">
@@ -51,43 +64,97 @@ export function ProtectionModeScreen() {
         </View>
 
         <Text style={[styles.title, {color: palette.textPrimary}]}>Set protection mode</Text>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Instagram is just one example. Pick the level of protection you want for this app.</Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Pick the exact protection, authentication, and timeout you want for this app.</Text>
 
         <View style={[styles.appCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
           <View style={[styles.appIcon, {backgroundColor: palette.accentSoft}]}>
-            <Text style={[styles.appIconText, {color: palette.accent}]}>IG</Text>
+            <Text style={[styles.appIconText, {color: palette.accent}]}>{draft.label.slice(0, 2).toUpperCase()}</Text>
           </View>
           <View style={styles.appBody}>
-            <Text style={[styles.appTitle, {color: palette.textPrimary}]}>Instagram</Text>
+            <Text style={[styles.appTitle, {color: palette.textPrimary}]}>{draft.label}</Text>
             <Text style={[styles.appSubtitle, {color: palette.textSecondary}]}>Protected app profile</Text>
           </View>
         </View>
 
         <View style={styles.cards}>
-          <ModeCard palette={palette} title="None" subtitle="Open normally" onPress={() => undefined} />
-          <ModeCard palette={palette} title="Lock" subtitle="Authenticate to open" onPress={() => undefined} />
-          <ModeCard palette={palette} title="Hide" subtitle="Remove from launcher" onPress={() => undefined} />
-          <ModeCard palette={palette} title="Lock + Hide" subtitle="Hide + authenticate" selected onPress={() => undefined} />
+          <ModeCard palette={palette} title="None" subtitle="Open normally" selected={draft.mode === 'NONE'} onPress={() => updateDraft({mode: 'NONE'})} />
+          <ModeCard palette={palette} title="Lock" subtitle="Authenticate to open" selected={draft.mode === 'LOCK'} onPress={() => updateDraft({mode: 'LOCK'})} />
+          <ModeCard palette={palette} title="Hide" subtitle="Remove from launcher" selected={draft.mode === 'HIDE'} onPress={() => updateDraft({mode: 'HIDE'})} />
+          <ModeCard palette={palette} title="Lock + Hide" subtitle="Hide + authenticate" selected={draft.mode === 'LOCK_HIDE'} onPress={() => updateDraft({mode: 'LOCK_HIDE'})} />
         </View>
 
         <View style={[styles.notice, {backgroundColor: palette.accentSoft, borderColor: palette.border}]}>
-          <Text style={[styles.noticeText, {color: palette.accent}]}>Lock + Hide keeps the app out of the launcher while still requiring authentication to open.</Text>
+          <Text style={[styles.noticeText, {color: palette.accent}]}>
+            {draft.mode === 'NONE'
+              ? 'None keeps the app visible and launches it normally through the central policy check.'
+              : draft.mode === 'LOCK'
+                ? 'Lock keeps the app visible and requires authentication before it opens.'
+                : draft.mode === 'HIDE'
+                  ? 'Hide removes the app from normal launcher surfaces but keeps it available in the vault.'
+                  : 'Lock + Hide keeps the app out of the launcher while still requiring authentication to open.'}
+          </Text>
         </View>
 
         <View style={styles.infoStack}>
-          <Pressable onPress={() => navigation.navigate('AutoLockSettings')} style={[styles.infoRow, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-            <Text style={[styles.infoTitle, {color: palette.textPrimary}]}>Auto-lock</Text>
-            <Text style={[styles.infoMeta, {color: palette.textSecondary}]}>30 seconds</Text>
-          </Pressable>
-          <Pressable onPress={() => navigation.navigate('AuthGate')} style={[styles.infoRow, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+          <View style={[styles.infoSection, {backgroundColor: palette.surface, borderColor: palette.border}]}>
             <Text style={[styles.infoTitle, {color: palette.textPrimary}]}>Authentication</Text>
-            <Text style={[styles.infoMeta, {color: palette.textSecondary}]}>Fingerprint + PIN</Text>
-          </Pressable>
+            <View style={styles.optionWrap}>
+              {authOptions.map(option => {
+                const selected = draft.authMethod === option;
+                return (
+                  <Pressable
+                    key={option}
+                    onPress={() => updateDraft({authMethod: option})}
+                    style={[styles.optionPill, {backgroundColor: selected ? palette.accent : palette.accentSoft}]}>
+                    <Text style={[styles.optionText, {color: selected ? '#FFFFFF' : palette.accent}]}>
+                      {option === 'BIOMETRIC_FALLBACK' ? 'Biometric + fallback' : option}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+          <View style={[styles.infoSection, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+            <Text style={[styles.infoTitle, {color: palette.textPrimary}]}>Auto-lock</Text>
+            <View style={styles.optionWrap}>
+              {autoLockOptions.map(seconds => {
+                const selected = draft.autoLockSeconds === seconds;
+                return (
+                  <Pressable
+                    key={seconds}
+                    onPress={() => updateDraft({autoLockSeconds: seconds})}
+                    style={[styles.optionPill, {backgroundColor: selected ? palette.accent : palette.accentSoft}]}>
+                    <Text style={[styles.optionText, {color: selected ? '#FFFFFF' : palette.accent}]}>
+                      {seconds < 60 ? `${seconds}s` : `${seconds / 60}m`}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
         </View>
 
         <View style={styles.spacer} />
 
-        <FigmaActionButton variant="dark" label="Save protection" onPress={() => navigation.navigate('SecretEntry')} />
+        <FigmaActionButton
+          variant="dark"
+          label={saving ? 'Saving...' : 'Save protection'}
+          onPress={() => {
+            void (async () => {
+              setSaving(true);
+              try {
+                await protectionManager.upsertProtection({...draft, updatedAt: Date.now()});
+                if (route.params.onboarding) {
+                  navigation.navigate('SecretEntry');
+                } else {
+                  navigation.reset({index: 0, routes: [{name: 'PrivateHome'}]});
+                }
+              } finally {
+                setSaving(false);
+              }
+            })();
+          }}
+        />
       </ScrollView>
     </FigmaPage>
   );
@@ -224,22 +291,33 @@ const styles = StyleSheet.create({
     marginTop: 14,
     gap: 10,
   },
-  infoRow: {
-    minHeight: 54,
+  infoSection: {
     borderRadius: 18,
     borderWidth: 1,
     paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    paddingVertical: 14,
   },
   infoTitle: {
     fontSize: 10,
     fontWeight: '800',
     lineHeight: 14,
   },
-  infoMeta: {
+  optionWrap: {
+    marginTop: 12,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  optionPill: {
+    minHeight: 30,
+    borderRadius: 15,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  optionText: {
     fontSize: 8,
+    fontWeight: '700',
     lineHeight: 10,
   },
   spacer: {

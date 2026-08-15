@@ -6,6 +6,7 @@ import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/Figma
 import {nativeBridge} from '../../native';
 import {APP_UNLOCK_CREDENTIAL_TYPE} from '../../services/security/credentialTypes';
 import type {RootStackParamList} from '../../navigation/routes';
+import {localDataRepository} from '../../storage/LocalDataRepository';
 
 type CredentialKind = 'PIN' | 'PASSWORD' | 'PATTERN';
 
@@ -42,6 +43,8 @@ function CredentialSetupBase(props: {
     setError(null);
     try {
       await nativeBridge.createCredential(APP_UNLOCK_CREDENTIAL_TYPE, normalized);
+      const settings = await localDataRepository.getSettings();
+      await localDataRepository.saveSettings({...settings, primaryAuthMethod: props.kind});
       navigation.navigate(props.nextRoute as never);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to save the credential.');

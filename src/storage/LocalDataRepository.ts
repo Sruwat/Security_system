@@ -5,7 +5,8 @@ import type {AppProtection, AppSettings} from '../types/domain';
 const defaultSettings: AppSettings = {
   onboardingComplete: false,
   theme: 'SYSTEM',
-  secretEntryMethod: 'DOUBLE_TAP',
+  secretEntryMethod: 'CALCULATOR_CODE',
+  primaryAuthMethod: 'PIN',
   bannerEnabled: true,
   nativeAdEnabled: true,
   autoLockSecondsDefault: 300,

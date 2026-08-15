@@ -5,51 +5,87 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import {launchCoordinator} from '../../services/launch/LaunchCoordinator';
 import {nativeBridge} from '../../native';
-import {APP_UNLOCK_CREDENTIAL_TYPE} from '../../services/security/credentialTypes';
+import {VAULT_SECRET_CREDENTIAL_TYPE} from '../../services/security/credentialTypes';
 import type {RootStackParamList} from '../../navigation/routes';
 
-const keypad = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
+const keypad = ['7', '8', '9', '4', '5', '6', '1', '2', '3', '0'];
+const operators = ['+', '-', 'x', '/'];
+
+function evaluateExpression(expression: string): string {
+  const sanitized = expression.replace(/x/g, '*').replace(/[^0-9+\-*/.]/g, '');
+  if (!sanitized) {
+    return '0';
+  }
+
+  try {
+    const result = Function(`"use strict"; return (${sanitized})`)();
+    if (typeof result !== 'number' || !Number.isFinite(result)) {
+      return 'Error';
+    }
+    return Number.isInteger(result) ? String(result) : result.toFixed(2).replace(/\.00$/, '');
+  } catch {
+    return 'Error';
+  }
+}
 
 export function CalculatorScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const palette = figmaPalette.light;
-  const [value, setValue] = React.useState('');
+  const [expression, setExpression] = React.useState('');
   const [busy, setBusy] = React.useState(false);
-  const [message, setMessage] = React.useState('Enter the calculator code to reveal the vault.');
+  const [message, setMessage] = React.useState('Use the calculator normally, or enter your secret code and press =.');
 
   const appendDigit = React.useCallback((digit: string) => {
-    setValue(current => (current.length < 6 ? `${current}${digit}` : current));
+    setExpression(current => `${current}${digit}`.slice(0, 24));
+  }, []);
+
+  const appendOperator = React.useCallback((operator: string) => {
+    setExpression(current => {
+      if (!current) {
+        return current;
+      }
+
+      if (/[+\-x/]$/.test(current)) {
+        return `${current.slice(0, -1)}${operator}`;
+      }
+
+      return `${current}${operator}`;
+    });
   }, []);
 
   const clearValue = React.useCallback(() => {
-    setValue('');
-    setMessage('Enter the calculator code to reveal the vault.');
+    setExpression('');
+    setMessage('Use the calculator normally, or enter your secret code and press =.');
   }, []);
 
   const submit = React.useCallback(async () => {
-    if (!value) {
-      setMessage('Enter a code first.');
+    if (!expression) {
+      setMessage('Enter a calculation or secret code first.');
       return;
     }
 
     setBusy(true);
     try {
-      const verified = await nativeBridge.verifyCredential(APP_UNLOCK_CREDENTIAL_TYPE, value.trim());
-      if (!verified) {
-        setMessage('Code did not match. Try again.');
-        setValue('');
-        return;
+      const normalized = expression.trim();
+      if (/^\d{4,6}$/.test(normalized)) {
+        const verified = await nativeBridge.verifyCredential(VAULT_SECRET_CREDENTIAL_TYPE, normalized);
+        if (verified) {
+          await launchCoordinator.completeSecretEntry();
+          navigation.reset({index: 0, routes: [{name: 'Vault'}]});
+          return;
+        }
       }
 
-      await launchCoordinator.completeSecretEntry();
-      navigation.reset({index: 0, routes: [{name: 'Vault'}]});
+      const result = evaluateExpression(normalized);
+      setExpression(result === 'Error' ? '' : result);
+      setMessage(result === 'Error' ? 'That calculation could not be completed.' : 'Calculation complete.');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Unable to open the vault.');
       Alert.alert('Calculator failed', error instanceof Error ? error.message : 'Unable to open the vault.');
     } finally {
       setBusy(false);
     }
-  }, [navigation, value]);
+  }, [expression, navigation]);
 
   return (
     <FigmaPage variant="light">
@@ -66,7 +102,9 @@ export function CalculatorScreen() {
 
         <View style={[styles.displayCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
           <Text style={[styles.displayLabel, {color: palette.textSecondary}]}>Code</Text>
-          <Text style={[styles.displayValue, {color: palette.textPrimary}]}>{value || ' '}</Text>
+          <Text style={[styles.displayValue, {color: palette.textPrimary}]} numberOfLines={2}>
+            {expression || '0'}
+          </Text>
           <Text style={[styles.displayMessage, {color: palette.textSecondary}]}>{message}</Text>
         </View>
 
@@ -79,6 +117,14 @@ export function CalculatorScreen() {
               <Text style={[styles.keyText, {color: palette.textPrimary}]}>{digit}</Text>
             </Pressable>
           ))}
+          {operators.map(operator => (
+            <Pressable
+              key={operator}
+              onPress={() => appendOperator(operator)}
+              style={({pressed}) => [styles.key, {backgroundColor: palette.accentSoft, borderColor: palette.accent, opacity: pressed ? 0.94 : 1}]}>
+              <Text style={[styles.keyText, {color: palette.accent}]}>{operator}</Text>
+            </Pressable>
+          ))}
         </View>
 
         <View style={styles.actionsRow}>
@@ -86,7 +132,7 @@ export function CalculatorScreen() {
             <Text style={[styles.secondaryText, {color: palette.textSecondary}]}>Clear</Text>
           </Pressable>
           <Pressable onPress={() => void submit()} style={[styles.secondaryPill, {backgroundColor: palette.accentSoft, borderColor: palette.accent}]}>
-            <Text style={[styles.secondaryText, {color: palette.accent}]}>{busy ? 'Checking...' : 'Enter'}</Text>
+            <Text style={[styles.secondaryText, {color: palette.accent}]}>{busy ? 'Checking...' : '='}</Text>
           </Pressable>
         </View>
 

@@ -4,8 +4,6 @@ import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaActionButton, FigmaBanner, FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import {nativeBridge} from '../../native';
-import {buildProtectionPolicy} from './buildProtectionPolicy';
-import {protectionManager} from '../../services/protection/ProtectionManager';
 import {localDataRepository} from '../../storage/LocalDataRepository';
 import type {LaunchableApp} from '../../types/domain';
 import type {RootStackParamList} from '../../navigation/routes';
@@ -58,15 +56,16 @@ export function AddAppsScreen() {
 
     setSaving(true);
     try {
-      await protectionManager.upsertProtection(
-        buildProtectionPolicy({
+      const settings = await localDataRepository.getSettings();
+      navigation.navigate('ProtectionMode', {
+        draft: {
           app: selected,
           mode: 'LOCK_HIDE',
           authMethod: 'BIOMETRIC_FALLBACK',
-          autoLockSeconds: 300,
-        }),
-      );
-      navigation.navigate('ProtectionMode');
+          autoLockSeconds: settings.autoLockSecondsDefault,
+        },
+        onboarding: !settings.onboardingComplete,
+      });
     } catch (err) {
       Alert.alert('Save failed', err instanceof Error ? err.message : 'Unable to save protection.');
     } finally {
@@ -122,7 +121,7 @@ export function AddAppsScreen() {
 
               return (
                 <Pressable
-                  onPress={() => setSelectedPackageName(item.packageName)}
+                  onPress={() => setSelectedPackageName(current => (current === item.packageName ? null : item.packageName))}
                   style={({pressed}) => [
                     styles.appRow,
                     {
