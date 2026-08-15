@@ -11,7 +11,7 @@ class MainActivity : ReactActivity() {
   override fun getMainComponentName(): String = "SmartAppLockHide"
 
   override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
+    super.onCreate(null)
     window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
   }
 
