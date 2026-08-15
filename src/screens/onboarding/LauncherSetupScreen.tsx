@@ -1,5 +1,5 @@
 import React from 'react';
-import {Pressable, StyleSheet, Text, View} from 'react-native';
+import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
@@ -25,7 +25,7 @@ export function LauncherSetupScreen() {
 
   return (
     <FigmaPage variant="light">
-      <View style={styles.fill}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.topRow}>
           <View>
             <Text style={[styles.time, {color: palette.textSecondary}]}>9:41</Text>
@@ -63,14 +63,14 @@ export function LauncherSetupScreen() {
         <View style={styles.spacer} />
 
         <FigmaActionButton variant="light" label="Continue" onPress={() => navigation.navigate('PrimaryLock')} />
-      </View>
+      </ScrollView>
     </FigmaPage>
   );
 }
 
 const styles = StyleSheet.create({
-  fill: {
-    flex: 1,
+  scrollContent: {
+    paddingBottom: 24,
   },
   topRow: {
     flexDirection: 'row',

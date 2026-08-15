@@ -7,8 +7,11 @@ import {launchCoordinator} from '../../services/launch/LaunchCoordinator';
 import {localDataRepository} from '../../storage/LocalDataRepository';
 import type {AppProtection} from '../../types/domain';
 import type {RootStackParamList} from '../../navigation/routes';
+import {useAppVariant} from '../../hooks/useAppVariant';
 
-function MetricCard(props: {label: string; value: string; tone: 'accent' | 'muted' | 'surface'; palette: typeof figmaPalette.dark}) {
+type Palette = (typeof figmaPalette)[keyof typeof figmaPalette];
+
+function MetricCard(props: {label: string; value: string; tone: 'accent' | 'muted' | 'surface'; palette: Palette}) {
   const backgroundColor = props.tone === 'accent' ? props.palette.accent : props.tone === 'muted' ? props.palette.accentSoft : props.palette.surface;
   const textColor = props.tone === 'accent' ? '#FFFFFF' : props.tone === 'muted' ? props.palette.accent : props.palette.textPrimary;
   const subColor = props.tone === 'accent' ? 'rgba(255,255,255,0.82)' : props.palette.textSecondary;
@@ -25,7 +28,8 @@ export function PrivateHomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [apps, setApps] = React.useState<AppProtection[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const palette = figmaPalette.dark;
+  const variant = useAppVariant();
+  const palette = figmaPalette[variant];
 
   const loadApps = React.useCallback(async () => {
     setLoading(true);
@@ -40,10 +44,11 @@ export function PrivateHomeScreen() {
     void loadApps();
   }, [loadApps]);
 
-  const visibleApps = apps.slice(0, 4);
+  const visibleApps = apps.filter(app => app.mode === 'NONE' || app.mode === 'LOCK').slice(0, 4);
+  const hiddenCount = apps.filter(app => app.mode === 'HIDE' || app.mode === 'LOCK_HIDE').length;
 
   return (
-    <FigmaPage variant="dark">
+    <FigmaPage variant={variant}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.topBar}>
           <View>
@@ -72,9 +77,18 @@ export function PrivateHomeScreen() {
         </View>
 
         <View style={styles.actionsRow}>
-          <FigmaActionButton variant="dark" label="Add apps" onPress={() => navigation.navigate('AddApps')} />
-          <FigmaActionButton variant="dark" label="Manage" tone="secondary" onPress={() => navigation.navigate('ManageApps')} />
+          <FigmaActionButton variant={variant} label="Add apps" onPress={() => navigation.navigate('AddApps')} />
+          <FigmaActionButton variant={variant} label="Manage" tone="secondary" onPress={() => navigation.navigate('ManageApps')} />
         </View>
+
+        {hiddenCount > 0 ? (
+          <Pressable onPress={() => navigation.navigate('Vault')} style={[styles.vaultCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+            <Text style={[styles.vaultTitle, {color: palette.textPrimary}]}>Vault access</Text>
+            <Text style={[styles.vaultBody, {color: palette.textSecondary}]}>
+              {hiddenCount} hidden app{hiddenCount === 1 ? '' : 's'} are available through secret entry.
+            </Text>
+          </Pressable>
+        ) : null}
 
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Protected apps</Text>
@@ -93,9 +107,18 @@ export function PrivateHomeScreen() {
               <Pressable
                 key={app.packageName}
                 onPress={() => {
-                  void launchCoordinator.launch(app.packageName).catch(error => {
-                    Alert.alert('Launch failed', error instanceof Error ? error.message : 'Unable to launch app.');
-                  });
+                  void (async () => {
+                    try {
+                      const outcome = await launchCoordinator.launch(app.packageName);
+                      if (outcome === 'auth_required') {
+                        navigation.navigate('AuthGate');
+                      } else if (outcome === 'secret_required') {
+                        navigation.navigate('Vault');
+                      }
+                    } catch (error) {
+                      Alert.alert('Launch failed', error instanceof Error ? error.message : 'Unable to launch app.');
+                    }
+                  })();
                 }}
                 style={({pressed}) => [
                   styles.appCard,
@@ -130,10 +153,10 @@ export function PrivateHomeScreen() {
           <Text style={[styles.calloutBody, {color: palette.textSecondary}]}>Protected apps stay local to this device. No cloud unlock history is required.</Text>
         </View>
 
-        <FigmaBanner variant="dark" title="Native advertisement" subtitle="Placed after functional content" tone="surfaceElevated" />
+        <FigmaBanner variant={variant} placement="native" title="Native advertisement" subtitle="Placed after functional content" tone="surfaceElevated" />
 
         <View style={styles.bottomSpacer} />
-        <FigmaBottomNav variant="dark" active="home" />
+        <FigmaBottomNav variant={variant} active="home" />
       </ScrollView>
     </FigmaPage>
   );
@@ -343,6 +366,23 @@ const styles = StyleSheet.create({
     lineHeight: 12,
   },
   calloutBody: {
+    marginTop: 8,
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  vaultCard: {
+    marginTop: 16,
+    borderRadius: 22,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  vaultTitle: {
+    fontSize: 10,
+    fontWeight: '800',
+    lineHeight: 12,
+  },
+  vaultBody: {
     marginTop: 8,
     fontSize: 11,
     lineHeight: 15,

@@ -65,15 +65,27 @@ export function ManageAppsScreen() {
 
   const removeProtection = React.useCallback(
     async (app: AppProtection) => {
-      setBusyPackage(app.packageName);
-      try {
-        await protectionManager.removeProtection(app.packageName);
-        await loadApps();
-      } catch (error) {
-        Alert.alert('Remove failed', error instanceof Error ? error.message : 'Unable to remove protection.');
-      } finally {
-        setBusyPackage(null);
-      }
+      Alert.alert('Remove app?', `Remove protection for ${app.label}?`, [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              setBusyPackage(app.packageName);
+              try {
+                await protectionManager.removeProtection(app.packageName);
+                await loadApps();
+                navigation.navigate('AppRemoved', {label: app.label});
+              } catch (error) {
+                Alert.alert('Remove failed', error instanceof Error ? error.message : 'Unable to remove protection.');
+              } finally {
+                setBusyPackage(null);
+              }
+            })();
+          },
+        },
+      ]);
     },
     [loadApps],
   );
@@ -143,7 +155,7 @@ export function ManageAppsScreen() {
           <Text style={[styles.calloutBody, {color: palette.textSecondary}]}>Lock + Hide keeps the app out of the launcher while still requiring authentication to open.</Text>
         </View>
 
-        <FigmaBanner variant="dark" title="Native advertisement" subtitle="Placed after functional content" tone="surfaceElevated" />
+        <FigmaBanner variant="dark" placement="native" title="Native advertisement" subtitle="Placed after functional content" tone="surfaceElevated" />
 
         <View style={styles.bottomSpacer} />
         <FigmaBottomNav variant="dark" active="home" />

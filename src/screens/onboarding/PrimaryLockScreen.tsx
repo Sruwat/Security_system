@@ -1,13 +1,22 @@
 import React from 'react';
-import {Pressable, StyleSheet, Text, View} from 'react-native';
+import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import type {RootStackParamList} from '../../navigation/routes';
 
-function LockChoice(props: {title: string; subtitle: string; icon: string; palette: typeof figmaPalette.dark}) {
+function LockChoice(props: {title: string; subtitle: string; icon: string; palette: typeof figmaPalette.dark; onPress: () => void}) {
   return (
-    <View style={[styles.choiceCard, {backgroundColor: props.palette.surface, borderColor: props.palette.border}]}>
+    <Pressable
+      onPress={props.onPress}
+      style={({pressed}) => [
+        styles.choiceCard,
+        {
+          backgroundColor: props.palette.surface,
+          borderColor: props.palette.border,
+          opacity: pressed ? 0.94 : 1,
+        },
+      ]}>
       <View style={[styles.choiceIcon, {backgroundColor: props.palette.accentSoft}]}>
         <Text style={[styles.choiceIconText, {color: props.palette.accent}]}>{props.icon}</Text>
       </View>
@@ -15,7 +24,7 @@ function LockChoice(props: {title: string; subtitle: string; icon: string; palet
         <Text style={[styles.choiceTitle, {color: props.palette.textPrimary}]}>{props.title}</Text>
         <Text style={[styles.choiceSubtitle, {color: props.palette.textSecondary}]}>{props.subtitle}</Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -25,7 +34,7 @@ export function PrimaryLockScreen() {
 
   return (
     <FigmaPage variant="dark">
-      <View style={styles.fill}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.topRow}>
           <Text style={[styles.time, {color: palette.textPrimary}]}>9:41</Text>
           <View style={[styles.stepPill, {backgroundColor: palette.accentSoft}]}>
@@ -48,10 +57,10 @@ export function PrimaryLockScreen() {
         </View>
 
         <View style={styles.choices}>
-          <LockChoice palette={palette} icon="1234" title="PIN" subtitle="Fast numeric fallback" />
-          <LockChoice palette={palette} icon="Aa" title="Password" subtitle="Text-based credential" />
-          <LockChoice palette={palette} icon="O" title="Pattern" subtitle="Android-style gesture lock" />
-          <LockChoice palette={palette} icon="B" title="Biometric" subtitle="Use fingerprint or face unlock" />
+          <LockChoice palette={palette} icon="1234" title="PIN" subtitle="Fast numeric fallback" onPress={() => navigation.navigate('PinSetup')} />
+          <LockChoice palette={palette} icon="Aa" title="Password" subtitle="Text-based credential" onPress={() => navigation.navigate('PasswordSetup')} />
+          <LockChoice palette={palette} icon="O" title="Pattern" subtitle="Android-style gesture lock" onPress={() => navigation.navigate('PatternSetup')} />
+          <LockChoice palette={palette} icon="B" title="Biometric" subtitle="Use fingerprint or face unlock" onPress={() => navigation.navigate('BiometricSetup')} />
         </View>
 
         <View style={[styles.noteCard, {backgroundColor: palette.accentSoft, borderColor: palette.border}]}>
@@ -65,15 +74,15 @@ export function PrimaryLockScreen() {
 
         <View style={styles.spacer} />
 
-        <FigmaActionButton variant="dark" label="Create primary lock" onPress={() => navigation.navigate('AddApps')} />
-      </View>
+        <FigmaActionButton variant="dark" label="Create primary lock" onPress={() => navigation.navigate('PinSetup')} />
+      </ScrollView>
     </FigmaPage>
   );
 }
 
 const styles = StyleSheet.create({
-  fill: {
-    flex: 1,
+  scrollContent: {
+    paddingBottom: 24,
   },
   topRow: {
     flexDirection: 'row',

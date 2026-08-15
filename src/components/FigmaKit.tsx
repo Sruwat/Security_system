@@ -1,5 +1,6 @@
 import React from 'react';
 import {Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View} from 'react-native';
+import {adsManager} from '../services/ads/AdsManager';
 
 export type FigmaVariant = 'light' | 'dark';
 
@@ -174,8 +175,19 @@ export function FigmaBottomNav(props: {variant: FigmaVariant; active: 'home' | '
   );
 }
 
-export function FigmaBanner(props: {variant: FigmaVariant; title: string; subtitle?: string; tone?: 'surfaceElevated' | 'surface'}) {
+export function FigmaBanner(props: {variant: FigmaVariant; title: string; subtitle?: string; tone?: 'surfaceElevated' | 'surface'; placement?: 'banner' | 'native'}) {
   const palette = useFigmaPalette(props.variant);
+  const [ready, setReady] = React.useState(false);
+  const placement = props.placement ?? 'banner';
+  React.useEffect(() => {
+    const timer = setTimeout(() => setReady(true), 0);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const isReady = placement === 'native' ? adsManager.showNative() : adsManager.showBanner();
+  if (!ready || !isReady) {
+    return null;
+  }
   const backgroundColor = props.tone === 'surface' ? palette.surface : palette.surfaceElevated;
   return (
     <View style={[styles.banner, {backgroundColor, borderColor: palette.border}]}>

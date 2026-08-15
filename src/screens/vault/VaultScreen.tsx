@@ -6,10 +6,14 @@ import {FigmaActionButton, FigmaBanner, FigmaBottomNav, FigmaPage, figmaPalette}
 import {launchCoordinator} from '../../services/launch/LaunchCoordinator';
 import {nativeBridge} from '../../native';
 import {localDataRepository} from '../../storage/LocalDataRepository';
+import {sessionManager} from '../../services/session/SessionManager';
 import type {AppProtection} from '../../types/domain';
 import type {RootStackParamList} from '../../navigation/routes';
+import {useAppVariant} from '../../hooks/useAppVariant';
 
-function VaultMetric(props: {label: string; value: string; palette: typeof figmaPalette.dark; tone?: 'accent' | 'surface'}) {
+type Palette = (typeof figmaPalette)[keyof typeof figmaPalette];
+
+function VaultMetric(props: {label: string; value: string; palette: Palette; tone?: 'accent' | 'surface'}) {
   const backgroundColor = props.tone === 'accent' ? props.palette.accent : props.palette.surface;
   const valueColor = props.tone === 'accent' ? '#FFFFFF' : props.palette.textPrimary;
   const labelColor = props.tone === 'accent' ? 'rgba(255,255,255,0.82)' : props.palette.textSecondary;
@@ -24,11 +28,14 @@ function VaultMetric(props: {label: string; value: string; palette: typeof figma
 
 export function VaultScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const palette = figmaPalette.dark;
+  const variant = useAppVariant();
+  const palette = figmaPalette[variant];
   const [apps, setApps] = React.useState<AppProtection[]>([]);
   const [loading, setLoading] = React.useState(true);
   const pendingPackageName = launchCoordinator.getPendingLaunchPackageName();
   const pendingMode = launchCoordinator.getPendingLaunchMode();
+  const pendingLabel = pendingMode === 'LOCK_HIDE' ? 'Protected app' : pendingPackageName;
+  const hasVaultSession = sessionManager.getState()?.vaultUnlocked === true;
 
   const loadVault = React.useCallback(async () => {
     setLoading(true);
@@ -47,8 +54,16 @@ export function VaultScreen() {
     return apps.filter(app => app.mode === 'HIDE' || app.mode === 'LOCK_HIDE');
   }, [apps]);
 
+  const visibleHiddenApps = hiddenApps.filter(app => app.mode === 'HIDE');
+  const lockedHiddenApps = hiddenApps.filter(app => app.mode === 'LOCK_HIDE');
+
   const openPendingApp = React.useCallback(async () => {
     if (!pendingPackageName) {
+      return;
+    }
+
+    if (!hasVaultSession) {
+      navigation.navigate('Calculator');
       return;
     }
 
@@ -58,22 +73,33 @@ export function VaultScreen() {
         Alert.alert('Authentication required', 'Biometric verification did not complete.');
         return;
       }
-    }
 
-    try {
       const outcome = await launchCoordinator.completeAuthentication();
       if (outcome === 'app_launched') {
         navigation.reset({index: 0, routes: [{name: 'PrivateHome'}]});
-      } else if (outcome === 'vault_unlocked') {
-        navigation.navigate('SecretEntry');
+        return;
       }
-    } catch (error) {
-      Alert.alert('Unable to open app', error instanceof Error ? error.message : 'Failed to launch hidden app.');
+
+      navigation.navigate('UnlockSuccess');
+      return;
     }
-  }, [navigation, pendingMode, pendingPackageName]);
+
+    const outcome = await launchCoordinator.launch(pendingPackageName);
+    if (outcome === 'launched') {
+      navigation.reset({index: 0, routes: [{name: 'PrivateHome'}]});
+      return;
+    }
+
+    if (outcome === 'auth_required') {
+      navigation.navigate('AuthGate');
+      return;
+    }
+
+    navigation.navigate('Calculator');
+  }, [hasVaultSession, navigation, pendingMode, pendingPackageName]);
 
   return (
-    <FigmaPage variant="dark">
+    <FigmaPage variant={variant}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.topRow}>
           <View>
@@ -106,21 +132,21 @@ export function VaultScreen() {
               <View style={[styles.pendingBadge, {backgroundColor: palette.accentSoft}]}>
                 <Text style={[styles.pendingBadgeText, {color: palette.accent}]}>Pending access</Text>
               </View>
-              <Text style={[styles.pendingApp, {color: palette.textPrimary}]}>{pendingPackageName}</Text>
+              <Text style={[styles.pendingApp, {color: palette.textPrimary}]}>{pendingLabel}</Text>
             </View>
             <Text style={[styles.pendingText, {color: palette.textSecondary}]}>
-              {pendingMode ? `The app is waiting in ${pendingMode} mode.` : 'The app is waiting for vault access.'}
+              {pendingMode === 'LOCK_HIDE' ? 'A protected app is waiting for biometric confirmation.' : pendingMode ? `The app is waiting in ${pendingMode} mode.` : 'The app is waiting for vault access.'}
             </Text>
             <Text style={[styles.pendingHint, {color: palette.textSecondary}]}>Hidden launches stay routed through LaunchCoordinator.</Text>
             <FigmaActionButton
-              variant="dark"
+              variant={variant}
               label={pendingMode === 'LOCK_HIDE' ? 'Authenticate and open' : 'Open hidden app'}
               onPress={() => void openPendingApp()}
             />
           </View>
         ) : null}
 
-        <FigmaBanner variant="dark" title="Banner ad" tone="surfaceElevated" />
+        <FigmaBanner variant={variant} title="Banner ad" tone="surfaceElevated" />
 
         <View style={styles.sectionRow}>
           <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>My Private Apps</Text>
@@ -142,31 +168,58 @@ export function VaultScreen() {
               </Pressable>
             </View>
           ) : (
-            hiddenApps.map(app => (
-              <Pressable
-                key={app.packageName}
-                onPress={() => {
-                  void launchCoordinator.launch(app.packageName).catch(error => {
-                    Alert.alert('Launch failed', error instanceof Error ? error.message : 'Unable to launch hidden app.');
-                  });
-                }}
-                style={({pressed}) => [
-                  styles.gridCard,
-                  {
-                    backgroundColor: palette.surface,
-                    borderColor: palette.border,
-                    opacity: pressed ? 0.94 : 1,
-                  },
-                ]}>
-                <View style={[styles.iconBox, {backgroundColor: palette.accentSoft}]}>
-                  <Text style={[styles.iconText, {color: palette.accent}]}>{app.label.slice(0, 2).toUpperCase()}</Text>
-                </View>
-                <Text style={[styles.cardTitle, {color: palette.textPrimary}]}>{app.label}</Text>
-                <View style={[styles.modePill, {backgroundColor: palette.accentSoft}]}>
-                  <Text style={[styles.modeText, {color: palette.accent}]}>{app.mode}</Text>
-                </View>
-              </Pressable>
-            ))
+            <>
+              {visibleHiddenApps.map(app => (
+                <Pressable
+                  key={app.packageName}
+                  onPress={() => {
+                    void launchCoordinator.launch(app.packageName).catch(error => {
+                      Alert.alert('Launch failed', error instanceof Error ? error.message : 'Unable to launch hidden app.');
+                    });
+                  }}
+                  style={({pressed}) => [
+                    styles.gridCard,
+                    {
+                      backgroundColor: palette.surface,
+                      borderColor: palette.border,
+                      opacity: pressed ? 0.94 : 1,
+                    },
+                  ]}>
+                  <View style={[styles.iconBox, {backgroundColor: palette.accentSoft}]}>
+                    <Text style={[styles.iconText, {color: palette.accent}]}>{app.label.slice(0, 2).toUpperCase()}</Text>
+                  </View>
+                  <Text style={[styles.cardTitle, {color: palette.textPrimary}]}>{app.label}</Text>
+                  <View style={[styles.modePill, {backgroundColor: palette.accentSoft}]}>
+                    <Text style={[styles.modeText, {color: palette.accent}]}>HIDE</Text>
+                  </View>
+                </Pressable>
+              ))}
+
+              {lockedHiddenApps.map(app => (
+                <Pressable
+                  key={app.packageName}
+                  onPress={() => {
+                    launchCoordinator.restorePendingLaunch(app.packageName, app.mode);
+                    navigation.navigate(hasVaultSession ? 'AuthGate' : 'Calculator');
+                  }}
+                  style={({pressed}) => [
+                    styles.gridCard,
+                    {
+                      backgroundColor: palette.surface,
+                      borderColor: palette.border,
+                      opacity: pressed ? 0.94 : 1,
+                    },
+                  ]}>
+                  <View style={[styles.iconBox, {backgroundColor: palette.accentSoft}]}>
+                    <Text style={[styles.iconText, {color: palette.accent}]}>LK</Text>
+                  </View>
+                  <Text style={[styles.cardTitle, {color: palette.textPrimary}]}>Protected app</Text>
+                  <View style={[styles.modePill, {backgroundColor: palette.accentSoft}]}>
+                    <Text style={[styles.modeText, {color: palette.accent}]}>LOCK_HIDE</Text>
+                  </View>
+                </Pressable>
+              ))}
+            </>
           )}
 
           <Pressable
@@ -182,15 +235,10 @@ export function VaultScreen() {
           <Text style={[styles.calloutBody, {color: palette.textSecondary}]}>Opening a hidden app keeps the user inside the protected route instead of bypassing it.</Text>
         </View>
 
-        <FigmaBanner
-          variant="dark"
-          title="Native advertisement"
-          subtitle="Placed after functional content"
-          tone="surfaceElevated"
-        />
+        <FigmaBanner variant={variant} placement="native" title="Native advertisement" subtitle="Placed after functional content" tone="surfaceElevated" />
 
         <View style={styles.bottomSpacer} />
-        <FigmaBottomNav variant="dark" active="home" />
+        <FigmaBottomNav variant={variant} active="home" />
       </ScrollView>
     </FigmaPage>
   );

@@ -119,6 +119,7 @@ export function AddAppsScreen() {
               const isSelected = item.packageName === selectedPackageName;
               const label = isSelected ? 'Selected' : 'Add';
               const icon = item.label.slice(0, 2).toUpperCase();
+
               return (
                 <Pressable
                   onPress={() => setSelectedPackageName(item.packageName)}
@@ -146,7 +147,7 @@ export function AddAppsScreen() {
           />
         )}
 
-        <FigmaBanner variant="light" title="Native advertisement" subtitle="Placed after functional content" tone="surfaceElevated" />
+        <FigmaBanner variant="light" placement="native" title="Native advertisement" subtitle="Placed after functional content" tone="surfaceElevated" />
 
         <View style={styles.spacer} />
 

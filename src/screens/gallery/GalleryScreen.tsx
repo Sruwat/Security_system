@@ -39,12 +39,7 @@ export function GalleryScreen() {
           ))}
         </View>
 
-        <FigmaBanner
-          variant="dark"
-          title="Native advertisement"
-          subtitle="Placed after functional content"
-          tone="surfaceElevated"
-        />
+        <FigmaBanner variant="dark" placement="native" title="Native advertisement" subtitle="Placed after functional content" tone="surfaceElevated" />
 
         <View style={styles.bottomSpacer} />
         <FigmaBottomNav variant="dark" active="gallery" />

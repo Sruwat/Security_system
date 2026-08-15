@@ -140,6 +140,25 @@ class SmartAppLockHideBridgeModule(private val context: ReactApplicationContext)
   }
 
   @ReactMethod
+  fun getTransientAccess(promise: Promise) {
+    try {
+      val state = transientAccessRepository.read()
+      if (state == null) {
+        promise.resolve(null)
+        return
+      }
+
+      promise.resolve(Arguments.createMap().apply {
+        putString("packageName", state.packageName)
+        putBoolean("vaultUnlocked", state.vaultUnlocked)
+        putDouble("expiresAt", state.expiresAt.toDouble())
+      })
+    } catch (error: Throwable) {
+      promise.reject("TRANSIENT_ACCESS_READ_FAILED", error)
+    }
+  }
+
+  @ReactMethod
   fun getDeviceCapabilities(promise: Promise) {
     val map = Arguments.createMap().apply {
       val capabilities = capabilityProvider.getCapabilities()

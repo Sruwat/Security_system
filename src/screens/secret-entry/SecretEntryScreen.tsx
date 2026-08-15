@@ -1,9 +1,10 @@
 import React from 'react';
-import {Pressable, StyleSheet, Text, View} from 'react-native';
+import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import {localDataRepository} from '../../storage/LocalDataRepository';
+import type {SecretEntryMethod} from '../../types/domain';
 import type {RootStackParamList} from '../../navigation/routes';
 
 const entryMethods = [
@@ -14,9 +15,18 @@ const entryMethods = [
   {title: 'Pinch / spread', subtitle: 'Gesture', tag: 'Flexible'},
 ];
 
-function EntryCard(props: {title: string; subtitle: string; tag: string; palette: typeof figmaPalette.light}) {
+function EntryCard(props: {title: string; subtitle: string; tag: string; selected?: boolean; onPress: () => void; palette: typeof figmaPalette.light}) {
   return (
-    <Pressable style={({pressed}) => [styles.entryCard, {backgroundColor: props.palette.surface, borderColor: props.palette.border, opacity: pressed ? 0.94 : 1}]}>
+    <Pressable
+      onPress={props.onPress}
+      style={({pressed}) => [
+        styles.entryCard,
+        {
+          backgroundColor: props.selected ? props.palette.accentSoft : props.palette.surface,
+          borderColor: props.selected ? props.palette.accent : props.palette.border,
+          opacity: pressed ? 0.94 : 1,
+        },
+      ]}>
       <View style={styles.entryBody}>
         <Text style={[styles.entryTitle, {color: props.palette.textPrimary}]}>{props.title}</Text>
         <Text style={[styles.entrySubtitle, {color: props.palette.textSecondary}]}>{props.subtitle}</Text>
@@ -31,10 +41,25 @@ function EntryCard(props: {title: string; subtitle: string; tag: string; palette
 export function SecretEntryScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const palette = figmaPalette.light;
+  const [selectedMethod, setSelectedMethod] = React.useState<SecretEntryMethod>('CALCULATOR_CODE');
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    void localDataRepository.getSettings().then(settings => {
+      setSelectedMethod(settings.secretEntryMethod);
+      setLoading(false);
+    });
+  }, []);
+
+  const saveAndFinish = React.useCallback(async () => {
+    const settings = await localDataRepository.getSettings();
+    await localDataRepository.saveSettings({...settings, secretEntryMethod: selectedMethod, onboardingComplete: true});
+    navigation.navigate(selectedMethod === 'CALCULATOR_CODE' ? 'Calculator' : 'Vault');
+  }, [navigation, selectedMethod]);
 
   return (
     <FigmaPage variant="light">
-      <View style={styles.fill}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.topRow}>
           <Text style={[styles.time, {color: palette.textSecondary}]}>9:41</Text>
           <View style={[styles.stepPill, {backgroundColor: palette.accentSoft}]}>
@@ -60,7 +85,15 @@ export function SecretEntryScreen() {
 
         <View style={styles.cards}>
           {entryMethods.map(method => (
-            <EntryCard key={method.title} title={method.title} subtitle={method.subtitle} tag={method.tag} palette={palette} />
+            <EntryCard
+              key={method.title}
+              title={method.title}
+              subtitle={method.subtitle}
+              tag={method.tag}
+              selected={selectedMethod === methodToSecretEntryMethod(method.title)}
+              onPress={() => setSelectedMethod(methodToSecretEntryMethod(method.title))}
+              palette={palette}
+            />
           ))}
         </View>
 
@@ -68,21 +101,32 @@ export function SecretEntryScreen() {
 
         {/* The vault unlock step keeps the native credential check in place:
             verifyCredential(VAULT_SECRET_CREDENTIAL_TYPE, ...) */}
-        <FigmaActionButton
-          variant="light"
-          label="Finish setup"
-          onPress={() => {
-            void localDataRepository.setOnboardingComplete(true).finally(() => navigation.navigate('Vault'));
-          }}
-        />
-      </View>
+        <FigmaActionButton variant="light" label={loading ? 'Loading...' : 'Finish setup'} onPress={() => void saveAndFinish()} />
+      </ScrollView>
     </FigmaPage>
   );
 }
 
+function methodToSecretEntryMethod(title: string): SecretEntryMethod {
+  switch (title) {
+    case 'Calculator code':
+      return 'CALCULATOR_CODE';
+    case 'Double tap':
+      return 'DOUBLE_TAP';
+    case 'Triple tap':
+      return 'TRIPLE_TAP';
+    case 'Long press':
+      return 'LONG_PRESS';
+    case 'Pinch / spread':
+      return 'PINCH';
+    default:
+      return 'CALCULATOR_CODE';
+  }
+}
+
 const styles = StyleSheet.create({
-  fill: {
-    flex: 1,
+  scrollContent: {
+    paddingBottom: 24,
   },
   topRow: {
     flexDirection: 'row',

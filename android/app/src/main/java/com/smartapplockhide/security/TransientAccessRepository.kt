@@ -5,12 +5,30 @@ import android.content.Context
 class TransientAccessRepository(context: Context) {
   private val preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+  data class TransientAccessState(
+    val packageName: String?,
+    val vaultUnlocked: Boolean,
+    val expiresAt: Long,
+  )
+
   fun persist(packageName: String?, vaultUnlocked: Boolean, expiresAt: Long) {
     preferences.edit()
       .putString(KEY_PACKAGE_NAME, packageName)
       .putBoolean(KEY_VAULT_UNLOCKED, vaultUnlocked)
       .putLong(KEY_EXPIRES_AT, expiresAt)
       .apply()
+  }
+
+  fun read(): TransientAccessState? {
+    if (!preferences.contains(KEY_EXPIRES_AT) && !preferences.contains(KEY_VAULT_UNLOCKED) && !preferences.contains(KEY_PACKAGE_NAME)) {
+      return null
+    }
+
+    return TransientAccessState(
+      packageName = preferences.getString(KEY_PACKAGE_NAME, null),
+      vaultUnlocked = preferences.getBoolean(KEY_VAULT_UNLOCKED, false),
+      expiresAt = preferences.getLong(KEY_EXPIRES_AT, 0L),
+    )
   }
 
   fun clear() {

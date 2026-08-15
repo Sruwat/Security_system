@@ -16,14 +16,21 @@ export class LaunchCoordinator {
     }
 
     const decision = protectionManager.evaluateDecision(protection.mode, packageName);
+    const hasSession = sessionManager.isValidFor(packageName);
 
-    if (decision.requiresSecretEntry) {
+    if (decision.requiresSecretEntry && !hasSession) {
       this.pendingLaunchPackageName = packageName;
       this.pendingLaunchMode = protection.mode;
       return 'secret_required';
     }
 
-    if (decision.requiresAuthentication && !sessionManager.isValidFor(packageName)) {
+    if (protection.mode === 'LOCK_HIDE' && hasSession) {
+      this.pendingLaunchPackageName = packageName;
+      this.pendingLaunchMode = protection.mode;
+      return 'auth_required';
+    }
+
+    if (decision.requiresAuthentication && !hasSession) {
       this.pendingLaunchPackageName = packageName;
       this.pendingLaunchMode = protection.mode;
       return 'auth_required';
@@ -49,6 +56,11 @@ export class LaunchCoordinator {
 
   getPendingLaunchMode(): ProtectionMode | null {
     return this.pendingLaunchMode;
+  }
+
+  restorePendingLaunch(packageName: string | null, mode: ProtectionMode | null = null): void {
+    this.pendingLaunchPackageName = packageName;
+    this.pendingLaunchMode = mode;
   }
 
   async completeAuthentication(): Promise<'vault_unlocked' | 'app_launched'> {

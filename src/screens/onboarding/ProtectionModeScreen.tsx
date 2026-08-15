@@ -1,5 +1,5 @@
 import React from 'react';
-import {Pressable, StyleSheet, Text, View} from 'react-native';
+import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
@@ -42,7 +42,7 @@ export function ProtectionModeScreen() {
 
   return (
     <FigmaPage variant="dark">
-      <View style={styles.fill}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.topRow}>
           <Text style={[styles.time, {color: palette.textPrimary}]}>9:41</Text>
           <View style={[styles.stepPill, {backgroundColor: palette.accentSoft}]}>
@@ -75,7 +75,7 @@ export function ProtectionModeScreen() {
         </View>
 
         <View style={styles.infoStack}>
-          <Pressable onPress={() => navigation.navigate('Settings')} style={[styles.infoRow, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+          <Pressable onPress={() => navigation.navigate('AutoLockSettings')} style={[styles.infoRow, {backgroundColor: palette.surface, borderColor: palette.border}]}>
             <Text style={[styles.infoTitle, {color: palette.textPrimary}]}>Auto-lock</Text>
             <Text style={[styles.infoMeta, {color: palette.textSecondary}]}>30 seconds</Text>
           </Pressable>
@@ -88,14 +88,14 @@ export function ProtectionModeScreen() {
         <View style={styles.spacer} />
 
         <FigmaActionButton variant="dark" label="Save protection" onPress={() => navigation.navigate('SecretEntry')} />
-      </View>
+      </ScrollView>
     </FigmaPage>
   );
 }
 
 const styles = StyleSheet.create({
-  fill: {
-    flex: 1,
+  scrollContent: {
+    paddingBottom: 24,
   },
   topRow: {
     flexDirection: 'row',

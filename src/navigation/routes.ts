@@ -2,6 +2,15 @@ export type RootStackParamList = {
   Welcome: undefined;
   LauncherSetup: undefined;
   PrimaryLock: undefined;
+  PinSetup: undefined;
+  PasswordSetup: undefined;
+  PatternSetup: undefined;
+  BiometricSetup: undefined;
+  ProtectionSaved: undefined;
+  AutoLockSettings: undefined;
+  RebootRestored: undefined;
+  UnlockSuccess: undefined;
+  Calculator: undefined;
   AuthGate: undefined;
   PrivateHome: undefined;
   AddApps: undefined;
@@ -11,4 +20,7 @@ export type RootStackParamList = {
   SecretEntry: undefined;
   Vault: undefined;
   Settings: undefined;
+  PrivacyCenter: undefined;
+  AdManagerRules: undefined;
+  AppRemoved: {label: string};
 };

@@ -20,8 +20,8 @@ export class ProtectionManager {
     await localDataRepository.removeProtectedApp(packageName);
   }
 
-  evaluateDecision(mode: ProtectionMode, packageName: string): LaunchDecision {
-    const hasSession = sessionManager.isValidFor(packageName);
+  evaluateDecision(mode: ProtectionMode, packageName: string, hasSession = false): LaunchDecision {
+    const sessionActive = hasSession || sessionManager.isValidFor(packageName);
 
     switch (mode) {
       case 'NONE':
@@ -29,23 +29,23 @@ export class ProtectionManager {
       case 'LOCK':
         return {
           launchable: true,
-          requiresAuthentication: !hasSession,
+          requiresAuthentication: !sessionActive,
           requiresSecretEntry: false,
-          reason: hasSession ? 'Valid temporary session' : 'Authentication required',
+          reason: sessionActive ? 'Valid temporary session' : 'Authentication required',
         };
       case 'HIDE':
         return {
-          launchable: false,
+          launchable: sessionActive,
           requiresAuthentication: true,
           requiresSecretEntry: true,
-          reason: 'Hidden from normal launcher surfaces',
+          reason: sessionActive ? 'Secret session already active' : 'Hidden from normal launcher surfaces',
         };
       case 'LOCK_HIDE':
         return {
           launchable: false,
           requiresAuthentication: true,
           requiresSecretEntry: true,
-          reason: 'Hidden and protected',
+          reason: sessionActive ? 'Secret session active, authentication still required' : 'Hidden and protected',
         };
       default:
         return {launchable: false, requiresAuthentication: false, requiresSecretEntry: false, reason: 'Unknown mode'};

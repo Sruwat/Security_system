@@ -26,6 +26,9 @@ const fallback: NativeBridge = {
   async clearTransientAccess() {
     return;
   },
+  async getTransientAccess() {
+    return null;
+  },
   async getDeviceCapabilities() {
     return {
       biometricsAvailable: false,

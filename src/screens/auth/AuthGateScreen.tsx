@@ -5,6 +5,7 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import {launchCoordinator} from '../../services/launch/LaunchCoordinator';
 import {nativeBridge} from '../../native';
+import {sessionManager} from '../../services/session/SessionManager';
 import type {RootStackParamList} from '../../navigation/routes';
 import {APP_UNLOCK_CREDENTIAL_TYPE} from '../../services/security/credentialTypes';
 
@@ -29,24 +30,38 @@ export function AuthGateScreen() {
   const palette = figmaPalette.dark;
   const [pin, setPin] = React.useState('');
   const [loading, setLoading] = React.useState(false);
+  const [attempts, setAttempts] = React.useState(0);
+  const [cooldownUntil, setCooldownUntil] = React.useState<number | null>(null);
+  const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
   const promptAttemptedRef = React.useRef(false);
   const pendingLaunchPackageName = launchCoordinator.getPendingLaunchPackageName();
+  const pendingLaunchMode = launchCoordinator.getPendingLaunchMode();
+  const pendingLaunchLabel = pendingLaunchMode === 'LOCK_HIDE' ? 'Protected app' : pendingLaunchPackageName ?? 'Private space';
+  const activeSession = sessionManager.getState();
+  const sessionExpired = Boolean(activeSession && activeSession.expiresAt <= Date.now());
+  const cooldownRemaining = cooldownUntil ? Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000)) : 0;
 
-  const completeAuthentication = React.useCallback(
+  const verifyPin = React.useCallback(async (pinValue: string) => {
+    const verified = await nativeBridge.verifyCredential(APP_UNLOCK_CREDENTIAL_TYPE, pinValue.trim());
+    if (!verified) {
+      throw new Error('The PIN did not match the stored credential.');
+    }
+  }, []);
+
+  const finishAuthentication = React.useCallback(
     async (pinValue?: string) => {
       if (pinValue) {
-        const verified = await nativeBridge.verifyCredential(APP_UNLOCK_CREDENTIAL_TYPE, pinValue.trim());
-        if (!verified) {
-          throw new Error('The PIN did not match the stored credential.');
-        }
+        await verifyPin(pinValue);
       }
 
       const outcome = await launchCoordinator.completeAuthentication();
       if (outcome === 'app_launched' || outcome === 'vault_unlocked') {
-        navigation.reset({index: 0, routes: [{name: 'PrivateHome'}]});
+        setPin('');
+        setStatusMessage(null);
+        navigation.navigate('UnlockSuccess');
       }
     },
-    [navigation],
+    [navigation, verifyPin],
   );
 
   const authenticate = React.useCallback(async () => {
@@ -54,33 +69,51 @@ export function AuthGateScreen() {
       return;
     }
 
+    if (cooldownUntil && cooldownUntil > Date.now()) {
+      setStatusMessage(`Cooldown active for ${Math.ceil((cooldownUntil - Date.now()) / 1000)} seconds.`);
+      return;
+    }
+
     setLoading(true);
+    setStatusMessage(null);
     try {
       const result = await nativeBridge.authenticateBiometric();
+      if (result === 'unavailable') {
+        setStatusMessage('Biometric unavailable. Use the PIN fallback.');
+        return;
+      }
       if (result !== 'success') {
+        setStatusMessage('Biometric changed or verification failed.');
         return;
       }
 
-      await completeAuthentication();
+      await finishAuthentication();
     } catch (error) {
       Alert.alert('Authentication failed', error instanceof Error ? error.message : 'Unable to authenticate.');
     } finally {
       setLoading(false);
     }
-  }, [completeAuthentication, loading]);
+  }, [cooldownUntil, finishAuthentication, loading]);
 
   const submitDigit = React.useCallback(
     (digit: string) => {
       const next = `${pin}${digit}`.slice(0, 4);
       setPin(next);
       if (next.length === 4) {
-        void completeAuthentication(next).catch(error => {
+        void finishAuthentication(next).catch(error => {
+          const nextAttempts = attempts + 1;
+          setAttempts(nextAttempts);
+          setStatusMessage('Wrong PIN. Try again.');
+          if (nextAttempts >= 3) {
+            setCooldownUntil(Date.now() + 30000);
+            setStatusMessage('Recovery required. Cooldown started for 30 seconds.');
+          }
           Alert.alert('Authentication failed', error instanceof Error ? error.message : 'Unable to verify the PIN.');
           setPin('');
         });
       }
     },
-    [completeAuthentication, pin],
+    [attempts, finishAuthentication, pin],
   );
 
   React.useEffect(() => {
@@ -102,8 +135,17 @@ export function AuthGateScreen() {
 
         <Text style={[styles.title, {color: palette.textPrimary}]}>Unlock access</Text>
         <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
-          {pendingLaunchPackageName ? `Continue to ${pendingLaunchPackageName}` : 'Authenticate to continue.'}
+          {pendingLaunchPackageName ? `Continue to ${pendingLaunchLabel}` : 'Authenticate to continue.'}
         </Text>
+
+        {sessionExpired ? (
+          <View style={[styles.contextCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+            <View style={styles.contextBody}>
+              <Text style={[styles.contextLabel, {color: palette.textPrimary}]}>Session expired</Text>
+              <Text style={[styles.contextHint, {color: palette.textSecondary}]}>The previous temporary access is no longer valid. Authenticate again.</Text>
+            </View>
+          </View>
+        ) : null}
 
         <View style={[styles.contextCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
           <View style={[styles.contextIcon, {backgroundColor: palette.accentSoft}]}>
@@ -111,7 +153,7 @@ export function AuthGateScreen() {
           </View>
           <View style={styles.contextBody}>
             <Text style={[styles.contextLabel, {color: palette.textPrimary}]}>
-              {pendingLaunchPackageName ?? 'Private space'}
+              {pendingLaunchLabel}
             </Text>
             <Text style={[styles.contextHint, {color: palette.textSecondary}]}>Biometric or PIN required</Text>
           </View>
@@ -120,6 +162,8 @@ export function AuthGateScreen() {
         <View style={styles.centerArea}>
           <UnlockGlyph />
           <Text style={[styles.instruction, {color: palette.textSecondary}]}>Use Face ID, fingerprint, or your 4-digit PIN.</Text>
+          {statusMessage ? <Text style={[styles.errorLine, {color: '#FECACA'}]}>{statusMessage}</Text> : null}
+          {cooldownRemaining > 0 ? <Text style={[styles.errorLine, {color: '#FECACA'}]}>Cooldown {cooldownRemaining}s remaining</Text> : null}
         </View>
 
         <View style={styles.dotsRow}>
@@ -130,7 +174,15 @@ export function AuthGateScreen() {
 
         <View style={styles.keypad}>
           {keypad.map(value => (
-            <Pressable key={value} onPress={() => submitDigit(value)} style={[styles.key, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+            <Pressable
+              key={value}
+              onPress={() => {
+                if (cooldownRemaining > 0) {
+                  return;
+                }
+                submitDigit(value);
+              }}
+              style={[styles.key, {backgroundColor: palette.surface, borderColor: palette.border, opacity: cooldownRemaining > 0 ? 0.5 : 1}]}>
               <Text style={[styles.keyText, {color: palette.textPrimary}]}>{value}</Text>
             </Pressable>
           ))}
@@ -272,6 +324,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 10,
     lineHeight: 13,
+  },
+  errorLine: {
+    marginTop: 8,
+    textAlign: 'center',
+    fontSize: 9,
+    fontWeight: '700',
+    lineHeight: 12,
   },
   dotsRow: {
     marginTop: 18,

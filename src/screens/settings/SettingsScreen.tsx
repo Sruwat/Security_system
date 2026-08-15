@@ -1,6 +1,9 @@
 import React from 'react';
 import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {useNavigation} from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaBanner, FigmaBottomNav, FigmaPage, figmaPalette} from '../../components/FigmaKit';
+import type {RootStackParamList} from '../../navigation/routes';
 
 const rows = [
   ['Appearance', 'System / Light / Dark'],
@@ -9,11 +12,13 @@ const rows = [
   ['Auto-lock', '30 seconds'],
   ['Manage apps', '3 protected'],
   ['Privacy info', 'On-device only'],
+  ['Privacy Center', 'Ads and local data'],
+  ['AdManager Rules', 'Banner + native ads'],
 ];
 
-function SettingRow(props: {title: string; subtitle: string; palette: typeof figmaPalette.light}) {
+function SettingRow(props: {title: string; subtitle: string; palette: typeof figmaPalette.light; onPress?: () => void}) {
   return (
-    <Pressable style={({pressed}) => [styles.row, {backgroundColor: props.palette.surface, borderColor: props.palette.border, opacity: pressed ? 0.94 : 1}]}>
+    <Pressable onPress={props.onPress} style={({pressed}) => [styles.row, {backgroundColor: props.palette.surface, borderColor: props.palette.border, opacity: pressed ? 0.94 : 1}]}>
       <View style={styles.rowBody}>
         <Text style={[styles.rowTitle, {color: props.palette.textPrimary}]}>{props.title}</Text>
         <Text style={[styles.rowSubtitle, {color: props.palette.textSecondary}]}>{props.subtitle}</Text>
@@ -26,6 +31,7 @@ function SettingRow(props: {title: string; subtitle: string; palette: typeof fig
 }
 
 export function SettingsScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const palette = figmaPalette.light;
 
   return (
@@ -66,7 +72,25 @@ export function SettingsScreen() {
 
         <View style={styles.list}>
           {rows.map(([title, subtitle]) => (
-            <SettingRow key={title} title={title} subtitle={subtitle} palette={palette} />
+            <SettingRow
+              key={title}
+              title={title}
+              subtitle={subtitle}
+              palette={palette}
+              onPress={
+                title === 'Auto-lock'
+                  ? () => navigation.navigate('AutoLockSettings')
+                  : title === 'Secret access'
+                    ? () => navigation.navigate('SecretEntry')
+                    : title === 'Manage apps'
+                      ? () => navigation.navigate('ManageApps')
+                      : title === 'Privacy Center'
+                  ? () => navigation.navigate('PrivacyCenter')
+                  : title === 'AdManager Rules'
+                    ? () => navigation.navigate('AdManagerRules')
+                    : undefined
+              }
+            />
           ))}
         </View>
 
