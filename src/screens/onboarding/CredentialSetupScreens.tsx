@@ -11,6 +11,18 @@ import type {OnboardingResumeRoute} from '../../types/domain';
 
 type CredentialKind = 'PIN' | 'PASSWORD' | 'PATTERN';
 
+function normalizeCredential(kind: CredentialKind, text: string): string {
+  if (kind === 'PIN') {
+    return text.replace(/[^0-9]/g, '').slice(0, 6);
+  }
+
+  if (kind === 'PATTERN') {
+    return text.replace(/\s+/g, '');
+  }
+
+  return text.trim();
+}
+
 function CredentialSetupBase(props: {
   kind: CredentialKind;
   title: string;
@@ -32,11 +44,16 @@ function CredentialSetupBase(props: {
   }, [props.kind]);
 
   const saveCredential = React.useCallback(async () => {
-    const normalized = value.trim();
-    const confirmed = confirmValue.trim();
+    const normalized = normalizeCredential(props.kind, value);
+    const confirmed = normalizeCredential(props.kind, confirmValue);
 
     if (!normalized) {
       setError('Enter a value to continue.');
+      return;
+    }
+
+    if (props.kind === 'PIN' && !/^\d{4,6}$/.test(normalized)) {
+      setError('Enter a 4 to 6 digit PIN.');
       return;
     }
 
@@ -92,11 +109,19 @@ function CredentialSetupBase(props: {
             <Text style={[styles.fieldLabel, {color: palette.textSecondary}]}>Enter {props.kind.toLowerCase()}</Text>
             <TextInput
               value={value}
-              onChangeText={setValue}
+              onChangeText={text => {
+                setValue(normalizeCredential(props.kind, text));
+                if (error) {
+                  setError(null);
+                }
+              }}
               placeholder={props.kind === 'PATTERN' ? 'Example: 1-2-3-4' : ''}
               placeholderTextColor={palette.textSecondary}
               secureTextEntry={props.kind !== 'PATTERN'}
               keyboardType={props.kind === 'PIN' ? 'number-pad' : 'default'}
+              autoCapitalize="none"
+              autoCorrect={false}
+              maxLength={props.kind === 'PIN' ? 6 : undefined}
               style={[styles.fieldInput, {color: palette.textPrimary}]}
             />
           </View>
@@ -104,9 +129,17 @@ function CredentialSetupBase(props: {
             <Text style={[styles.fieldLabel, {color: palette.textSecondary}]}>Confirm {props.kind.toLowerCase()}</Text>
             <TextInput
               value={confirmValue}
-              onChangeText={setConfirmValue}
+              onChangeText={text => {
+                setConfirmValue(normalizeCredential(props.kind, text));
+                if (error) {
+                  setError(null);
+                }
+              }}
               secureTextEntry={props.kind !== 'PATTERN'}
               keyboardType={props.kind === 'PIN' ? 'number-pad' : 'default'}
+              autoCapitalize="none"
+              autoCorrect={false}
+              maxLength={props.kind === 'PIN' ? 6 : undefined}
               style={[styles.fieldInput, {color: palette.textPrimary}]}
             />
           </View>
