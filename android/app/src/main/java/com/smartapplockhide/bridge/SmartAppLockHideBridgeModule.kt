@@ -31,13 +31,23 @@ class SmartAppLockHideBridgeModule(private val context: ReactApplicationContext)
         addCategory(Intent.CATEGORY_LAUNCHER)
       }
       val apps = context.packageManager.queryIntentActivities(intent, PackageManager.MATCH_ALL)
-        .map { resolveInfo ->
-          val activityInfo = resolveInfo.activityInfo
+        .mapNotNull { resolveInfo ->
+          val activityInfo = resolveInfo.activityInfo ?: return@mapNotNull null
+          if (activityInfo.packageName == context.packageName) {
+            return@mapNotNull null
+          }
+
           val label = resolveInfo.loadLabel(context.packageManager)?.toString()
+            ?.trim()
+            ?.ifEmpty { activityInfo.packageName }
             ?: activityInfo.packageName
           val isSystemApp = activityInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM != 0
+          Triple(activityInfo.packageName, label, isSystemApp)
+        }
+        .distinctBy { it.first }
+        .map { (packageName, label, isSystemApp) ->
           Arguments.createMap().apply {
-            putString("packageName", activityInfo.packageName)
+            putString("packageName", packageName)
             putString("label", label)
             putBoolean("systemApp", isSystemApp)
           }

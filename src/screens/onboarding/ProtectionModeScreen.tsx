@@ -91,8 +91,8 @@ export function ProtectionModeScreen() {
               : draft.mode === 'LOCK'
                 ? 'Lock keeps the app visible and requires authentication before it opens.'
                 : draft.mode === 'HIDE'
-                  ? 'Hide removes the app from normal launcher surfaces but keeps it available in the vault.'
-                  : 'Lock + Hide keeps the app out of the launcher while still requiring authentication to open.'}
+                  ? 'Hide keeps the app inside this launcher flow and still available in the vault.'
+                  : 'Lock + Hide keeps the app inside the vault flow and still requires authentication before opening.'}
           </Text>
         </View>
 

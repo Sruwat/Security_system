@@ -8,6 +8,16 @@ import {localDataRepository} from '../../storage/LocalDataRepository';
 import type {LaunchableApp} from '../../types/domain';
 import type {RootStackParamList} from '../../navigation/routes';
 
+function appInitials(label: string) {
+  return label
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0]?.toUpperCase() ?? '')
+    .join('')
+    .slice(0, 2);
+}
+
 export function AddAppsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const palette = figmaPalette.light;
@@ -27,7 +37,9 @@ export function AddAppsScreen() {
       const protectedPackages = new Set(protectedApps.map(app => app.packageName));
       const available = discovered.filter(app => !protectedPackages.has(app.packageName));
       setApps(available);
-      setSelectedPackageNames(current => current.filter(packageName => available.some(app => app.packageName === packageName)));
+      setSelectedPackageNames(current =>
+        current.filter(packageName => available.some(app => app.packageName === packageName)),
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load installed apps.');
     } finally {
@@ -39,19 +51,44 @@ export function AddAppsScreen() {
     void loadApps();
   }, [loadApps]);
 
-  const visibleApps = React.useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    if (!normalizedQuery) {
-      return apps.slice(0, 5);
-    }
-
-    return apps.filter(app => app.label.toLowerCase().includes(normalizedQuery)).slice(0, 5);
-  }, [apps, query]);
+  const toggleSelection = React.useCallback((packageName: string) => {
+    setSelectedPackageNames(current =>
+      current.includes(packageName)
+        ? current.filter(currentPackageName => currentPackageName !== packageName)
+        : [...current, packageName],
+    );
+  }, []);
 
   const selectedApps = React.useMemo(
-    () => visibleApps.filter(app => selectedPackageNames.includes(app.packageName)),
-    [selectedPackageNames, visibleApps],
+    () =>
+      apps
+        .filter(app => selectedPackageNames.includes(app.packageName))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    [apps, selectedPackageNames],
   );
+
+  const visibleApps = React.useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    const filtered = normalizedQuery
+      ? apps.filter(
+          app =>
+            app.label.toLowerCase().includes(normalizedQuery) ||
+            app.packageName.toLowerCase().includes(normalizedQuery),
+        )
+      : apps;
+
+    return [...filtered].sort((a, b) => {
+      const aSelected = selectedPackageNames.includes(a.packageName) ? 0 : 1;
+      const bSelected = selectedPackageNames.includes(b.packageName) ? 0 : 1;
+      if (aSelected !== bSelected) {
+        return aSelected - bSelected;
+      }
+      if (a.systemApp !== b.systemApp) {
+        return a.systemApp ? 1 : -1;
+      }
+      return a.label.localeCompare(b.label);
+    });
+  }, [apps, query, selectedPackageNames]);
 
   const continueNext = React.useCallback(async () => {
     const selected = apps.filter(app => selectedPackageNames.includes(app.packageName));
@@ -80,77 +117,158 @@ export function AddAppsScreen() {
     }
   }, [apps, navigation, selectedPackageNames]);
 
-  return (
-    <FigmaPage variant="light">
-      <View style={styles.fill}>
+  const renderHeader = React.useCallback(
+    () => (
+      <View>
         <Text style={[styles.time, {color: palette.textPrimary}]}>9:41</Text>
         <Text style={[styles.title, {color: palette.textPrimary}]}>Select apps</Text>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Choose apps to protect.</Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
+          Scan your phone, choose the apps you want to protect, and continue in one simple flow.
+        </Text>
 
         <View style={[styles.searchBar, {backgroundColor: palette.surface, borderColor: palette.border}]}>
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="Search installed apps"
+            placeholder="Search by app name"
             placeholderTextColor={palette.textSecondary}
             style={[styles.searchInput, {color: palette.textPrimary}]}
           />
         </View>
 
+        <View style={styles.metaRow}>
+          <View style={[styles.metaCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+            <Text style={[styles.metaValue, {color: palette.textPrimary}]}>
+              {apps.length} installed app{apps.length === 1 ? '' : 's'}
+            </Text>
+            <Text style={[styles.metaLabel, {color: palette.textSecondary}]}>Ready to choose</Text>
+          </View>
+          <View style={[styles.metaCard, {backgroundColor: palette.accentSoft, borderColor: palette.border}]}>
+            <Text style={[styles.metaValue, {color: palette.accent}]}>
+              {selectedPackageNames.length} selected
+            </Text>
+            <Text style={[styles.metaLabel, {color: palette.textSecondary}]}>Tap again to remove</Text>
+          </View>
+        </View>
+
+        {selectedApps.length > 0 ? (
+          <View style={[styles.selectedBox, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+            <Text style={[styles.selectedTitle, {color: palette.textPrimary}]}>Selected apps</Text>
+            <View style={styles.selectedWrap}>
+              {selectedApps.map(app => (
+                <Pressable
+                  key={app.packageName}
+                  onPress={() => toggleSelection(app.packageName)}
+                  style={[styles.selectedChip, {backgroundColor: palette.accentSoft}]}>
+                  <Text style={[styles.selectedChipText, {color: palette.accent}]}>{app.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        ) : null}
+
+        <View style={[styles.helpCard, {backgroundColor: palette.accentSoft, borderColor: palette.border}]}>
+          <Text style={[styles.helpTitle, {color: palette.accent}]}>Easy to understand</Text>
+          <Text style={[styles.helpText, {color: palette.textSecondary}]}>
+            Choose any app here first. On normal Android phones, Hide is reliable inside this launcher flow, but other launchers may still show the app unless this app is set as the Home launcher.
+          </Text>
+        </View>
+
+        <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Installed apps</Text>
+      </View>
+    ),
+    [apps.length, palette, query, selectedApps, selectedPackageNames.length, toggleSelection],
+  );
+
+  const renderEmpty = React.useCallback(
+    () => (
+      <View style={[styles.stateBox, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+        <Text style={[styles.stateTitle, {color: palette.textPrimary}]}>
+          {query.trim() ? 'No app matched your search' : 'No launchable apps found'}
+        </Text>
+        <Text style={[styles.stateText, {color: palette.textSecondary}]}>
+          {query.trim()
+            ? 'Try a shorter app name or clear the search.'
+            : 'Check launcher setup and app discovery permissions, then try again.'}
+        </Text>
+      </View>
+    ),
+    [palette, query],
+  );
+
+  const renderItem = React.useCallback(
+    ({item}: {item: LaunchableApp}) => {
+      const isSelected = selectedPackageNames.includes(item.packageName);
+
+      return (
+        <Pressable
+          onPress={() => toggleSelection(item.packageName)}
+          style={({pressed}) => [
+            styles.appRow,
+            {
+              borderColor: isSelected ? palette.accent : palette.border,
+              backgroundColor: isSelected ? palette.accentSoft : palette.surface,
+              opacity: pressed ? 0.94 : 1,
+            },
+          ]}>
+          <View style={[styles.appIcon, {backgroundColor: isSelected ? palette.accent : palette.accentSoft}]}>
+            <Text style={[styles.appIconText, {color: isSelected ? '#FFFFFF' : palette.accent}]}>
+              {appInitials(item.label)}
+            </Text>
+          </View>
+          <View style={styles.appBody}>
+            <Text style={[styles.appName, {color: palette.textPrimary}]} numberOfLines={1}>
+              {item.label}
+            </Text>
+            <Text style={[styles.appMeta, {color: palette.textSecondary}]} numberOfLines={1}>
+              {item.systemApp ? 'System app' : 'Installed app'} · {item.packageName}
+            </Text>
+          </View>
+          <View style={[styles.statusPill, {backgroundColor: isSelected ? palette.accent : palette.accentSoft}]}>
+            <Text style={[styles.statusText, {color: isSelected ? '#FFFFFF' : palette.accent}]}>
+              {isSelected ? 'Selected' : 'Select'}
+            </Text>
+          </View>
+        </Pressable>
+      );
+    },
+    [palette, selectedPackageNames, toggleSelection],
+  );
+
+  return (
+    <FigmaPage variant="light">
+      <View style={styles.fill}>
         {loading ? (
           <View style={[styles.stateBox, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-            <Text style={[styles.stateText, {color: palette.textSecondary}]}>Loading installed apps...</Text>
+            <Text style={[styles.stateTitle, {color: palette.textPrimary}]}>Scanning installed apps...</Text>
+            <Text style={[styles.stateText, {color: palette.textSecondary}]}>Please wait a moment.</Text>
           </View>
         ) : error ? (
           <View style={[styles.stateBox, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+            <Text style={[styles.stateTitle, {color: palette.textPrimary}]}>Could not load apps</Text>
             <Text style={[styles.stateText, {color: '#D92D20'}]}>{error}</Text>
-            <Pressable onPress={() => void loadApps()} style={[styles.retryButton, {backgroundColor: palette.accentSoft}]}>
+            <Pressable
+              onPress={() => void loadApps()}
+              style={[styles.retryButton, {backgroundColor: palette.accentSoft}]}>
               <Text style={[styles.retryText, {color: palette.accent}]}>Try again</Text>
             </Pressable>
           </View>
         ) : (
           <FlatList
+            style={styles.listView}
             data={visibleApps}
             keyExtractor={item => item.packageName}
-            scrollEnabled={false}
+            renderItem={renderItem}
+            ListHeaderComponent={renderHeader}
+            ListEmptyComponent={renderEmpty}
+            ItemSeparatorComponent={() => <View style={styles.rowGap} />}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.list}
-            renderItem={({item}) => {
-              const isSelected = selectedPackageNames.includes(item.packageName);
-              const label = isSelected ? 'Selected' : 'Add';
-
-              return (
-                <Pressable
-                  onPress={() =>
-                    setSelectedPackageNames(current =>
-                      current.includes(item.packageName)
-                        ? current.filter(packageName => packageName !== item.packageName)
-                        : [...current, item.packageName],
-                    )
-                  }
-                  style={({pressed}) => [
-                    styles.appRow,
-                    {
-                      borderColor: palette.border,
-                      backgroundColor: palette.surface,
-                      opacity: pressed ? 0.94 : 1,
-                    },
-                  ]}>
-                  <View style={[styles.appIcon, {backgroundColor: palette.accentSoft}]}>
-                    <Text style={[styles.appIconText, {color: palette.accent}]}>{item.label.slice(0, 2).toUpperCase()}</Text>
-                  </View>
-                  <View style={styles.appBody}>
-                    <Text style={[styles.appName, {color: palette.textPrimary}]}>{item.label}</Text>
-                  </View>
-                  <View style={[styles.statusPill, {backgroundColor: palette.accentSoft}]}>
-                    <Text style={[styles.statusText, {color: palette.accent}]}>{label}</Text>
-                  </View>
-                </Pressable>
-              );
-            }}
           />
         )}
 
-        <View style={styles.spacer} />
+        {!loading && !error ? <View style={styles.footerGap} /> : <View style={styles.spacer} />}
 
         <FigmaActionButton
           variant="light"
@@ -183,72 +301,165 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
   },
-  searchBar: {
-    minHeight: 96,
-    borderRadius: 34,
-    borderWidth: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 28,
-    marginTop: 64,
-  },
-  searchInput: {
-    fontSize: 18,
-    lineHeight: 24,
+  listView: {
+    flex: 1,
   },
   list: {
-    marginTop: 32,
-    gap: 16,
+    paddingBottom: 12,
+  },
+  searchBar: {
+    minHeight: 88,
+    borderRadius: 30,
+    borderWidth: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    marginTop: 28,
+  },
+  searchInput: {
+    fontSize: 17,
+    lineHeight: 22,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 18,
+  },
+  metaCard: {
+    flex: 1,
+    minHeight: 84,
+    borderWidth: 1,
+    borderRadius: 28,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    justifyContent: 'center',
+  },
+  metaValue: {
+    fontSize: 16,
+    fontWeight: '800',
+    lineHeight: 20,
+  },
+  metaLabel: {
+    marginTop: 6,
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  selectedBox: {
+    marginTop: 18,
+    borderWidth: 1,
+    borderRadius: 28,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+  },
+  selectedTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    lineHeight: 20,
+  },
+  selectedWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 14,
+  },
+  selectedChip: {
+    minHeight: 36,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+    justifyContent: 'center',
+  },
+  selectedChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 16,
+  },
+  helpCard: {
+    marginTop: 18,
+    minHeight: 120,
+    borderWidth: 1,
+    borderRadius: 28,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+  },
+  helpTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    lineHeight: 20,
+  },
+  helpText: {
+    marginTop: 10,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  sectionTitle: {
+    marginTop: 24,
+    marginBottom: 14,
+    fontSize: 18,
+    fontWeight: '800',
+    lineHeight: 22,
   },
   appRow: {
-    minHeight: 116,
+    minHeight: 98,
     borderWidth: 1,
-    borderRadius: 34,
+    borderRadius: 30,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 28,
-    gap: 20,
+    paddingHorizontal: 20,
+    gap: 16,
   },
   appIcon: {
-    width: 78,
-    height: 78,
-    borderRadius: 24,
+    width: 62,
+    height: 62,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
   appIconText: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '700',
-    lineHeight: 24,
+    lineHeight: 20,
   },
   appBody: {
     flex: 1,
   },
   appName: {
-    fontSize: 18,
-    fontWeight: '700',
-    lineHeight: 22,
-  },
-  statusPill: {
-    minWidth: 126,
-    minHeight: 50,
-    borderRadius: 25,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 18,
-  },
-  statusText: {
     fontSize: 16,
     fontWeight: '700',
     lineHeight: 20,
   },
+  appMeta: {
+    marginTop: 6,
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  statusPill: {
+    minWidth: 96,
+    minHeight: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+  },
+  statusText: {
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 16,
+  },
+  rowGap: {
+    height: 12,
+  },
   stateBox: {
-    marginTop: 32,
+    marginTop: 24,
     minHeight: 128,
     borderRadius: 34,
     borderWidth: 1,
     justifyContent: 'center',
     gap: 12,
     paddingHorizontal: 28,
+  },
+  stateTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    lineHeight: 20,
   },
   stateText: {
     fontSize: 14,
@@ -263,6 +474,9 @@ const styles = StyleSheet.create({
   retryText: {
     fontSize: 14,
     fontWeight: '700',
+  },
+  footerGap: {
+    height: 16,
   },
   spacer: {
     flex: 1,
