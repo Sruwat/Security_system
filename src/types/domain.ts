@@ -10,6 +10,7 @@ export type SecretEntryMethod = 'DOUBLE_TAP' | 'TRIPLE_TAP' | 'LONG_PRESS' | 'PI
 export interface AppProtection {
   packageName: string;
   label: string;
+  iconUri?: string;
   mode: ProtectionMode;
   authMethod: AuthMethod;
   autoLockSeconds: number;

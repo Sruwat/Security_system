@@ -82,6 +82,9 @@ export function CalculatorScreen() {
           navigation.reset({index: 0, routes: [{name: 'Vault'}]});
           return;
         }
+
+        setMessage('Secret code did not match. Try again or go back to secret entry.');
+        return;
       }
 
       const result = evaluateExpression(normalized);

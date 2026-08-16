@@ -3,6 +3,11 @@ package com.smartapplockhide.bridge
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
+import android.util.Base64
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -46,9 +51,14 @@ class SmartAppLockHideBridgeModule(private val context: ReactApplicationContext)
         }
         .distinctBy { it.first }
         .map { (packageName, label, isSystemApp) ->
+          val iconUri = runCatching {
+            context.packageManager.getApplicationIcon(packageName)?.let(::drawableToDataUri)
+          }.getOrNull()
+
           Arguments.createMap().apply {
             putString("packageName", packageName)
             putString("label", label)
+            putString("iconUri", iconUri)
             putBoolean("systemApp", isSystemApp)
           }
         }
@@ -180,5 +190,25 @@ class SmartAppLockHideBridgeModule(private val context: ReactApplicationContext)
       putBoolean("packageVisibilityRestricted", capabilities.packageVisibilityRestricted)
     }
     promise.resolve(map)
+  }
+
+  private fun drawableToDataUri(drawable: Drawable): String? {
+    val bitmap = when (drawable) {
+      is BitmapDrawable -> drawable.bitmap
+      else -> {
+        val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 128
+        val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 128
+        Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).also { bitmap ->
+          val canvas = Canvas(bitmap)
+          drawable.setBounds(0, 0, canvas.width, canvas.height)
+          drawable.draw(canvas)
+        }
+      }
+    }
+
+    val output = java.io.ByteArrayOutputStream()
+    bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)
+    val encoded = Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP)
+    return "data:image/png;base64,$encoded"
   }
 }

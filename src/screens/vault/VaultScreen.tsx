@@ -1,5 +1,5 @@
 import React from 'react';
-import {Alert, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {Alert, Image, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaActionButton, FigmaBanner, FigmaBottomNav, FigmaPage, figmaPalette} from '../../components/FigmaKit';
@@ -32,6 +32,14 @@ function VaultCard(props: {
   label: string;
   onPress: () => void;
 }) {
+  const iconLabel = props.app.label
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0]?.toUpperCase() ?? '')
+    .join('')
+    .slice(0, 2);
+
   return (
     <Pressable
       onPress={props.onPress}
@@ -43,9 +51,13 @@ function VaultCard(props: {
           opacity: pressed ? 0.94 : 1,
         },
       ]}>
-      <View style={[styles.appIcon, {backgroundColor: props.palette.accentSoft}]}>
-        <Text style={[styles.appIconText, {color: props.palette.accent}]}>{props.label.slice(0, 2).toUpperCase()}</Text>
-      </View>
+      {props.app.iconUri ? (
+        <Image source={{uri: props.app.iconUri}} style={styles.appArtwork} resizeMode="contain" />
+      ) : (
+        <View style={[styles.appIcon, {backgroundColor: props.palette.accentSoft}]}>
+          <Text style={[styles.appIconText, {color: props.palette.accent}]}>{iconLabel}</Text>
+        </View>
+      )}
       <Text style={[styles.appLabel, {color: props.palette.textPrimary}]}>{props.label}</Text>
       <View style={[styles.badgePill, {backgroundColor: props.palette.accentSoft}]}>
         <Text style={[styles.badgeText, {color: props.palette.accent}]}>{modeLabel(props.app.mode)}</Text>
@@ -178,9 +190,24 @@ export function VaultScreen() {
                   palette={palette}
                   label={app.label}
                   onPress={() => {
-                    void launchCoordinator.launch(app.packageName).catch(error => {
-                      Alert.alert('Launch failed', error instanceof Error ? error.message : 'Unable to launch hidden app.');
-                    });
+                    void launchCoordinator
+                      .launch(app.packageName)
+                      .then(outcome => {
+                        if (outcome === 'launched') {
+                          navigation.reset({index: 0, routes: [{name: 'PrivateHome'}]});
+                          return;
+                        }
+
+                        if (outcome === 'auth_required') {
+                          navigation.navigate('AuthGate');
+                          return;
+                        }
+
+                        navigation.navigate('Calculator');
+                      })
+                      .catch(error => {
+                        Alert.alert('Launch failed', error instanceof Error ? error.message : 'Unable to launch hidden app.');
+                      });
                   }}
                 />
               ))}
@@ -312,6 +339,11 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  appArtwork: {
+    width: 88,
+    height: 88,
+    borderRadius: 24,
   },
   appIconText: {
     fontSize: 20,

@@ -12,6 +12,7 @@ export function buildProtectionPolicy(draft: ProtectionDraft): AppProtection {
   return {
     packageName: draft.app.packageName,
     label: draft.app.label,
+    iconUri: draft.app.iconUri,
     mode: draft.mode,
     authMethod: draft.authMethod,
     autoLockSeconds: draft.autoLockSeconds,

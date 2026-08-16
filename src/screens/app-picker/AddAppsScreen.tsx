@@ -1,5 +1,5 @@
 import React from 'react';
-import {Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View} from 'react-native';
+import {Alert, FlatList, Image, Pressable, StyleSheet, Text, TextInput, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
@@ -211,11 +211,15 @@ export function AddAppsScreen() {
               opacity: pressed ? 0.94 : 1,
             },
           ]}>
-          <View style={[styles.appIcon, {backgroundColor: isSelected ? palette.accent : palette.accentSoft}]}>
-            <Text style={[styles.appIconText, {color: isSelected ? '#FFFFFF' : palette.accent}]}>
-              {appInitials(item.label)}
-            </Text>
-          </View>
+          {item.iconUri ? (
+            <Image source={{uri: item.iconUri}} style={styles.appArtwork} resizeMode="contain" />
+          ) : (
+            <View style={[styles.appIcon, {backgroundColor: isSelected ? palette.accent : palette.accentSoft}]}>
+              <Text style={[styles.appIconText, {color: isSelected ? '#FFFFFF' : palette.accent}]}>
+                {appInitials(item.label)}
+              </Text>
+            </View>
+          )}
           <View style={styles.appBody}>
             <Text style={[styles.appName, {color: palette.textPrimary}]} numberOfLines={1}>
               {item.label}
@@ -412,6 +416,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  appArtwork: {
+    width: 62,
+    height: 62,
+    borderRadius: 20,
   },
   appIconText: {
     fontSize: 16,

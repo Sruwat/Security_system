@@ -1,5 +1,5 @@
 import React from 'react';
-import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {Image, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
@@ -40,6 +40,22 @@ function ModeCard(props: {
   );
 }
 
+function AppArtwork(props: {
+  label: string;
+  iconUri?: string;
+  palette: typeof figmaPalette.dark;
+}) {
+  if (props.iconUri) {
+    return <Image source={{uri: props.iconUri}} style={styles.appArtwork} resizeMode="contain" />;
+  }
+
+  return (
+    <View style={[styles.appIcon, {backgroundColor: props.palette.accentSoft}]}>
+      <Text style={[styles.appIconText, {color: props.palette.accent}]}>{props.label.slice(0, 2).toUpperCase()}</Text>
+    </View>
+  );
+}
+
 export function ProtectionModeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'ProtectionMode'>>();
@@ -68,9 +84,7 @@ export function ProtectionModeScreen() {
         <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Pick the exact protection, authentication, and timeout you want for this app.</Text>
 
         <View style={[styles.appCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-          <View style={[styles.appIcon, {backgroundColor: palette.accentSoft}]}>
-            <Text style={[styles.appIconText, {color: palette.accent}]}>{draft.label.slice(0, 2).toUpperCase()}</Text>
-          </View>
+          <AppArtwork label={draft.label} iconUri={draft.iconUri} palette={palette} />
           <View style={styles.appBody}>
           <Text style={[styles.appTitle, {color: palette.textPrimary}]}>{selectedApps.length === 1 ? draft.label : `${selectedApps.length} selected apps`}</Text>
           <Text style={[styles.appSubtitle, {color: palette.textSecondary}]}>{selectedApps.length === 1 ? 'Protected app profile' : 'Shared protection profile'}</Text>
@@ -224,6 +238,11 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  appArtwork: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
   },
   appIconText: {
     fontSize: 12,
