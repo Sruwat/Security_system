@@ -9,7 +9,7 @@ const defaultSettings: AppSettings = {
   primaryAuthMethod: 'PIN',
   bannerEnabled: true,
   nativeAdEnabled: true,
-  autoLockSecondsDefault: 300,
+  autoLockSecondsDefault: 30,
 };
 
 export class LocalDataRepository {

@@ -15,17 +15,8 @@ function cycleMode(mode: ProtectionMode): ProtectionMode {
   return protectionModes[(index + 1) % protectionModes.length];
 }
 
-function StatCard(props: {label: string; value: string; palette: typeof figmaPalette.dark; tone?: 'accent' | 'surface'}) {
-  const backgroundColor = props.tone === 'accent' ? props.palette.accent : props.palette.surface;
-  const valueColor = props.tone === 'accent' ? '#FFFFFF' : props.palette.textPrimary;
-  const labelColor = props.tone === 'accent' ? 'rgba(255,255,255,0.82)' : props.palette.textSecondary;
-
-  return (
-    <View style={[styles.statCard, {backgroundColor, borderColor: props.palette.border}]}>
-      <Text style={[styles.statLabel, {color: labelColor}]}>{props.label}</Text>
-      <Text style={[styles.statValue, {color: valueColor}]}>{props.value}</Text>
-    </View>
-  );
+function describeMode(mode: ProtectionMode): string {
+  return mode === 'LOCK_HIDE' ? 'Lock + Hide' : mode === 'LOCK' ? 'Lock' : mode === 'HIDE' ? 'Hide' : 'Open';
 }
 
 export function ManageAppsScreen() {
@@ -78,19 +69,11 @@ export function ManageAppsScreen() {
     [navigation],
   );
 
-  const protectedCount = apps.length;
-  const hideCount = apps.filter(app => app.mode === 'HIDE' || app.mode === 'LOCK_HIDE').length;
-
   return (
     <FigmaPage variant="dark">
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.topRow}>
-          <View>
-            <Text style={[styles.time, {color: palette.textPrimary}]}>9:41</Text>
-            <Text style={[styles.title, {color: palette.textPrimary}]}>Manage Apps</Text>
-          </View>
-        </View>
-
+        <Text style={[styles.time, {color: palette.textPrimary}]}>9:41</Text>
+        <Text style={[styles.title, {color: palette.textPrimary}]}>Manage Apps</Text>
         <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Change, add or remove apps.</Text>
 
         <FigmaBanner screen="manage-apps" variant="dark" title="Banner ad" tone="surfaceElevated" />
@@ -110,23 +93,23 @@ export function ManageAppsScreen() {
           <View style={styles.list}>
             {apps.map(app => (
               <View key={app.packageName} style={[styles.row, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-                <View style={[styles.iconBox, {backgroundColor: palette.accentSoft}]}>
-                  <Text style={[styles.iconText, {color: palette.accent}]}>{app.label.slice(0, 2).toUpperCase()}</Text>
-                </View>
                 <View style={styles.rowBody}>
                   <Text style={[styles.rowTitle, {color: palette.textPrimary}]}>{app.label}</Text>
-                  <Text style={[styles.rowSubtitle, {color: palette.textSecondary}]}>{app.mode === 'LOCK_HIDE' ? 'Lock + Hide' : app.mode}</Text>
+                  <Text style={[styles.rowSubtitle, {color: palette.textSecondary}]}>{describeMode(app.mode)}</Text>
                 </View>
-                <Pressable onPress={() => void updateMode(app)} style={[styles.actionPill, {backgroundColor: palette.accentSoft}]}>
-                  <Text style={[styles.actionText, {color: palette.accent}]}>
-                    {busyPackage === app.packageName ? 'Updating...' : 'Change'}
-                  </Text>
-                </Pressable>
-                <Pressable onPress={() => void removeProtection(app)} style={[styles.actionPill, styles.removePill, {backgroundColor: palette.surfaceElevated}]}>
-                  <Text style={[styles.actionText, {color: palette.textSecondary}]}>
-                    {busyPackage === app.packageName ? 'Removing...' : 'Remove'}
-                  </Text>
-                </Pressable>
+
+                <View style={styles.actions}>
+                  <Pressable onPress={() => void updateMode(app)} style={[styles.actionPill, {backgroundColor: palette.accentSoft}]}>
+                    <Text style={[styles.actionText, {color: palette.accent}]}>
+                      {busyPackage === app.packageName ? 'Updating...' : 'Change'}
+                    </Text>
+                  </Pressable>
+                  <Pressable onPress={() => void removeProtection(app)} style={[styles.actionPill, {backgroundColor: palette.accentSoft}]}>
+                    <Text style={[styles.actionText, {color: palette.accent}]}>
+                      {busyPackage === app.packageName ? 'Removing...' : 'Remove'}
+                    </Text>
+                  </Pressable>
+                </View>
               </View>
             ))}
 
@@ -136,7 +119,14 @@ export function ManageAppsScreen() {
           </View>
         )}
 
-        <FigmaBanner screen="manage-apps" variant="dark" placement="native" title="Native advertisement" subtitle="Placed after functional content" tone="surfaceElevated" />
+        <FigmaBanner
+          screen="manage-apps"
+          variant="dark"
+          placement="native"
+          title="Native advertisement"
+          subtitle="Placed after functional content"
+          tone="surfaceElevated"
+        />
 
         <View style={styles.bottomSpacer} />
         <FigmaBottomNav variant="dark" active="home" />
@@ -149,52 +139,22 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 8,
   },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
   time: {
     fontSize: 10,
     fontWeight: '700',
     lineHeight: 12,
   },
   title: {
-    marginTop: 10,
-    fontSize: 28,
+    marginTop: 28,
+    fontSize: 40,
     fontWeight: '800',
-    lineHeight: 33,
-    letterSpacing: -0.2,
+    lineHeight: 48,
+    letterSpacing: -0.8,
   },
   subtitle: {
     marginTop: 10,
-    fontSize: 13,
+    fontSize: 14,
     lineHeight: 18,
-  },
-  statsRow: {
-    display: 'none',
-    marginTop: 0,
-    flexDirection: 'row',
-    gap: 0,
-  },
-  statCard: {
-    flex: 1,
-    minHeight: 82,
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    justifyContent: 'space-between',
-  },
-  statLabel: {
-    fontSize: 8,
-    fontWeight: '700',
-    lineHeight: 10,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: '800',
-    lineHeight: 24,
   },
   emptyCard: {
     marginTop: 16,
@@ -224,72 +184,61 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: 12,
-    marginTop: 16,
+    marginTop: 36,
   },
   row: {
     borderWidth: 1,
-    borderRadius: 24,
-    minHeight: 78,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRadius: 34,
+    minHeight: 140,
+    paddingHorizontal: 30,
+    paddingVertical: 24,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-  },
-  iconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconText: {
-    fontSize: 9,
-    fontWeight: '800',
-    lineHeight: 11,
+    gap: 18,
   },
   rowBody: {
     flex: 1,
   },
   rowTitle: {
-    fontSize: 11,
+    fontSize: 18,
     fontWeight: '800',
-    lineHeight: 14,
+    lineHeight: 22,
   },
   rowSubtitle: {
-    marginTop: 4,
-    fontSize: 8,
-    lineHeight: 10,
+    marginTop: 14,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 8,
   },
   actionPill: {
-    minWidth: 60,
-    minHeight: 26,
-    borderRadius: 13,
+    minWidth: 112,
+    minHeight: 56,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 10,
-  },
-  removePill: {
-    marginLeft: 2,
+    paddingHorizontal: 18,
   },
   actionText: {
-    fontSize: 8,
+    fontSize: 12,
     fontWeight: '800',
-    lineHeight: 10,
+    lineHeight: 16,
   },
   addMoreRow: {
     borderWidth: 1,
-    borderRadius: 24,
-    minHeight: 78,
-    paddingHorizontal: 20,
+    borderRadius: 34,
+    minHeight: 98,
+    paddingHorizontal: 28,
     justifyContent: 'center',
   },
   addMoreText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
-    lineHeight: 20,
+    lineHeight: 22,
   },
   bottomSpacer: {
-    height: 4,
+    height: 10,
   },
 });

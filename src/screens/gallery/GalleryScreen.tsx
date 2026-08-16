@@ -1,12 +1,8 @@
 import React from 'react';
 import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
-import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaBanner, FigmaBottomNav, FigmaPage, figmaPalette} from '../../components/FigmaKit';
-import type {RootStackParamList} from '../../navigation/routes';
 
 export function GalleryScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const palette = figmaPalette.dark;
   const recentTiles = Array.from({length: 6}, (_, index) => index);
 
@@ -20,7 +16,9 @@ export function GalleryScreen() {
         <FigmaBanner screen="gallery" variant="dark" title="Banner ad" tone="surfaceElevated" />
 
         <View style={styles.heroCard}>
-          <Text style={[styles.heroGlyph, {color: palette.accent}]}>◇</Text>
+          <View style={[styles.heroGlyphWrap, {borderColor: palette.accent}]}>
+            <View style={[styles.heroGlyphInner, {backgroundColor: palette.accent}]} />
+          </View>
           <View style={styles.heroCopy}>
             <Text style={[styles.heroTitle, {color: palette.textPrimary}]}>Private Gallery</Text>
             <Text style={[styles.heroBody, {color: palette.textSecondary}]}>Protected media on this device</Text>
@@ -39,7 +37,14 @@ export function GalleryScreen() {
           ))}
         </View>
 
-        <FigmaBanner screen="gallery" variant="dark" placement="native" title="Native advertisement" subtitle="Placed after functional content" tone="surfaceElevated" />
+        <FigmaBanner
+          screen="gallery"
+          variant="dark"
+          placement="native"
+          title="Native advertisement"
+          subtitle="Placed after functional content"
+          tone="surfaceElevated"
+        />
 
         <View style={styles.bottomSpacer} />
         <FigmaBottomNav variant="dark" active="gallery" />
@@ -53,80 +58,90 @@ const styles = StyleSheet.create({
     paddingBottom: 17,
   },
   time: {
-    fontSize: 9,
-    fontWeight: '600',
-    lineHeight: 11,
+    fontSize: 10,
+    fontWeight: '700',
+    lineHeight: 12,
   },
   title: {
-    marginTop: 30,
-    fontSize: 20,
-    fontWeight: '700',
-    lineHeight: 24,
+    marginTop: 28,
+    fontSize: 40,
+    fontWeight: '800',
+    lineHeight: 48,
+    letterSpacing: -0.8,
   },
   subtitle: {
-    marginTop: 6,
-    fontSize: 9,
-    lineHeight: 11,
+    marginTop: 10,
+    fontSize: 14,
+    lineHeight: 18,
   },
   heroCard: {
     marginTop: 18,
-    minHeight: 94,
-    borderRadius: 21,
-    backgroundColor: '#211A3A',
+    minHeight: 194,
+    borderRadius: 40,
+    backgroundColor: '#2B2146',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    gap: 16,
+    paddingHorizontal: 42,
+    gap: 26,
   },
-  heroGlyph: {
-    fontSize: 27,
-    fontWeight: '700',
-    lineHeight: 30,
+  heroGlyphWrap: {
+    width: 34,
+    height: 34,
+    borderWidth: 5,
+    transform: [{rotate: '45deg'}],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroGlyphInner: {
+    width: 14,
+    height: 14,
   },
   heroCopy: {
-    gap: 6,
+    gap: 8,
   },
   heroTitle: {
-    fontSize: 12,
+    fontSize: 22,
     fontWeight: '700',
-    lineHeight: 15,
+    lineHeight: 28,
   },
   heroBody: {
-    fontSize: 8,
-    lineHeight: 10,
+    fontSize: 12,
+    lineHeight: 17,
   },
   openButton: {
     marginTop: 20,
-    minHeight: 48,
-    borderRadius: 17,
+    minHeight: 100,
+    borderRadius: 32,
     alignItems: 'flex-start',
     justifyContent: 'center',
-    paddingHorizontal: 18,
+    paddingHorizontal: 42,
   },
   openButtonText: {
     color: '#FFFFFF',
-    fontSize: 11,
+    fontSize: 18,
     fontWeight: '700',
-    lineHeight: 13,
+    lineHeight: 22,
   },
   sectionTitle: {
-    marginTop: 22,
-    marginBottom: 16,
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 14,
+    marginTop: 40,
+    marginBottom: 24,
+    fontSize: 28,
+    fontWeight: '800',
+    lineHeight: 34,
+    letterSpacing: -0.4,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    justifyContent: 'space-between',
+    rowGap: 24,
   },
   tile: {
-    width: 96,
-    height: 78,
-    borderRadius: 15,
+    width: '30.5%',
+    aspectRatio: 1,
+    borderRadius: 28,
   },
   bottomSpacer: {
-    height: 16,
+    height: 10,
   },
 });

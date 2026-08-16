@@ -17,14 +17,14 @@ const entryMethods = [
   {title: 'Pinch / spread', subtitle: 'Gesture', tag: 'Flexible'},
 ];
 
-function EntryCard(props: {title: string; subtitle: string; tag: string; selected?: boolean; onPress: () => void; palette: typeof figmaPalette.light}) {
+function EntryCard(props: {title: string; subtitle: string; selected?: boolean; onPress: () => void; palette: typeof figmaPalette.light}) {
   return (
     <Pressable
       onPress={props.onPress}
       style={({pressed}) => [
         styles.entryCard,
         {
-          backgroundColor: props.selected ? props.palette.accentSoft : props.palette.surface,
+          backgroundColor: props.palette.surface,
           borderColor: props.selected ? props.palette.accent : props.palette.border,
           opacity: pressed ? 0.94 : 1,
         },
@@ -33,9 +33,7 @@ function EntryCard(props: {title: string; subtitle: string; tag: string; selecte
         <Text style={[styles.entryTitle, {color: props.palette.textPrimary}]}>{props.title}</Text>
         <Text style={[styles.entrySubtitle, {color: props.palette.textSecondary}]}>{props.subtitle}</Text>
       </View>
-      <View style={[styles.entryPill, {backgroundColor: props.palette.accentSoft}]}>
-        <Text style={[styles.entryPillText, {color: props.palette.accent}]}>{props.tag}</Text>
-      </View>
+      <Text style={[styles.chevron, {color: props.palette.textSecondary}]}>{'>'}</Text>
     </Pressable>
   );
 }
@@ -82,28 +80,9 @@ export function SecretEntryScreen() {
   return (
     <FigmaPage variant="light">
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.topRow}>
-          <Text style={[styles.time, {color: palette.textSecondary}]}>9:41</Text>
-          <View style={[styles.stepPill, {backgroundColor: palette.accentSoft}]}>
-            <Text style={[styles.stepText, {color: palette.accent}]}>4 of 4</Text>
-          </View>
-        </View>
-
-        <Text style={[styles.title, {color: palette.textPrimary}]}>Choose secret entry</Text>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Pick the gesture or code you will use to reveal the vault when the launcher is hidden.</Text>
-
-        <View style={[styles.heroCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-          <View style={[styles.heroIcon, {backgroundColor: palette.accentSoft}]}>
-            <View style={[styles.heroDot, {backgroundColor: palette.accent}]} />
-          </View>
-          <Text style={[styles.heroTitle, {color: palette.textPrimary}]}>A discreet entry point keeps the vault accessible without showing it up front.</Text>
-          <Text style={[styles.heroBody, {color: palette.textSecondary}]}>Choose something quick to remember but hard for others to notice.</Text>
-        </View>
-
-        <View style={[styles.noteCard, {backgroundColor: palette.accentSoft, borderColor: palette.border}]}>
-          <Text style={[styles.noteTitle, {color: palette.accent}]}>Best choice</Text>
-          <Text style={[styles.noteBody, {color: palette.textSecondary}]}>Calculator code is the most discreet because it looks like a normal utility app.</Text>
-        </View>
+        <Text style={[styles.time, {color: palette.textPrimary}]}>9:41</Text>
+        <Text style={[styles.title, {color: palette.textPrimary}]}>Secret access</Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Choose hidden-app entry.</Text>
 
         <View style={styles.cards}>
           {entryMethods.map(method => (
@@ -111,7 +90,6 @@ export function SecretEntryScreen() {
               key={method.title}
               title={method.title}
               subtitle={method.subtitle}
-              tag={method.tag}
               selected={selectedMethod === methodToSecretEntryMethod(method.title)}
               onPress={() => setSelectedMethod(methodToSecretEntryMethod(method.title))}
               palette={palette}
@@ -151,8 +129,8 @@ export function SecretEntryScreen() {
         ) : null}
 
         {error ? (
-          <View style={[styles.noteCard, {backgroundColor: '#FEF3F2', borderColor: '#FEE4E2'}]}>
-            <Text style={[styles.noteBody, {color: '#B42318', marginTop: 0}]}>{error}</Text>
+          <View style={[styles.errorCard, {backgroundColor: '#FEF3F2', borderColor: '#FEE4E2'}]}>
+            <Text style={[styles.errorBody, {color: '#B42318'}]}>{error}</Text>
           </View>
         ) : null}
 
@@ -187,11 +165,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 24,
   },
-  topRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
   time: {
     fontSize: 10,
     fontWeight: '700',
@@ -210,125 +183,80 @@ const styles = StyleSheet.create({
     lineHeight: 10,
   },
   title: {
-    marginTop: 10,
-    fontSize: 26,
+    marginTop: 28,
+    fontSize: 40,
     fontWeight: '800',
-    lineHeight: 31,
-    letterSpacing: -0.1,
+    lineHeight: 48,
+    letterSpacing: -0.8,
   },
   subtitle: {
     marginTop: 10,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  heroCard: {
-    marginTop: 18,
-    borderRadius: 28,
-    borderWidth: 1,
-    paddingHorizontal: 18,
-    paddingVertical: 18,
-  },
-  heroIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroDot: {
-    width: 18,
-    height: 18,
-    borderRadius: 6,
-  },
-  heroTitle: {
-    marginTop: 16,
-    fontSize: 19,
-    fontWeight: '800',
-    lineHeight: 23,
-  },
-  heroBody: {
-    marginTop: 8,
-    fontSize: 11,
-    lineHeight: 16,
-  },
-  noteCard: {
-    marginTop: 16,
-    borderRadius: 22,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  noteTitle: {
-    fontSize: 10,
-    fontWeight: '800',
-    lineHeight: 12,
-  },
-  noteBody: {
-    marginTop: 8,
-    fontSize: 10,
-    lineHeight: 14,
+    fontSize: 14,
+    lineHeight: 18,
   },
   cards: {
-    marginTop: 16,
-    gap: 12,
+    marginTop: 58,
+    gap: 14,
   },
   form: {
+    marginTop: 18,
+    gap: 14,
+  },
+  errorCard: {
     marginTop: 16,
-    gap: 12,
+    borderRadius: 24,
+    borderWidth: 1,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+  },
+  errorBody: {
+    fontSize: 12,
+    lineHeight: 16,
   },
   field: {
     borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRadius: 28,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
   },
   fieldLabel: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '700',
-    lineHeight: 11,
+    lineHeight: 12,
   },
   fieldInput: {
     marginTop: 8,
-    minHeight: 28,
-    fontSize: 16,
+    minHeight: 32,
+    fontSize: 18,
     fontWeight: '700',
     letterSpacing: 1.5,
   },
   entryCard: {
-    minHeight: 66,
-    borderRadius: 20,
+    minHeight: 112,
+    borderRadius: 30,
     borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 32,
+    paddingVertical: 22,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
   },
   entryBody: {
     flex: 1,
   },
   entryTitle: {
-    fontSize: 10,
-    fontWeight: '800',
-    lineHeight: 14,
+    fontSize: 18,
+    fontWeight: '700',
+    lineHeight: 22,
   },
   entrySubtitle: {
-    marginTop: 3,
-    fontSize: 8,
-    lineHeight: 10,
+    marginTop: 10,
+    fontSize: 11,
+    lineHeight: 15,
   },
-  entryPill: {
-    minWidth: 72,
-    minHeight: 26,
-    paddingHorizontal: 10,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  entryPillText: {
-    fontSize: 7,
-    fontWeight: '800',
-    lineHeight: 9,
+  chevron: {
+    fontSize: 32,
+    lineHeight: 34,
+    fontWeight: '700',
   },
   spacer: {
     flex: 1,

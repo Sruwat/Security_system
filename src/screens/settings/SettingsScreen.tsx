@@ -12,7 +12,7 @@ function formatPrimaryLock(settings: AppSettings): string {
     ? 'Password'
     : settings.primaryAuthMethod === 'PATTERN'
       ? 'Pattern'
-      : 'PIN';
+      : 'Fingerprint + PIN';
 }
 
 function formatSecretAccess(settings: AppSettings): string {
@@ -24,21 +24,30 @@ function formatSecretAccess(settings: AppSettings): string {
         ? 'Triple tap'
         : settings.secretEntryMethod === 'LONG_PRESS'
           ? 'Long press'
-          : 'Pinch';
+          : 'Pinch / spread';
 }
 
 function formatAutoLock(seconds: number): string {
-  return seconds < 60 ? `${seconds} seconds` : `${seconds / 60} minutes`;
+  return seconds <= 30 ? '30 seconds' : seconds < 60 ? `${seconds} seconds` : `${seconds / 60} minutes`;
 }
 
 function SettingRow(props: {title: string; subtitle: string; onPress?: () => void; palette: typeof figmaPalette.light}) {
   return (
-    <Pressable onPress={props.onPress} style={({pressed}) => [styles.row, {backgroundColor: props.palette.surface, borderColor: props.palette.border, opacity: pressed ? 0.94 : 1}]}>
+    <Pressable
+      onPress={props.onPress}
+      style={({pressed}) => [
+        styles.row,
+        {
+          backgroundColor: props.palette.surface,
+          borderColor: props.palette.border,
+          opacity: pressed ? 0.94 : 1,
+        },
+      ]}>
       <View style={styles.rowBody}>
         <Text style={[styles.rowTitle, {color: props.palette.textPrimary}]}>{props.title}</Text>
         <Text style={[styles.rowSubtitle, {color: props.palette.textSecondary}]}>{props.subtitle}</Text>
       </View>
-      <Text style={[styles.chevron, {color: props.palette.textSecondary}]}>›</Text>
+      <Text style={[styles.chevron, {color: props.palette.textSecondary}]}>{'>'}</Text>
     </Pressable>
   );
 }
@@ -126,25 +135,25 @@ const styles = StyleSheet.create({
   },
   title: {
     marginTop: 28,
-    fontSize: 28,
+    fontSize: 40,
     fontWeight: '800',
-    lineHeight: 33,
-    letterSpacing: -0.2,
+    lineHeight: 48,
+    letterSpacing: -0.8,
   },
   subtitle: {
     marginTop: 10,
-    fontSize: 13,
+    fontSize: 14,
     lineHeight: 18,
   },
   list: {
-    marginTop: 16,
+    marginTop: 34,
     gap: 14,
   },
   row: {
     minHeight: 112,
     borderWidth: 1,
     borderRadius: 30,
-    paddingHorizontal: 24,
+    paddingHorizontal: 32,
     paddingVertical: 22,
     flexDirection: 'row',
     alignItems: 'center',
@@ -159,15 +168,15 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   rowSubtitle: {
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 11,
+    lineHeight: 15,
   },
   chevron: {
-    fontSize: 32,
-    lineHeight: 36,
+    fontSize: 24,
+    lineHeight: 28,
     fontWeight: '700',
   },
   bottomSpacer: {
-    height: 8,
+    height: 372,
   },
 });

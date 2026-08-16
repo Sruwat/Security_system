@@ -5,17 +5,24 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import type {RootStackParamList} from '../../navigation/routes';
 
-function StepCard(props: {title: string; subtitle: string; index: string; palette: typeof figmaPalette.light}) {
+function LauncherRow(props: {title: string; subtitle: string; palette: typeof figmaPalette.light; onPress: () => void}) {
   return (
-    <View style={[styles.stepCard, {backgroundColor: props.palette.surface, borderColor: props.palette.border}]}>
-      <View style={[styles.stepIndex, {backgroundColor: props.palette.accentSoft}]}>
-        <Text style={[styles.stepIndexText, {color: props.palette.accent}]}>{props.index}</Text>
+    <Pressable
+      onPress={props.onPress}
+      style={({pressed}) => [
+        styles.row,
+        {
+          backgroundColor: props.palette.surface,
+          borderColor: props.palette.border,
+          opacity: pressed ? 0.94 : 1,
+        },
+      ]}>
+      <View style={styles.rowBody}>
+        <Text style={[styles.rowTitle, {color: props.palette.textPrimary}]}>{props.title}</Text>
+        <Text style={[styles.rowSubtitle, {color: props.palette.textSecondary}]}>{props.subtitle}</Text>
       </View>
-      <View style={styles.stepBody}>
-        <Text style={[styles.stepTitle, {color: props.palette.textPrimary}]}>{props.title}</Text>
-        <Text style={[styles.stepSubtitle, {color: props.palette.textSecondary}]}>{props.subtitle}</Text>
-      </View>
-    </View>
+      <Text style={[styles.chevron, {color: props.palette.textSecondary}]}>{'>'}</Text>
+    </Pressable>
   );
 }
 
@@ -26,39 +33,19 @@ export function LauncherSetupScreen() {
   return (
     <FigmaPage variant="light">
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.topRow}>
-          <View>
-            <Text style={[styles.time, {color: palette.textSecondary}]}>9:41</Text>
-            <Text style={[styles.title, {color: palette.textPrimary}]}>Launcher setup</Text>
-          </View>
-          <View style={[styles.stepPill, {backgroundColor: palette.accentSoft}]}>
-            <Text style={[styles.stepPillText, {color: palette.accent}]}>1 of 4</Text>
-          </View>
-        </View>
+        <Text style={[styles.time, {color: palette.textPrimary}]}>9:41</Text>
+        <Text style={[styles.title, {color: palette.textPrimary}]}>Launcher setup</Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>One-time Android setup.</Text>
 
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Complete the one-time launcher setup so protected apps can stay hidden and easy to open from your private space.</Text>
-
-        <View style={[styles.heroCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-          <View style={[styles.heroIcon, {backgroundColor: palette.accentSoft}]}>
-            <View style={[styles.heroDot, {backgroundColor: palette.accent}]} />
-          </View>
-          <Text style={[styles.heroTitle, {color: palette.textPrimary}]}>Keep control inside Smart App Lock.</Text>
-          <Text style={[styles.heroBody, {color: palette.textSecondary}]}>This setup lets the launcher handle hiding, opening, and returning users to a secure home screen.</Text>
-        </View>
-
-        <View style={styles.steps}>
-          <StepCard palette={palette} index="01" title="Set as default launcher" subtitle="Route the Home button through the private launcher." />
-          <StepCard palette={palette} index="02" title="Allow app discovery" subtitle="Make protected apps visible to the private launcher." />
+        <View style={styles.rows}>
+          <LauncherRow palette={palette} title="Default launcher" subtitle="Set this app as Home launcher" onPress={() => undefined} />
+          <LauncherRow palette={palette} title="App discovery" subtitle="Allow permitted app discovery" onPress={() => undefined} />
         </View>
 
         <View style={[styles.noteCard, {backgroundColor: palette.accentSoft, borderColor: palette.border}]}>
-          <Text style={[styles.noteTitle, {color: palette.accent}]}>What this does not do</Text>
-          <Text style={[styles.noteBody, {color: palette.textSecondary}]}>It does not claim Android-wide hiding or modify unrelated system apps.</Text>
+          <Text style={[styles.noteTitle, {color: palette.accent}]}>Hide works inside this Smart Launcher.</Text>
+          <Text style={[styles.noteBody, {color: palette.textSecondary}]}>No Android-wide hiding claim.</Text>
         </View>
-
-        <Pressable style={[styles.inlineLink, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-          <Text style={[styles.inlineLinkText, {color: palette.textSecondary}]}>Need help with launcher permissions?</Text>
-        </Pressable>
 
         <View style={styles.spacer} />
 
@@ -72,22 +59,17 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 24,
   },
-  topRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
   time: {
     fontSize: 10,
     fontWeight: '700',
     lineHeight: 12,
   },
   title: {
-    marginTop: 10,
-    fontSize: 26,
+    marginTop: 28,
+    fontSize: 40,
     fontWeight: '800',
-    lineHeight: 31,
-    letterSpacing: -0.1,
+    lineHeight: 48,
+    letterSpacing: -0.8,
   },
   stepPill: {
     minHeight: 30,
@@ -103,107 +85,57 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     marginTop: 10,
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 14,
+    lineHeight: 18,
   },
-  heroCard: {
-    marginTop: 18,
-    borderRadius: 28,
+  rows: {
+    marginTop: 24,
+    gap: 14,
+  },
+  row: {
+    minHeight: 112,
     borderWidth: 1,
-    paddingHorizontal: 18,
-    paddingVertical: 18,
-  },
-  heroIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroDot: {
-    width: 18,
-    height: 18,
-    borderRadius: 6,
-  },
-  heroTitle: {
-    marginTop: 16,
-    fontSize: 19,
-    fontWeight: '800',
-    lineHeight: 23,
-  },
-  heroBody: {
-    marginTop: 8,
-    fontSize: 11,
-    lineHeight: 16,
-  },
-  steps: {
-    marginTop: 16,
-    gap: 12,
-  },
-  stepCard: {
-    minHeight: 74,
-    borderRadius: 22,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    borderRadius: 30,
+    paddingHorizontal: 32,
+    paddingVertical: 22,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
   },
-  stepIndex: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepIndexText: {
-    fontSize: 9,
-    fontWeight: '800',
-    lineHeight: 11,
-  },
-  stepBody: {
+  rowBody: {
     flex: 1,
   },
-  stepTitle: {
-    fontSize: 10,
-    fontWeight: '800',
-    lineHeight: 14,
+  rowTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    lineHeight: 22,
   },
-  stepSubtitle: {
-    marginTop: 4,
-    fontSize: 8,
-    lineHeight: 10,
-  },
-  noteCard: {
-    marginTop: 16,
-    borderRadius: 22,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  noteTitle: {
-    fontSize: 10,
-    fontWeight: '800',
-    lineHeight: 12,
-  },
-  noteBody: {
-    marginTop: 8,
+  rowSubtitle: {
+    marginTop: 10,
     fontSize: 11,
     lineHeight: 15,
   },
-  inlineLink: {
-    marginTop: 12,
-    minHeight: 42,
-    borderRadius: 18,
+  noteCard: {
+    marginTop: 16,
+    minHeight: 218,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 30,
+    paddingHorizontal: 36,
+    paddingVertical: 44,
   },
-  inlineLinkText: {
-    fontSize: 10,
+  noteTitle: {
+    fontSize: 18,
     fontWeight: '700',
-    lineHeight: 12,
+    lineHeight: 24,
+  },
+  noteBody: {
+    marginTop: 34,
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  chevron: {
+    fontSize: 32,
+    lineHeight: 34,
+    fontWeight: '700',
   },
   spacer: {
     flex: 1,

@@ -18,12 +18,12 @@ export const figmaPalette = {
   dark: {
     background: '#090D16',
     surface: '#151C2B',
-    surfaceElevated: '#171F2F',
+    surfaceElevated: '#1B2232',
     textPrimary: '#F8FAFC',
     textSecondary: '#94A3B8',
     accent: '#A78BFA',
-    accentSoft: '#211A3A',
-    border: '#273247',
+    accentSoft: '#2B2146',
+    border: '#2F3B56',
   },
 } as const;
 
@@ -36,20 +36,6 @@ export function FigmaPage(props: {variant: FigmaVariant; children: React.ReactNo
   return (
     <SafeAreaView style={[styles.page, {backgroundColor: palette.background}, props.style]}>
       <StatusBar barStyle={props.variant === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={palette.background} />
-      <View pointerEvents="none" style={styles.backdrop}>
-        {props.variant === 'dark' ? (
-          <>
-            <View style={[styles.glow, styles.glowTopLeft, {backgroundColor: 'rgba(167, 139, 250, 0.16)'}]} />
-            <View style={[styles.glow, styles.glowBottomRight, {backgroundColor: 'rgba(59, 130, 246, 0.08)'}]} />
-            <View style={[styles.haze, {backgroundColor: 'rgba(255, 255, 255, 0.03)'}]} />
-          </>
-        ) : (
-          <>
-            <View style={[styles.glow, styles.lightOrbTopLeft, {backgroundColor: 'rgba(167, 139, 250, 0.08)'}]} />
-            <View style={[styles.glow, styles.lightOrbBottomRight, {backgroundColor: 'rgba(59, 130, 246, 0.05)'}]} />
-          </>
-        )}
-      </View>
       <View style={styles.content}>{props.children}</View>
     </SafeAreaView>
   );
@@ -95,7 +81,6 @@ export function FigmaRowCard(props: {
   rightLabel?: string;
   icon?: string;
   onPress?: () => void;
-  compact?: boolean;
 }) {
   const palette = useFigmaPalette(props.variant);
   const backgroundColor =
@@ -128,11 +113,11 @@ export function FigmaRowCard(props: {
         <Text style={[styles.rowSubtitle, {color: palette.textSecondary}]}>{props.subtitle}</Text>
       </View>
       {props.rightLabel ? (
-        <View style={[styles.badge, {backgroundColor: props.selected ? palette.accentSoft : palette.accentSoft}]}>
+        <View style={styles.badge}>
           <Text style={[styles.badgeText, {color: palette.accent}]}>{props.rightLabel}</Text>
         </View>
       ) : (
-        <Text style={[styles.chevron, {color: palette.textSecondary}]}>›</Text>
+        <Text style={[styles.chevron, {color: palette.textSecondary}]}>{'>'}</Text>
       )}
     </Pressable>
   );
@@ -150,15 +135,9 @@ export function FigmaActionButton(props: {variant: FigmaVariant; label: string; 
           backgroundColor: isSecondary ? palette.surface : palette.accent,
           borderColor: isSecondary ? palette.border : 'transparent',
           opacity: pressed ? 0.94 : 1,
-          transform: [{scale: pressed ? 0.985 : 1}, {translateY: pressed ? 1 : 0}],
-          shadowColor: isSecondary ? 'transparent' : '#000000',
-          shadowOpacity: isSecondary ? 0 : 0.22,
-          shadowRadius: isSecondary ? 0 : 20,
-          shadowOffset: isSecondary ? {width: 0, height: 0} : {width: 0, height: 10},
-          elevation: isSecondary ? 0 : 4,
         },
       ]}>
-      <Text style={[styles.actionText, {color: isSecondary ? palette.accent : '#FFFFFF'}]}>{props.label}</Text>
+      <Text style={[styles.actionText, {color: isSecondary ? palette.textPrimary : '#FFFFFF'}]}>{props.label}</Text>
     </Pressable>
   );
 }
@@ -166,11 +145,28 @@ export function FigmaActionButton(props: {variant: FigmaVariant; label: string; 
 export function FigmaBottomNav(props: {variant: FigmaVariant; active: 'home' | 'gallery' | 'settings'}) {
   const palette = useFigmaPalette(props.variant);
   return (
-    <View style={[styles.bottomNav, {backgroundColor: props.variant === 'dark' ? palette.surface : palette.surface}]}>
-      <View style={[styles.navPill, {backgroundColor: palette.accentSoft, left: props.active === 'home' ? 8 : props.active === 'gallery' ? 113 : 218}]} />
-      <Text style={[styles.navIcon, {left: 48, color: props.active === 'home' ? palette.accent : palette.textSecondary}]}>▦</Text>
-      <Text style={[styles.navIcon, {left: 154, color: props.active === 'gallery' ? palette.accent : palette.textSecondary}]}>◇</Text>
-      <Text style={[styles.navIcon, {left: 260, color: props.active === 'settings' ? palette.accent : palette.textSecondary}]}>⚙</Text>
+    <View style={[styles.bottomNav, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+      <View style={[styles.navPill, {backgroundColor: palette.accentSoft, left: props.active === 'home' ? 16 : props.active === 'gallery' ? 121 : 226}]} />
+
+      <View style={[styles.navSlot, {left: 55}]}>
+        <View style={styles.gridIcon}>
+          {Array.from({length: 9}).map((_, index) => (
+            <View key={index} style={[styles.gridDot, {backgroundColor: props.active === 'home' ? palette.accent : palette.textSecondary}]} />
+          ))}
+        </View>
+      </View>
+
+      <View style={[styles.navSlot, {left: 160}]}>
+        <View style={[styles.diamondIcon, {borderColor: props.active === 'gallery' ? palette.accent : palette.textSecondary}]}>
+          <View style={[styles.diamondIconInner, {backgroundColor: props.active === 'gallery' ? palette.accent : palette.textSecondary}]} />
+        </View>
+      </View>
+
+      <View style={[styles.navSlot, {left: 266}]}>
+        <View style={[styles.settingsIcon, {borderColor: props.active === 'settings' ? palette.accent : palette.textSecondary}]}>
+          <View style={[styles.settingsIconInner, {backgroundColor: props.active === 'settings' ? palette.accent : palette.textSecondary}]} />
+        </View>
+      </View>
     </View>
   );
 }
@@ -186,6 +182,7 @@ export function FigmaBanner(props: {
   const palette = useFigmaPalette(props.variant);
   const [ready, setReady] = React.useState(false);
   const placement = props.placement ?? 'banner';
+
   React.useEffect(() => {
     const timer = setTimeout(() => setReady(true), 0);
     return () => clearTimeout(timer);
@@ -195,9 +192,9 @@ export function FigmaBanner(props: {
   if (!ready || !isReady) {
     return null;
   }
-  const backgroundColor = props.tone === 'surface' ? palette.surface : palette.surfaceElevated;
+
   return (
-    <View style={[styles.banner, {backgroundColor, borderColor: palette.border}]}>
+    <View style={[styles.banner, {backgroundColor: props.tone === 'surface' ? palette.surface : palette.surfaceElevated, borderColor: palette.border}]}>
       <Text style={[styles.bannerKicker, {color: palette.textSecondary}]}>Sponsored</Text>
       <Text style={[styles.bannerTitle, {color: palette.textPrimary}]}>{props.title}</Text>
       {props.subtitle ? <Text style={[styles.bannerSubtitle, {color: palette.textSecondary}]}>{props.subtitle}</Text> : null}
@@ -209,51 +206,10 @@ const styles = StyleSheet.create({
   page: {
     flex: 1,
   },
-  backdrop: {
-    ...StyleSheet.absoluteFill,
-    overflow: 'hidden',
-  },
   content: {
     flex: 1,
     paddingHorizontal: 18,
     paddingTop: 12,
-  },
-  glow: {
-    position: 'absolute',
-    borderRadius: 999,
-  },
-  glowTopLeft: {
-    width: 280,
-    height: 280,
-    top: -120,
-    left: -110,
-  },
-  glowBottomRight: {
-    width: 240,
-    height: 240,
-    right: -100,
-    bottom: -96,
-  },
-  haze: {
-    position: 'absolute',
-    top: '18%',
-    alignSelf: 'center',
-    width: '72%',
-    height: 220,
-    borderRadius: 44,
-    transform: [{rotate: '-9deg'}],
-  },
-  lightOrbTopLeft: {
-    width: 220,
-    height: 220,
-    top: -90,
-    left: -88,
-  },
-  lightOrbBottomRight: {
-    width: 180,
-    height: 180,
-    right: -70,
-    bottom: -68,
   },
   header: {
     marginBottom: 16,
@@ -351,9 +307,6 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     marginTop: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
     position: 'relative',
     overflow: 'hidden',
   },
@@ -364,14 +317,50 @@ const styles = StyleSheet.create({
     top: 11,
     borderRadius: 19,
   },
-  navIcon: {
+  navSlot: {
     position: 'absolute',
-    top: 20,
+    top: 18,
     width: 28,
-    textAlign: 'center',
-    fontSize: 14,
-    lineHeight: 16,
-    fontWeight: '700',
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gridIcon: {
+    width: 18,
+    height: 18,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 2,
+  },
+  gridDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 1,
+  },
+  diamondIcon: {
+    width: 16,
+    height: 16,
+    borderWidth: 2,
+    transform: [{rotate: '45deg'}],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  diamondIconInner: {
+    width: 6,
+    height: 6,
+  },
+  settingsIcon: {
+    width: 18,
+    height: 18,
+    borderWidth: 2,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  settingsIconInner: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   banner: {
     minHeight: 56,
