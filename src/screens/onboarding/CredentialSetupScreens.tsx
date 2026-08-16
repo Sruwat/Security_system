@@ -13,7 +13,7 @@ type CredentialKind = 'PIN' | 'PASSWORD' | 'PATTERN';
 
 function normalizeCredential(kind: CredentialKind, text: string): string {
   if (kind === 'PIN') {
-    return text.replace(/[^0-9]/g, '').slice(0, 6);
+    return text.replace(/[^0-9]/g, '').slice(0, 4);
   }
 
   if (kind === 'PATTERN') {
@@ -52,8 +52,8 @@ function CredentialSetupBase(props: {
       return;
     }
 
-    if (props.kind === 'PIN' && !/^\d{4,6}$/.test(normalized)) {
-      setError('Enter a 4 to 6 digit PIN.');
+    if (props.kind === 'PIN' && !/^\d{4}$/.test(normalized)) {
+      setError('Enter a 4 digit PIN.');
       return;
     }
 
@@ -121,7 +121,7 @@ function CredentialSetupBase(props: {
               keyboardType={props.kind === 'PIN' ? 'number-pad' : 'default'}
               autoCapitalize="none"
               autoCorrect={false}
-              maxLength={props.kind === 'PIN' ? 6 : undefined}
+              maxLength={props.kind === 'PIN' ? 4 : undefined}
               style={[styles.fieldInput, {color: palette.textPrimary}]}
             />
           </View>
@@ -139,7 +139,7 @@ function CredentialSetupBase(props: {
               keyboardType={props.kind === 'PIN' ? 'number-pad' : 'default'}
               autoCapitalize="none"
               autoCorrect={false}
-              maxLength={props.kind === 'PIN' ? 6 : undefined}
+              maxLength={props.kind === 'PIN' ? 4 : undefined}
               style={[styles.fieldInput, {color: palette.textPrimary}]}
             />
           </View>
