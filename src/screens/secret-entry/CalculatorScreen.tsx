@@ -1,5 +1,5 @@
 import React from 'react';
-import {Alert, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {Alert, Pressable, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
@@ -8,8 +8,12 @@ import {nativeBridge} from '../../native';
 import {VAULT_SECRET_CREDENTIAL_TYPE} from '../../services/security/credentialTypes';
 import type {RootStackParamList} from '../../navigation/routes';
 
-const keypad = ['7', '8', '9', '4', '5', '6', '1', '2', '3', '0'];
-const operators = ['+', '-', 'x', '/'];
+const keypadRows = [
+  ['7', '8', '9', '/'],
+  ['4', '5', '6', 'x'],
+  ['1', '2', '3', '-'],
+  ['C', '0', '=', '+'],
+] as const;
 
 function evaluateExpression(expression: string): string {
   const sanitized = expression.replace(/x/g, '*').replace(/[^0-9+\-*/.]/g, '');
@@ -31,9 +35,15 @@ function evaluateExpression(expression: string): string {
 export function CalculatorScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const palette = figmaPalette.light;
+  const {width, height} = useWindowDimensions();
   const [expression, setExpression] = React.useState('');
   const [busy, setBusy] = React.useState(false);
   const [message, setMessage] = React.useState('Use the calculator normally, or enter your secret code and press =.');
+
+  const compactLayout = height < 760;
+  const keypadGap = compactLayout ? 10 : 14;
+  const horizontalPadding = 36;
+  const keySize = Math.max(64, Math.min(84, (width - horizontalPadding * 2 - keypadGap * 3) / 4));
 
   const appendDigit = React.useCallback((digit: string) => {
     setExpression(current => `${current}${digit}`.slice(0, 24));
@@ -100,7 +110,7 @@ export function CalculatorScreen() {
 
   return (
     <FigmaPage variant="light">
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <View style={styles.screen}>
         <View style={styles.topRow}>
           <Text style={[styles.time, {color: palette.textSecondary}]}>9:41</Text>
           <View style={[styles.stepPill, {backgroundColor: palette.accentSoft}]}>
@@ -108,56 +118,90 @@ export function CalculatorScreen() {
           </View>
         </View>
 
-        <Text style={[styles.title, {color: palette.textPrimary}]}>Calculator</Text>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Use the calculator code to open the hidden vault.</Text>
+        <Text style={[styles.title, compactLayout && styles.titleCompact, {color: palette.textPrimary}]}>Calculator</Text>
+        <Text style={[styles.subtitle, compactLayout && styles.subtitleCompact, {color: palette.textSecondary}]}>
+          Use the calculator code to open the hidden vault.
+        </Text>
 
-        <View style={[styles.displayCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+        <View style={[styles.displayCard, compactLayout && styles.displayCardCompact, {backgroundColor: palette.surface, borderColor: palette.border}]}>
           <Text style={[styles.displayLabel, {color: palette.textSecondary}]}>Code</Text>
-          <Text style={[styles.displayValue, {color: palette.textPrimary}]} numberOfLines={2}>
+          <Text style={[styles.displayValue, compactLayout && styles.displayValueCompact, {color: palette.textPrimary}]} numberOfLines={2}>
             {expression || '0'}
           </Text>
-          <Text style={[styles.displayMessage, {color: palette.textSecondary}]}>{message}</Text>
+          <Text style={[styles.displayMessage, compactLayout && styles.displayMessageCompact, {color: palette.textSecondary}]}>{message}</Text>
         </View>
 
-        <View style={styles.keypad}>
-          {keypad.map(digit => (
-            <Pressable
-              key={digit}
-              onPress={() => appendDigit(digit)}
-              style={({pressed}) => [styles.key, {backgroundColor: palette.surface, borderColor: palette.border, opacity: pressed ? 0.94 : 1}]}>
-              <Text style={[styles.keyText, {color: palette.textPrimary}]}>{digit}</Text>
-            </Pressable>
-          ))}
-          {operators.map(operator => (
-            <Pressable
-              key={operator}
-              onPress={() => appendOperator(operator)}
-              style={({pressed}) => [styles.key, {backgroundColor: palette.accentSoft, borderColor: palette.accent, opacity: pressed ? 0.94 : 1}]}>
-              <Text style={[styles.keyText, {color: palette.accent}]}>{operator}</Text>
-            </Pressable>
-          ))}
+        <View style={styles.keypadWrap}>
+          <View style={[styles.keypad, {gap: keypadGap}]}>
+            {keypadRows.map((row, rowIndex) => (
+              <View key={`row-${rowIndex}`} style={[styles.keyRow, {gap: keypadGap}]}>
+                {row.map(key => {
+                  const isOperator = ['+', '-', 'x', '/'].includes(key);
+                  const isClear = key === 'C';
+                  const isEquals = key === '=';
+                  const onPress = () => {
+                    if (isClear) {
+                      clearValue();
+                      return;
+                    }
+                    if (isEquals) {
+                      void submit();
+                      return;
+                    }
+                    if (isOperator) {
+                      appendOperator(key);
+                      return;
+                    }
+                    appendDigit(key);
+                  };
+
+                  return (
+                    <Pressable
+                      key={key}
+                      onPress={onPress}
+                      style={({pressed}) => [
+                        styles.key,
+                        {
+                          width: keySize,
+                          height: keySize,
+                          backgroundColor: isOperator || isEquals ? palette.accentSoft : palette.surface,
+                          borderColor: isOperator || isEquals ? palette.accent : palette.border,
+                          opacity: pressed ? 0.94 : 1,
+                        },
+                      ]}>
+                      <Text
+                        style={[
+                          styles.keyText,
+                          compactLayout && styles.keyTextCompact,
+                          {color: isOperator || isEquals ? palette.accent : isClear ? palette.textSecondary : palette.textPrimary},
+                        ]}>
+                        {key}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ))}
+          </View>
         </View>
 
-        <View style={styles.actionsRow}>
-          <Pressable onPress={clearValue} style={[styles.secondaryPill, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-            <Text style={[styles.secondaryText, {color: palette.textSecondary}]}>Clear</Text>
-          </Pressable>
-          <Pressable onPress={() => void submit()} style={[styles.secondaryPill, {backgroundColor: palette.accentSoft, borderColor: palette.accent}]}>
-            <Text style={[styles.secondaryText, {color: palette.accent}]}>{busy ? 'Checking...' : '='}</Text>
-          </Pressable>
+        <View style={[styles.statusBar, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+          <Text style={[styles.statusText, {color: palette.textSecondary}]}>
+            {busy ? 'Checking secret code...' : 'Enter code, then press ='}
+          </Text>
         </View>
 
-        <View style={styles.spacer} />
-
-        <FigmaActionButton variant="light" label="Back to secret entry" onPress={() => navigation.navigate('SecretEntry')} />
-      </ScrollView>
+        <View style={styles.footer}>
+          <FigmaActionButton variant="light" label="Back to secret entry" onPress={() => navigation.navigate('SecretEntry')} />
+        </View>
+      </View>
     </FigmaPage>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContent: {
-    paddingBottom: 24,
+  screen: {
+    flex: 1,
   },
   topRow: {
     flexDirection: 'row',
@@ -182,23 +226,37 @@ const styles = StyleSheet.create({
     lineHeight: 10,
   },
   title: {
-    marginTop: 28,
-    fontSize: 40,
+    marginTop: 18,
+    fontSize: 32,
     fontWeight: '800',
-    lineHeight: 48,
-    letterSpacing: -0.8,
+    lineHeight: 38,
+    letterSpacing: -0.6,
+  },
+  titleCompact: {
+    marginTop: 14,
+    fontSize: 28,
+    lineHeight: 34,
   },
   subtitle: {
-    marginTop: 10,
-    fontSize: 14,
-    lineHeight: 18,
+    marginTop: 8,
+    fontSize: 13,
+    lineHeight: 17,
+  },
+  subtitleCompact: {
+    fontSize: 12,
+    lineHeight: 16,
   },
   displayCard: {
-    marginTop: 24,
+    marginTop: 18,
     borderWidth: 1,
-    borderRadius: 30,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+    borderRadius: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+  },
+  displayCardCompact: {
+    marginTop: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   displayLabel: {
     fontSize: 10,
@@ -206,28 +264,39 @@ const styles = StyleSheet.create({
     lineHeight: 12,
   },
   displayValue: {
-    marginTop: 10,
-    minHeight: 52,
-    fontSize: 28,
+    marginTop: 8,
+    minHeight: 44,
+    fontSize: 26,
     fontWeight: '800',
-    letterSpacing: 2,
+    letterSpacing: 1.6,
+  },
+  displayValueCompact: {
+    minHeight: 38,
+    fontSize: 22,
   },
   displayMessage: {
     marginTop: 6,
     fontSize: 12,
     lineHeight: 16,
   },
-  keypad: {
+  displayMessageCompact: {
+    fontSize: 11,
+    lineHeight: 14,
+  },
+  keypadWrap: {
     marginTop: 18,
+    alignItems: 'center',
+  },
+  keypad: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  keyRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 14,
   },
   key: {
-    width: '31%',
-    minHeight: 72,
     borderWidth: 1,
-    borderRadius: 24,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -236,26 +305,28 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 24,
   },
-  actionsRow: {
-    marginTop: 18,
-    flexDirection: 'row',
-    gap: 14,
+  keyTextCompact: {
+    fontSize: 18,
+    lineHeight: 22,
   },
-  secondaryPill: {
-    flex: 1,
-    minHeight: 54,
-    borderRadius: 22,
+  statusBar: {
+    marginTop: 18,
+    minHeight: 52,
+    borderRadius: 20,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 18,
   },
-  secondaryText: {
+  statusText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
     lineHeight: 15,
+    textAlign: 'center',
   },
-  spacer: {
-    flex: 1,
-    minHeight: 24,
+  footer: {
+    marginTop: 'auto',
+    paddingTop: 18,
+    paddingBottom: 24,
   },
 });
