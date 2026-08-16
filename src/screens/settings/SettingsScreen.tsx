@@ -118,7 +118,13 @@ export function SettingsScreen() {
         </View>
 
         <View style={styles.bottomSpacer} />
-        <FigmaBottomNav variant="light" active="settings" />
+        <FigmaBottomNav
+          variant="light"
+          active="settings"
+          onHomePress={() => navigation.navigate('PrivateHome')}
+          onGalleryPress={() => navigation.navigate('Gallery')}
+          onSettingsPress={() => navigation.navigate('Settings')}
+        />
       </ScrollView>
     </FigmaPage>
   );

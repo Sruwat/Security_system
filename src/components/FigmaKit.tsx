@@ -142,31 +142,43 @@ export function FigmaActionButton(props: {variant: FigmaVariant; label: string; 
   );
 }
 
-export function FigmaBottomNav(props: {variant: FigmaVariant; active: 'home' | 'gallery' | 'settings'}) {
+export function FigmaBottomNav(props: {
+  variant: FigmaVariant;
+  active: 'home' | 'gallery' | 'settings';
+  onHomePress?: () => void;
+  onGalleryPress?: () => void;
+  onSettingsPress?: () => void;
+}) {
   const palette = useFigmaPalette(props.variant);
   return (
     <View style={[styles.bottomNav, {backgroundColor: palette.surface, borderColor: palette.border}]}>
       <View style={[styles.navPill, {backgroundColor: palette.accentSoft, left: props.active === 'home' ? 16 : props.active === 'gallery' ? 121 : 226}]} />
 
-      <View style={[styles.navSlot, {left: 55}]}>
+      <Pressable
+        onPress={props.onHomePress}
+        style={({pressed}) => [styles.navSlot, {left: 55, opacity: pressed ? 0.92 : 1}]}>
         <View style={styles.gridIcon}>
           {Array.from({length: 9}).map((_, index) => (
             <View key={index} style={[styles.gridDot, {backgroundColor: props.active === 'home' ? palette.accent : palette.textSecondary}]} />
           ))}
         </View>
-      </View>
+      </Pressable>
 
-      <View style={[styles.navSlot, {left: 160}]}>
+      <Pressable
+        onPress={props.onGalleryPress}
+        style={({pressed}) => [styles.navSlot, {left: 160, opacity: pressed ? 0.92 : 1}]}>
         <View style={[styles.diamondIcon, {borderColor: props.active === 'gallery' ? palette.accent : palette.textSecondary}]}>
           <View style={[styles.diamondIconInner, {backgroundColor: props.active === 'gallery' ? palette.accent : palette.textSecondary}]} />
         </View>
-      </View>
+      </Pressable>
 
-      <View style={[styles.navSlot, {left: 266}]}>
+      <Pressable
+        onPress={props.onSettingsPress}
+        style={({pressed}) => [styles.navSlot, {left: 266, opacity: pressed ? 0.92 : 1}]}>
         <View style={[styles.settingsIcon, {borderColor: props.active === 'settings' ? palette.accent : palette.textSecondary}]}>
           <View style={[styles.settingsIconInner, {backgroundColor: props.active === 'settings' ? palette.accent : palette.textSecondary}]} />
         </View>
-      </View>
+      </Pressable>
     </View>
   );
 }

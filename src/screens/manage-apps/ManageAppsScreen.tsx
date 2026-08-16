@@ -1,5 +1,5 @@
 import React from 'react';
-import {Alert, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {Alert, Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaBanner, FigmaBottomNav, FigmaPage, figmaPalette} from '../../components/FigmaKit';
@@ -22,9 +22,11 @@ function describeMode(mode: ProtectionMode): string {
 export function ManageAppsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const palette = figmaPalette.dark;
+  const {width} = useWindowDimensions();
   const [apps, setApps] = React.useState<AppProtection[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [busyPackage, setBusyPackage] = React.useState<string | null>(null);
+  const compactRow = width < 390;
 
   const loadApps = React.useCallback(async () => {
     setLoading(true);
@@ -93,12 +95,37 @@ export function ManageAppsScreen() {
           <View style={styles.list}>
             {apps.map(app => (
               <View key={app.packageName} style={[styles.row, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-                <View style={styles.rowBody}>
-                  <Text style={[styles.rowTitle, {color: palette.textPrimary}]}>{app.label}</Text>
-                  <Text style={[styles.rowSubtitle, {color: palette.textSecondary}]}>{describeMode(app.mode)}</Text>
+                <View style={styles.rowHeader}>
+                  {app.iconUri ? (
+                    <Image source={{uri: app.iconUri}} style={styles.appArtwork} resizeMode="contain" />
+                  ) : (
+                    <View style={[styles.appIconFallback, {backgroundColor: palette.accentSoft}]}>
+                      <Text style={[styles.appIconText, {color: palette.accent}]}>
+                        {app.label
+                          .split(/\s+/)
+                          .filter(Boolean)
+                          .slice(0, 2)
+                          .map(part => part[0]?.toUpperCase() ?? '')
+                          .join('')
+                          .slice(0, 2)}
+                      </Text>
+                    </View>
+                  )}
+
+                  <View style={styles.rowBody}>
+                    <Text style={[styles.rowTitle, {color: palette.textPrimary}]} numberOfLines={2}>
+                      {app.label}
+                    </Text>
+                    <Text style={[styles.rowPackage, {color: palette.textSecondary}]} numberOfLines={1}>
+                      {app.packageName}
+                    </Text>
+                    <View style={[styles.modePill, {backgroundColor: palette.accentSoft}]}>
+                      <Text style={[styles.modeText, {color: palette.accent}]}>{describeMode(app.mode)}</Text>
+                    </View>
+                  </View>
                 </View>
 
-                <View style={styles.actions}>
+                <View style={[styles.actions, compactRow && styles.actionsCompact]}>
                   <Pressable onPress={() => void updateMode(app)} style={[styles.actionPill, {backgroundColor: palette.accentSoft}]}>
                     <Text style={[styles.actionText, {color: palette.accent}]}>
                       {busyPackage === app.packageName ? 'Updating...' : 'Change'}
@@ -129,7 +156,13 @@ export function ManageAppsScreen() {
         />
 
         <View style={styles.bottomSpacer} />
-        <FigmaBottomNav variant="dark" active="home" />
+        <FigmaBottomNav
+          variant="dark"
+          active="home"
+          onHomePress={() => navigation.navigate('PrivateHome')}
+          onGalleryPress={() => navigation.navigate('Gallery')}
+          onSettingsPress={() => navigation.navigate('Settings')}
+        />
       </ScrollView>
     </FigmaPage>
   );
@@ -189,29 +222,68 @@ const styles = StyleSheet.create({
   row: {
     borderWidth: 1,
     borderRadius: 34,
-    minHeight: 140,
+    minHeight: 164,
     paddingHorizontal: 30,
     paddingVertical: 24,
+    gap: 20,
+  },
+  rowHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 18,
+    gap: 16,
   },
   rowBody: {
     flex: 1,
+    minWidth: 0,
+  },
+  appArtwork: {
+    width: 62,
+    height: 62,
+    borderRadius: 20,
+  },
+  appIconFallback: {
+    width: 62,
+    height: 62,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  appIconText: {
+    fontSize: 16,
+    fontWeight: '800',
+    lineHeight: 20,
   },
   rowTitle: {
     fontSize: 18,
     fontWeight: '800',
     lineHeight: 22,
   },
-  rowSubtitle: {
-    marginTop: 14,
-    fontSize: 12,
-    lineHeight: 16,
+  rowPackage: {
+    marginTop: 6,
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  modePill: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+    minHeight: 34,
+    borderRadius: 17,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 14,
   },
   actions: {
     flexDirection: 'row',
     gap: 8,
+    justifyContent: 'flex-end',
+  },
+  actionsCompact: {
+    flexDirection: 'column',
   },
   actionPill: {
     minWidth: 112,

@@ -74,7 +74,6 @@ export function VaultScreen() {
   const [loading, setLoading] = React.useState(true);
   const pendingPackageName = launchCoordinator.getPendingLaunchPackageName();
   const pendingMode = launchCoordinator.getPendingLaunchMode();
-  const pendingLabel = pendingMode === 'LOCK_HIDE' ? 'Protected app' : pendingPackageName;
   const hasVaultSession = sessionManager.getState()?.vaultUnlocked === true;
 
   const loadVault = React.useCallback(async () => {
@@ -95,6 +94,11 @@ export function VaultScreen() {
   const hiddenApps = React.useMemo(() => {
     return apps.filter(app => app.mode === 'HIDE' || app.mode === 'LOCK_HIDE');
   }, [apps]);
+  const pendingApp = React.useMemo(
+    () => hiddenApps.find(app => app.packageName === pendingPackageName),
+    [hiddenApps, pendingPackageName],
+  );
+  const pendingLabel = pendingApp?.label ?? pendingPackageName ?? 'Private space';
 
   const visibleHiddenApps = hiddenApps.filter(app => app.mode === 'HIDE');
   const lockedHiddenApps = hiddenApps.filter(app => app.mode === 'LOCK_HIDE');
@@ -217,7 +221,7 @@ export function VaultScreen() {
                   key={app.packageName}
                   app={app}
                   palette={palette}
-                  label="Protected app"
+                  label={app.label}
                   onPress={() => {
                     launchCoordinator.restorePendingLaunch(app.packageName, app.mode);
                     navigation.navigate(hasVaultSession ? 'AuthGate' : 'Calculator');
@@ -245,7 +249,13 @@ export function VaultScreen() {
         <FigmaBanner screen="vault" variant={variant} placement="native" title="Native advertisement" subtitle="Placed after functional content" tone="surfaceElevated" />
 
         <View style={styles.bottomSpacer} />
-        <FigmaBottomNav variant={variant} active="home" />
+        <FigmaBottomNav
+          variant={variant}
+          active="home"
+          onHomePress={() => navigation.navigate('PrivateHome')}
+          onGalleryPress={() => navigation.navigate('Gallery')}
+          onSettingsPress={() => navigation.navigate('Settings')}
+        />
       </ScrollView>
     </FigmaPage>
   );

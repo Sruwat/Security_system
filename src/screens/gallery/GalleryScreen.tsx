@@ -1,8 +1,12 @@
 import React from 'react';
 import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {useNavigation} from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaBanner, FigmaBottomNav, FigmaPage, figmaPalette} from '../../components/FigmaKit';
+import type {RootStackParamList} from '../../navigation/routes';
 
 export function GalleryScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const palette = figmaPalette.dark;
   const recentTiles = Array.from({length: 6}, (_, index) => index);
 
@@ -47,7 +51,13 @@ export function GalleryScreen() {
         />
 
         <View style={styles.bottomSpacer} />
-        <FigmaBottomNav variant="dark" active="gallery" />
+        <FigmaBottomNav
+          variant="dark"
+          active="gallery"
+          onHomePress={() => navigation.navigate('PrivateHome')}
+          onGalleryPress={() => navigation.navigate('Gallery')}
+          onSettingsPress={() => navigation.navigate('Settings')}
+        />
       </ScrollView>
     </FigmaPage>
   );

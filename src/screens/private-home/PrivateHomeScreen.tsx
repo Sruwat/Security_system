@@ -150,7 +150,13 @@ export function PrivateHomeScreen() {
         <FigmaBanner screen="private-home" variant={variant} placement="native" title="Native advertisement" subtitle="Placed after functional content" tone="surfaceElevated" />
 
         <View style={styles.bottomSpacer} />
-        <FigmaBottomNav variant={variant} active="home" />
+        <FigmaBottomNav
+          variant={variant}
+          active="home"
+          onHomePress={() => navigation.navigate('PrivateHome')}
+          onGalleryPress={() => navigation.navigate('Gallery')}
+          onSettingsPress={() => navigation.navigate('Settings')}
+        />
       </ScrollView>
     </FigmaPage>
   );

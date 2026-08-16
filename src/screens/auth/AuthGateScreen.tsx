@@ -42,10 +42,10 @@ export function AuthGateScreen() {
   const [cooldownUntil, setCooldownUntil] = React.useState<number | null>(null);
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
   const [primaryAuthMethod, setPrimaryAuthMethod] = React.useState<PrimaryAuthMethod>('PIN');
+  const [pendingLabel, setPendingLabel] = React.useState<string>('Private space');
   const promptAttemptedRef = React.useRef(false);
   const pendingLaunchPackageName = launchCoordinator.getPendingLaunchPackageName();
   const pendingLaunchMode = launchCoordinator.getPendingLaunchMode();
-  const pendingLaunchLabel = pendingLaunchMode === 'LOCK_HIDE' ? 'Protected app' : pendingLaunchPackageName ?? 'Private space';
   const activeSession = sessionManager.getState();
   const sessionExpired = Boolean(activeSession && activeSession.expiresAt <= Date.now());
   const cooldownRemaining = cooldownUntil ? Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000)) : 0;
@@ -143,6 +143,18 @@ export function AuthGateScreen() {
     });
   }, []);
 
+  React.useEffect(() => {
+    if (!pendingLaunchPackageName) {
+      setPendingLabel('Private space');
+      return;
+    }
+
+    void localDataRepository.getProtectedApps().then(apps => {
+      const matchingApp = apps.find(app => app.packageName === pendingLaunchPackageName);
+      setPendingLabel(matchingApp?.label ?? pendingLaunchPackageName);
+    });
+  }, [pendingLaunchPackageName]);
+
   const submitManualCredential = React.useCallback(() => {
     if (cooldownRemaining > 0) {
       return;
@@ -174,7 +186,7 @@ export function AuthGateScreen() {
 
         <Text style={[styles.title, {color: palette.textPrimary}]}>Unlock access</Text>
         <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
-          {pendingLaunchPackageName ? `Continue to ${pendingLaunchLabel}` : 'Authenticate to continue.'}
+          {pendingLaunchPackageName ? `Continue to ${pendingLabel}` : 'Authenticate to continue.'}
         </Text>
 
         {sessionExpired ? (
@@ -192,7 +204,7 @@ export function AuthGateScreen() {
           </View>
           <View style={styles.contextBody}>
             <Text style={[styles.contextLabel, {color: palette.textPrimary}]}>
-              {pendingLaunchLabel}
+              {pendingLabel}
             </Text>
             <Text style={[styles.contextHint, {color: palette.textSecondary}]}>Biometric or PIN required</Text>
           </View>
