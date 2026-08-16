@@ -48,6 +48,7 @@ export function AddAppsScreen() {
   }, []);
 
   React.useEffect(() => {
+    void localDataRepository.setOnboardingResumeRoute('AddApps');
     void loadApps();
   }, [loadApps]);
 
@@ -100,6 +101,9 @@ export function AddAppsScreen() {
     setSaving(true);
     try {
       const settings = await localDataRepository.getSettings();
+      if (!settings.onboardingComplete) {
+        await localDataRepository.setOnboardingResumeRoute('ProtectionMode');
+      }
       navigation.navigate('ProtectionMode', {
         draft: {
           app: selected[0],

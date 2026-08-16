@@ -4,6 +4,7 @@ import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import type {RootStackParamList} from '../../navigation/routes';
+import {localDataRepository} from '../../storage/LocalDataRepository';
 
 function LockChoice(props: {title: string; subtitle: string; palette: typeof figmaPalette.dark; onPress: () => void}) {
   return (
@@ -30,6 +31,15 @@ export function PrimaryLockScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const palette = figmaPalette.dark;
 
+  React.useEffect(() => {
+    void localDataRepository.setOnboardingResumeRoute('PrimaryLock');
+  }, []);
+
+  const goTo = React.useCallback((route: 'PinSetup' | 'PasswordSetup' | 'PatternSetup' | 'BiometricSetup') => {
+    void localDataRepository.setOnboardingResumeRoute(route);
+    navigation.navigate(route);
+  }, [navigation]);
+
   return (
     <FigmaPage variant="dark">
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -38,10 +48,10 @@ export function PrimaryLockScreen() {
         <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Create once; reuse for protected access.</Text>
 
         <View style={styles.choices}>
-          <LockChoice palette={palette} title="PIN" subtitle="4–6 digits" onPress={() => navigation.navigate('PinSetup')} />
-          <LockChoice palette={palette} title="Password" subtitle="Text credential" onPress={() => navigation.navigate('PasswordSetup')} />
-          <LockChoice palette={palette} title="Pattern" subtitle="Android-style pattern" onPress={() => navigation.navigate('PatternSetup')} />
-          <LockChoice palette={palette} title="Biometric" subtitle="Optional after fallback" onPress={() => navigation.navigate('BiometricSetup')} />
+          <LockChoice palette={palette} title="PIN" subtitle="4-6 digits" onPress={() => goTo('PinSetup')} />
+          <LockChoice palette={palette} title="Password" subtitle="Text credential" onPress={() => goTo('PasswordSetup')} />
+          <LockChoice palette={palette} title="Pattern" subtitle="Android-style pattern" onPress={() => goTo('PatternSetup')} />
+          <LockChoice palette={palette} title="Biometric" subtitle="Optional after fallback" onPress={() => goTo('BiometricSetup')} />
         </View>
 
         <View style={[styles.noteCard, {backgroundColor: palette.accentSoft, borderColor: palette.border}]}>
@@ -51,7 +61,7 @@ export function PrimaryLockScreen() {
 
         <View style={styles.spacer} />
 
-        <FigmaActionButton variant="dark" label="Create primary lock" onPress={() => navigation.navigate('PinSetup')} />
+        <FigmaActionButton variant="dark" label="Create primary lock" onPress={() => goTo('PinSetup')} />
       </ScrollView>
     </FigmaPage>
   );

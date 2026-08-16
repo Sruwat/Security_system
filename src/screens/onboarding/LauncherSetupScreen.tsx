@@ -4,6 +4,7 @@ import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import type {RootStackParamList} from '../../navigation/routes';
+import {localDataRepository} from '../../storage/LocalDataRepository';
 
 function LauncherRow(props: {title: string; subtitle: string; palette: typeof figmaPalette.light; onPress: () => void}) {
   return (
@@ -30,6 +31,10 @@ export function LauncherSetupScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const palette = figmaPalette.light;
 
+  React.useEffect(() => {
+    void localDataRepository.setOnboardingResumeRoute('LauncherSetup');
+  }, []);
+
   return (
     <FigmaPage variant="light">
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -49,7 +54,14 @@ export function LauncherSetupScreen() {
 
         <View style={styles.spacer} />
 
-        <FigmaActionButton variant="light" label="Continue" onPress={() => navigation.navigate('PrimaryLock')} />
+        <FigmaActionButton
+          variant="light"
+          label="Continue"
+          onPress={() => {
+            void localDataRepository.setOnboardingResumeRoute('PrimaryLock');
+            navigation.navigate('PrimaryLock');
+          }}
+        />
       </ScrollView>
     </FigmaPage>
   );

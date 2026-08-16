@@ -7,6 +7,7 @@ import {nativeBridge} from '../../native';
 import {APP_UNLOCK_CREDENTIAL_TYPE} from '../../services/security/credentialTypes';
 import type {RootStackParamList} from '../../navigation/routes';
 import {localDataRepository} from '../../storage/LocalDataRepository';
+import type {OnboardingResumeRoute} from '../../types/domain';
 
 type CredentialKind = 'PIN' | 'PASSWORD' | 'PATTERN';
 
@@ -16,7 +17,7 @@ function CredentialSetupBase(props: {
   subtitle: string;
   hint: string;
   icon: string;
-  nextRoute: keyof RootStackParamList;
+  nextRoute: OnboardingResumeRoute;
 }) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const palette = figmaPalette.light;
@@ -24,6 +25,11 @@ function CredentialSetupBase(props: {
   const [confirmValue, setConfirmValue] = React.useState('');
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const resumeRoute = props.kind === 'PIN' ? 'PinSetup' : props.kind === 'PASSWORD' ? 'PasswordSetup' : 'PatternSetup';
+    void localDataRepository.setOnboardingResumeRoute(resumeRoute);
+  }, [props.kind]);
 
   const saveCredential = React.useCallback(async () => {
     const normalized = value.trim();
@@ -44,7 +50,7 @@ function CredentialSetupBase(props: {
     try {
       await nativeBridge.createCredential(APP_UNLOCK_CREDENTIAL_TYPE, normalized);
       const settings = await localDataRepository.getSettings();
-      await localDataRepository.saveSettings({...settings, primaryAuthMethod: props.kind});
+      await localDataRepository.saveSettings({...settings, primaryAuthMethod: props.kind, onboardingResumeRoute: props.nextRoute});
       navigation.navigate(props.nextRoute as never);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to save the credential.');
@@ -165,6 +171,7 @@ export function BiometricSetupScreen() {
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
+    void localDataRepository.setOnboardingResumeRoute('BiometricSetup');
     void nativeBridge.getDeviceCapabilities().then(capabilities => {
       setAvailable(capabilities.biometricsAvailable);
     });
@@ -187,6 +194,7 @@ export function BiometricSetupScreen() {
         }
       }
 
+      await localDataRepository.setOnboardingResumeRoute('ProtectionSaved');
       navigation.navigate('ProtectionSaved');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to continue.');
@@ -237,7 +245,12 @@ export function BiometricSetupScreen() {
           </View>
         </View>
 
-        <Pressable onPress={() => navigation.navigate('ProtectionSaved')} style={[styles.inlineLink, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+        <Pressable
+          onPress={() => {
+            void localDataRepository.setOnboardingResumeRoute('ProtectionSaved');
+            navigation.navigate('ProtectionSaved');
+          }}
+          style={[styles.inlineLink, {backgroundColor: palette.surface, borderColor: palette.border}]}>
           <Text style={[styles.inlineLinkText, {color: palette.textSecondary}]}>Skip biometric for now</Text>
         </Pressable>
 
@@ -252,6 +265,10 @@ export function BiometricSetupScreen() {
 export function ProtectionSavedScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const palette = figmaPalette.light;
+
+  React.useEffect(() => {
+    void localDataRepository.setOnboardingResumeRoute('ProtectionSaved');
+  }, []);
 
   return (
     <FigmaPage variant="light">
@@ -281,7 +298,14 @@ export function ProtectionSavedScreen() {
 
         <View style={styles.spacer} />
 
-        <FigmaActionButton variant="light" label="Continue to app selection" onPress={() => navigation.navigate('AddApps')} />
+        <FigmaActionButton
+          variant="light"
+          label="Continue to app selection"
+          onPress={() => {
+            void localDataRepository.setOnboardingResumeRoute('AddApps');
+            navigation.navigate('AddApps');
+          }}
+        />
       </ScrollView>
     </FigmaPage>
   );

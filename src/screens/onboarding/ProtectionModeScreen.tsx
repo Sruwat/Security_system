@@ -8,6 +8,7 @@ import type {RouteProp} from '@react-navigation/native';
 import {protectionManager} from '../../services/protection/ProtectionManager';
 import type {AppProtection, AuthMethod, ProtectionMode} from '../../types/domain';
 import {buildProtectionPolicy} from '../app-picker/buildProtectionPolicy';
+import {localDataRepository} from '../../storage/LocalDataRepository';
 
 function ModeCard(props: {
   title: string;
@@ -69,6 +70,12 @@ export function ProtectionModeScreen() {
   const updateDraft = React.useCallback((patch: Partial<AppProtection>) => {
     setDraft(current => ({...current, ...patch}));
   }, []);
+
+  React.useEffect(() => {
+    if (route.params.onboarding) {
+      void localDataRepository.setOnboardingResumeRoute('ProtectionMode');
+    }
+  }, [route.params.onboarding]);
 
   return (
     <FigmaPage variant="dark">
@@ -169,6 +176,7 @@ export function ProtectionModeScreen() {
                   ),
                 );
                 if (route.params.onboarding) {
+                  await localDataRepository.setOnboardingResumeRoute('SecretEntry');
                   navigation.navigate('SecretEntry');
                 } else {
                   navigation.reset({index: 0, routes: [{name: 'PrivateHome'}]});

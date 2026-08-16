@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {storageKeys} from './keys';
-import type {AppProtection, AppSettings} from '../types/domain';
+import type {AppProtection, AppSettings, OnboardingResumeRoute} from '../types/domain';
 
 const defaultSettings: AppSettings = {
   onboardingComplete: false,
@@ -96,6 +96,11 @@ export class LocalDataRepository {
   async setOnboardingComplete(onboardingComplete: boolean): Promise<void> {
     const settings = await this.getSettings();
     await this.saveSettings({...settings, onboardingComplete});
+  }
+
+  async setOnboardingResumeRoute(onboardingResumeRoute?: OnboardingResumeRoute): Promise<void> {
+    const settings = await this.getSettings();
+    await this.saveSettings({...settings, onboardingResumeRoute});
   }
 }
 

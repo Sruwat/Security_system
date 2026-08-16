@@ -6,6 +6,18 @@ export type PrimaryAuthMethod = 'PIN' | 'PASSWORD' | 'PATTERN';
 export type ThemeMode = 'SYSTEM' | 'LIGHT' | 'DARK';
 
 export type SecretEntryMethod = 'DOUBLE_TAP' | 'TRIPLE_TAP' | 'LONG_PRESS' | 'PINCH' | 'CALCULATOR_CODE';
+export type OnboardingResumeRoute =
+  | 'Welcome'
+  | 'LauncherSetup'
+  | 'PrimaryLock'
+  | 'PinSetup'
+  | 'PasswordSetup'
+  | 'PatternSetup'
+  | 'BiometricSetup'
+  | 'ProtectionSaved'
+  | 'AddApps'
+  | 'ProtectionMode'
+  | 'SecretEntry';
 
 export interface AppProtection {
   packageName: string;
@@ -19,6 +31,7 @@ export interface AppProtection {
 
 export interface AppSettings {
   onboardingComplete: boolean;
+  onboardingResumeRoute?: OnboardingResumeRoute;
   theme: ThemeMode;
   secretEntryMethod: SecretEntryMethod;
   primaryAuthMethod: PrimaryAuthMethod;

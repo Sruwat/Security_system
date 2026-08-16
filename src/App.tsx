@@ -9,10 +9,11 @@ import {localDataRepository} from './storage/LocalDataRepository';
 import {launchCoordinator} from './services/launch/LaunchCoordinator';
 import {sessionManager} from './services/session/SessionManager';
 import {useAppSecurityLifecycle} from './hooks/useAppSecurityLifecycle';
+import type {RootStackParamList} from './navigation/routes';
 
 export default function App() {
   useAppSecurityLifecycle();
-  const [initialRouteName, setInitialRouteName] = React.useState<'Welcome' | 'RebootRestored' | 'AuthGate' | 'PrivateHome'>('Welcome');
+  const [initialRouteName, setInitialRouteName] = React.useState<keyof RootStackParamList>('Welcome');
   const [ready, setReady] = React.useState(false);
 
   React.useEffect(() => {
@@ -30,7 +31,7 @@ export default function App() {
       }
 
       if (!settings.onboardingComplete) {
-        setInitialRouteName('Welcome');
+        setInitialRouteName(settings.onboardingResumeRoute ?? 'Welcome');
         setReady(true);
         return;
       }

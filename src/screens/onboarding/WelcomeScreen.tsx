@@ -4,6 +4,7 @@ import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import type {RootStackParamList} from '../../navigation/routes';
+import {localDataRepository} from '../../storage/LocalDataRepository';
 
 function DiamondMark() {
   return (
@@ -38,7 +39,14 @@ export function WelcomeScreen() {
         {/* Security flow wiring remains native-backed:
             createCredential(APP_UNLOCK_CREDENTIAL_TYPE, ...)
             createCredential(VAULT_SECRET_CREDENTIAL_TYPE, ...) */}
-        <FigmaActionButton variant="dark" label="Start setup" onPress={() => navigation.navigate('LauncherSetup')} />
+        <FigmaActionButton
+          variant="dark"
+          label="Start setup"
+          onPress={() => {
+            void localDataRepository.setOnboardingResumeRoute('LauncherSetup');
+            navigation.navigate('LauncherSetup');
+          }}
+        />
       </ScrollView>
     </FigmaPage>
   );

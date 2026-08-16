@@ -48,6 +48,7 @@ export function SecretEntryScreen() {
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
+    void localDataRepository.setOnboardingResumeRoute('SecretEntry');
     void localDataRepository.getSettings().then(settings => {
       setSelectedMethod(settings.secretEntryMethod);
       setLoading(false);
@@ -73,7 +74,12 @@ export function SecretEntryScreen() {
     }
 
     const settings = await localDataRepository.getSettings();
-    await localDataRepository.saveSettings({...settings, secretEntryMethod: selectedMethod, onboardingComplete: true});
+    await localDataRepository.saveSettings({
+      ...settings,
+      secretEntryMethod: selectedMethod,
+      onboardingComplete: true,
+      onboardingResumeRoute: undefined,
+    });
     navigation.navigate(selectedMethod === 'CALCULATOR_CODE' ? 'Calculator' : 'Vault');
   }, [calculatorCode, confirmCalculatorCode, navigation, selectedMethod]);
 
