@@ -78,9 +78,6 @@ export class LaunchCoordinator {
 
     const protection = await protectionManager.getProtection(pendingPackageName);
     const autoLockSeconds = protection?.autoLockSeconds ?? settings.autoLockSecondsDefault;
-    if ((pendingMode === 'HIDE' || pendingMode === 'LOCK_HIDE') && !sessionManager.isValidFor(pendingPackageName)) {
-      return 'vault_unlocked';
-    }
     if (pendingMode === 'LOCK' || pendingMode === 'LOCK_HIDE') {
       sessionManager.startSession(pendingPackageName, autoLockSeconds);
     }
@@ -91,10 +88,24 @@ export class LaunchCoordinator {
     return 'app_launched';
   }
 
-  async completeSecretEntry(): Promise<'vault_opened'> {
+  async completeSecretEntry(): Promise<'vault_opened' | 'auth_required' | 'app_launched'> {
     const settings = await localDataRepository.getSettings();
+    const pendingPackageName = this.pendingLaunchPackageName;
+    const pendingMode = this.pendingLaunchMode;
     sessionManager.startVaultSession(settings.autoLockSecondsDefault);
     await this.syncTransientAccess();
+
+    if (pendingPackageName && pendingMode === 'HIDE') {
+      await nativeBridge.launchApp(pendingPackageName);
+      this.pendingLaunchPackageName = null;
+      this.pendingLaunchMode = null;
+      return 'app_launched';
+    }
+
+    if (pendingPackageName && pendingMode === 'LOCK_HIDE') {
+      return 'auth_required';
+    }
+
     return 'vault_opened';
   }
 

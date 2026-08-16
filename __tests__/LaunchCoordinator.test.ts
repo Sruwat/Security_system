@@ -97,7 +97,7 @@ describe('LaunchCoordinator', () => {
     expect(mockedNativeBridge.launchApp).not.toHaveBeenCalled();
   });
 
-  it('opens the vault after secret entry and launches the hidden app after authentication', async () => {
+  it('launches hidden apps immediately after secret entry', async () => {
     mockedProtectionManager.getProtection = jest.fn().mockResolvedValue({
       packageName: 'com.example.hidden',
       label: 'Hidden App',
@@ -110,15 +110,11 @@ describe('LaunchCoordinator', () => {
     await launchCoordinator.launch('com.example.hidden');
 
     const secretResult = await launchCoordinator.completeSecretEntry();
-    expect(secretResult).toBe('vault_opened');
+    expect(secretResult).toBe('app_launched');
     expect(sessionManager.getState()).toMatchObject({
       vaultUnlocked: true,
     });
     expect(mockedNativeBridge.persistTransientAccess).toHaveBeenCalledWith(null, true, expect.any(Number));
-
-    const authResult = await launchCoordinator.completeAuthentication();
-
-    expect(authResult).toBe('app_launched');
     expect(mockedNativeBridge.launchApp).toHaveBeenCalledWith('com.example.hidden');
     expect(mockedNativeBridge.persistTransientAccess).toHaveBeenCalled();
     expect(launchCoordinator.getPendingLaunchPackageName()).toBeNull();
@@ -142,7 +138,7 @@ describe('LaunchCoordinator', () => {
     expect(launchCoordinator.getPendingLaunchMode()).toBe('LOCK_HIDE');
 
     const secretResult = await launchCoordinator.completeSecretEntry();
-    expect(secretResult).toBe('vault_opened');
+    expect(secretResult).toBe('auth_required');
     expect(sessionManager.getState()).toMatchObject({
       vaultUnlocked: true,
     });

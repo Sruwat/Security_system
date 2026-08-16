@@ -70,7 +70,15 @@ export function CalculatorScreen() {
       if (/^\d{4,6}$/.test(normalized)) {
         const verified = await nativeBridge.verifyCredential(VAULT_SECRET_CREDENTIAL_TYPE, normalized);
         if (verified) {
-          await launchCoordinator.completeSecretEntry();
+          const outcome = await launchCoordinator.completeSecretEntry();
+          if (outcome === 'app_launched') {
+            navigation.reset({index: 0, routes: [{name: 'PrivateHome'}]});
+            return;
+          }
+          if (outcome === 'auth_required') {
+            navigation.reset({index: 0, routes: [{name: 'AuthGate'}]});
+            return;
+          }
           navigation.reset({index: 0, routes: [{name: 'Vault'}]});
           return;
         }
