@@ -1,5 +1,5 @@
 import React from 'react';
-import {Alert, Pressable, StyleSheet, Text, TextInput, View} from 'react-native';
+import {Alert, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaPage, figmaPalette} from '../../components/FigmaKit';
@@ -11,7 +11,11 @@ import {APP_UNLOCK_CREDENTIAL_TYPE} from '../../services/security/credentialType
 import {localDataRepository} from '../../storage/LocalDataRepository';
 import type {PrimaryAuthMethod} from '../../types/domain';
 
-const keypad = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
+const keypadRows = [
+  ['1', '2', '3'],
+  ['4', '5', '6'],
+  ['7', '8', '9'],
+] as const;
 
 function UnlockGlyph() {
   return (
@@ -30,6 +34,7 @@ function UnlockGlyph() {
 export function AuthGateScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const palette = figmaPalette.dark;
+  const {width, height} = useWindowDimensions();
   const [pin, setPin] = React.useState('');
   const [manualValue, setManualValue] = React.useState('');
   const [loading, setLoading] = React.useState(false);
@@ -45,6 +50,10 @@ export function AuthGateScreen() {
   const sessionExpired = Boolean(activeSession && activeSession.expiresAt <= Date.now());
   const cooldownRemaining = cooldownUntil ? Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000)) : 0;
   const credentialLabel = primaryAuthMethod === 'PASSWORD' ? 'password' : primaryAuthMethod === 'PATTERN' ? 'pattern' : '4-digit PIN';
+  const compactLayout = height < 800;
+  const keypadGap = compactLayout ? 10 : 14;
+  const keypadHorizontalInset = compactLayout ? 48 : 42;
+  const keySize = Math.max(62, Math.min(78, (width - keypadHorizontalInset * 2 - keypadGap * 2) / 3));
 
   const verifyPin = React.useCallback(async (pinValue: string) => {
     const verified = await nativeBridge.verifyCredential(APP_UNLOCK_CREDENTIAL_TYPE, pinValue.trim());
@@ -204,20 +213,35 @@ export function AuthGateScreen() {
               ))}
             </View>
 
-            <View style={styles.keypad}>
-              {keypad.map(value => (
-                <Pressable
-                  key={value}
-                  onPress={() => {
-                    if (cooldownRemaining > 0) {
-                      return;
-                    }
-                    submitDigit(value);
-                  }}
-                  style={[styles.key, {backgroundColor: palette.surface, borderColor: palette.border, opacity: cooldownRemaining > 0 ? 0.5 : 1}]}>
-                  <Text style={[styles.keyText, {color: palette.textPrimary}]}>{value}</Text>
-                </Pressable>
-              ))}
+            <View style={styles.keypadWrap}>
+              <View style={[styles.keypad, {gap: keypadGap}]}>
+                {keypadRows.map((row, rowIndex) => (
+                  <View key={`row-${rowIndex}`} style={[styles.keyRow, {gap: keypadGap}]}>
+                    {row.map(value => (
+                      <Pressable
+                        key={value}
+                        onPress={() => {
+                          if (cooldownRemaining > 0) {
+                            return;
+                          }
+                          submitDigit(value);
+                        }}
+                        style={[
+                          styles.key,
+                          {
+                            width: keySize,
+                            height: compactLayout ? 58 : 64,
+                            backgroundColor: palette.surface,
+                            borderColor: palette.border,
+                            opacity: cooldownRemaining > 0 ? 0.5 : 1,
+                          },
+                        ]}>
+                        <Text style={[styles.keyText, compactLayout && styles.keyTextCompact, {color: palette.textPrimary}]}>{value}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                ))}
+              </View>
             </View>
           </>
         ) : (
@@ -401,17 +425,17 @@ const styles = StyleSheet.create({
     borderRadius: 7,
   },
   keypad: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  keypadWrap: {
     marginTop: 24,
-    alignSelf: 'center',
-    width: 252,
+    alignItems: 'center',
+  },
+  keyRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 14,
-    justifyContent: 'center',
   },
   key: {
-    width: 70,
-    height: 52,
     borderRadius: 18,
     borderWidth: 1,
     alignItems: 'center',
@@ -421,6 +445,10 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     lineHeight: 18,
+  },
+  keyTextCompact: {
+    fontSize: 14,
+    lineHeight: 17,
   },
   footerRow: {
     marginTop: 24,
