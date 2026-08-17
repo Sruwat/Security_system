@@ -65,7 +65,6 @@ export default function App() {
           return;
         }
         launchCoordinator.restorePendingLaunch(pendingAuth.packageName, protection?.mode ?? null);
-        await nativeBridge.clearPendingAuthRequest().catch(() => undefined);
         setInitialRouteName('AuthGate');
         setReady(true);
         return;
@@ -170,7 +169,6 @@ export default function App() {
 
         const protection = await protectionManager.getProtection(pendingAuth.packageName);
         launchCoordinator.restorePendingLaunch(pendingAuth.packageName, protection?.mode ?? null);
-        await nativeBridge.clearPendingAuthRequest().catch(() => undefined);
         navigationRef.resetRoot({index: 0, routes: [{name: 'AuthGate'}]});
       });
     });

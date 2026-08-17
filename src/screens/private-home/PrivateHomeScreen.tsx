@@ -5,10 +5,12 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaBottomNav, FigmaRootLayout, figmaPalette} from '../../components/FigmaKit';
 import type {RootStackParamList} from '../../navigation/routes';
 import {usePrimaryDrawer} from '../../navigation/usePrimaryDrawer';
+import {nativeBridge} from '../../native';
 import {launchCoordinator} from '../../services/launch/LaunchCoordinator';
 import {describeProtection, lockTypeLabel, normalizeProtection, protectionModeFromFlags} from '../../services/protection/protectionState';
+import {secretAccessRouter} from '../../services/secret/SecretAccessRouter';
 import {localDataRepository} from '../../storage/LocalDataRepository';
-import type {AppProtection} from '../../types/domain';
+import type {AppProtection, LaunchableApp, PermissionStatus} from '../../types/domain';
 
 function countLabel(value: number, singular: string, plural = singular) {
   return `${value} ${value === 1 ? singular : plural}`;
@@ -120,6 +122,8 @@ export function PrivateHomeScreen() {
   const palette = figmaPalette.light;
   const {drawerOpen, openDrawer, closeDrawer, drawerDestinations} = usePrimaryDrawer();
   const [apps, setApps] = React.useState<AppProtection[]>([]);
+  const [launcherApps, setLauncherApps] = React.useState<LaunchableApp[]>([]);
+  const [permissionStatuses, setPermissionStatuses] = React.useState<PermissionStatus[]>([]);
   const [loading, setLoading] = React.useState(true);
 
   const loadApps = React.useCallback(async () => {
@@ -127,6 +131,12 @@ export function PrivateHomeScreen() {
     try {
       const stored = await localDataRepository.getProtectedApps();
       setApps(stored.map(normalizeProtection));
+      const [discoveredApps, statuses] = await Promise.all([
+        nativeBridge.getLaunchableApps().catch(() => []),
+        nativeBridge.getPermissionStatuses().catch(() => []),
+      ]);
+      setLauncherApps(discoveredApps);
+      setPermissionStatuses(statuses);
     } finally {
       setLoading(false);
     }
@@ -150,8 +160,39 @@ export function PrivateHomeScreen() {
     };
   }, [apps]);
 
+  const launcherStatus = React.useMemo(
+    () => permissionStatuses.find(item => item.key === 'defaultLauncher'),
+    [permissionStatuses],
+  );
+  const accessibilityStatus = React.useMemo(
+    () => permissionStatuses.find(item => item.key === 'accessibility'),
+    [permissionStatuses],
+  );
+  const managedLauncherApps = React.useMemo(() => {
+    const hiddenPackages = new Set(counts.hiddenApps.map(app => app.packageName));
+    return launcherApps.filter(app => !hiddenPackages.has(app.packageName));
+  }, [counts.hiddenApps, launcherApps]);
+
   const openApp = React.useCallback(
     async (app: AppProtection) => {
+      try {
+        const outcome = await launchCoordinator.launch(app.packageName);
+        if (outcome === 'auth_required') {
+          navigation.navigate('AuthGate');
+          return;
+        }
+        if (outcome === 'secret_required') {
+          navigation.navigate('Calculator');
+        }
+      } catch (error) {
+        Alert.alert('Launch failed', error instanceof Error ? error.message : 'Unable to launch app.');
+      }
+    },
+    [navigation],
+  );
+
+  const openLauncherApp = React.useCallback(
+    async (app: LaunchableApp) => {
       try {
         const outcome = await launchCoordinator.launch(app.packageName);
         if (outcome === 'auth_required') {
@@ -188,6 +229,20 @@ export function PrivateHomeScreen() {
     [navigation],
   );
 
+  const openSecretAccess = React.useCallback(() => {
+    void secretAccessRouter.handleSecretAccess().then(next => {
+      if (next === 'auth_required') {
+        navigation.navigate('AuthGate');
+        return;
+      }
+      if (next === 'vault') {
+        navigation.navigate('Vault');
+        return;
+      }
+      navigation.navigate('Calculator');
+    });
+  }, [navigation]);
+
   return (
     <FigmaRootLayout
       variant="light"
@@ -210,6 +265,24 @@ export function PrivateHomeScreen() {
         <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
           Hide apps, lock apps, or combine both protections from one simple control center.
         </Text>
+
+        {launcherStatus?.status !== 'enabled' ? (
+          <View style={[styles.warningCard, {backgroundColor: '#FEF3C7', borderColor: '#F59E0B'}]}>
+            <Text style={[styles.warningTitle, {color: '#92400E'}]}>Managed launcher not active</Text>
+            <Text style={[styles.warningBody, {color: '#92400E'}]}>
+              Hidden apps stay out of this launcher only after Smart App Lock is selected as the default Home app.
+            </Text>
+          </View>
+        ) : null}
+
+        {accessibilityStatus?.status !== 'enabled' ? (
+          <View style={[styles.warningCard, {backgroundColor: '#FEE2E2', borderColor: '#EF4444'}]}>
+            <Text style={[styles.warningTitle, {color: '#991B1B'}]}>Lock protection needs Accessibility</Text>
+            <Text style={[styles.warningBody, {color: '#991B1B'}]}>
+              Locked apps are saved, but Android launch interception will not enforce them until Accessibility is enabled.
+            </Text>
+          </View>
+        ) : null}
 
         <View style={styles.statsRow}>
           <StatCard
@@ -264,9 +337,59 @@ export function PrivateHomeScreen() {
           <QuickAction
             title="Secret Access"
             subtitle="Open the hidden area through your configured secret method."
-            onPress={() => navigation.navigate('Calculator')}
+            onPress={openSecretAccess}
             palette={palette}
           />
+        </View>
+
+        <View style={[styles.sectionCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Managed Launcher</Text>
+            <Text style={[styles.sectionLink, {color: palette.accent}]}>
+              {managedLauncherApps.length} visible
+            </Text>
+          </View>
+
+          {loading ? (
+            <Text style={[styles.stateText, {color: palette.textSecondary}]}>Loading launcher apps...</Text>
+          ) : managedLauncherApps.length === 0 ? (
+            <Text style={[styles.stateText, {color: palette.textSecondary}]}>
+              No visible apps found. Hidden apps still remain inside Vault.
+            </Text>
+          ) : (
+            <View style={styles.appList}>
+              {managedLauncherApps.slice(0, 12).map(app => (
+                <Pressable
+                  key={app.packageName}
+                  onPress={() => void openLauncherApp(app)}
+                  style={({pressed}) => [
+                    styles.launcherRow,
+                    {
+                      backgroundColor: palette.surface,
+                      borderColor: palette.border,
+                      opacity: pressed ? 0.95 : 1,
+                    },
+                  ]}>
+                  <View style={[styles.appAvatar, {backgroundColor: palette.accentSoft}]}>
+                    <Text style={[styles.appAvatarText, {color: palette.accent}]}>
+                      {app.label.slice(0, 2).toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={styles.appBody}>
+                    <Text style={[styles.appName, {color: palette.textPrimary}]} numberOfLines={1}>
+                      {app.label}
+                    </Text>
+                    <Text style={[styles.appMeta, {color: palette.textSecondary}]} numberOfLines={1}>
+                      {app.packageName}
+                    </Text>
+                  </View>
+                  <View style={[styles.launchPill, {backgroundColor: palette.accentSoft}]}>
+                    <Text style={[styles.launchPillText, {color: palette.accent}]}>Open</Text>
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+          )}
         </View>
 
         <View style={[styles.sectionCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
@@ -317,6 +440,23 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontSize: 14,
     lineHeight: 20,
+  },
+  warningCard: {
+    marginTop: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  warningTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    lineHeight: 18,
+  },
+  warningBody: {
+    marginTop: 6,
+    fontSize: 12,
+    lineHeight: 18,
   },
   statsRow: {
     marginTop: 24,
@@ -393,6 +533,14 @@ const styles = StyleSheet.create({
   appList: {
     marginTop: 14,
     gap: 12,
+  },
+  launcherRow: {
+    borderWidth: 1,
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   appRow: {
     borderRadius: 24,

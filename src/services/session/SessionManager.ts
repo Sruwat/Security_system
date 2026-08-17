@@ -32,11 +32,19 @@ class SessionManager {
     }
 
     const notExpired = this.current.expiresAt > Date.now();
-    if (this.current.vaultUnlocked && notExpired) {
-      return true;
+    if (!notExpired) {
+      return false;
     }
-    const packageMatches = packageName ? this.current.packageName === packageName : true;
-    return notExpired && packageMatches;
+
+    if (!packageName) {
+      return this.current.vaultUnlocked;
+    }
+
+    return this.current.packageName === packageName;
+  }
+
+  isVaultUnlocked(): boolean {
+    return Boolean(this.current?.vaultUnlocked) && Boolean(this.current && this.current.expiresAt > Date.now());
   }
 
   clear(): void {

@@ -16,6 +16,7 @@ import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
 import android.util.Base64
+import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -238,18 +239,7 @@ class SmartAppLockHideBridgeModule(private val context: ReactApplicationContext)
       val items = buildList {
         for (index in 0 until protections.size()) {
           val item = protections.getMap(index) ?: continue
-          val packageName = item.getString("packageName") ?: continue
-          val credentialRef = item.getString("credentialRef") ?: continue
-          add(
-            ProtectionMetadataRepository.ProtectionMetadata(
-              packageName = packageName,
-              isLocked = item.getBoolean("isLocked"),
-              credentialRef = credentialRef,
-              lockType = item.getString("lockType") ?: "PIN",
-              autoLockTimeoutSeconds = item.getInt("autoLockSeconds"),
-              enabled = item.getBoolean("enabled"),
-            ),
-          )
+          buildProtectionMetadata(item)?.let(::add)
         }
       }
       protectionMetadataRepository.replaceAll(items)
@@ -273,6 +263,36 @@ class SmartAppLockHideBridgeModule(private val context: ReactApplicationContext)
       })
     } catch (error: Throwable) {
       promise.reject("PENDING_AUTH_READ_FAILED", error)
+    }
+  }
+
+  @ReactMethod
+  fun getProtectionDebugState(packageName: String, promise: Promise) {
+    try {
+      val protection = protectionMetadataRepository.readProtection(packageName)
+      if (protection == null) {
+        promise.resolve(null)
+        return
+      }
+
+      val pendingPackage = protectionMetadataRepository.getPendingAuthRequest()?.packageName
+      val launcherState = launchCoordinator.getLauncherState()
+      promise.resolve(Arguments.createMap().apply {
+        putString("packageName", protection.packageName)
+        putBoolean("enabled", protection.enabled)
+        putBoolean("isHidden", protection.isHidden)
+        putBoolean("isLocked", protection.isLocked)
+        putString("credentialRef", protection.credentialRef)
+        putString("lockType", protection.lockType)
+        putInt("autoLockSeconds", protection.autoLockTimeoutSeconds)
+        putDouble("updatedAt", protection.updatedAt.toDouble())
+        putBoolean("sessionValid", nativeSessionRepository.isValidFor(packageName))
+        putString("pendingPackage", pendingPackage)
+        putBoolean("accessibilityEnabled", isAccessibilityEnabled())
+        putBoolean("launcherDefault", launcherState.isDefaultLauncher)
+      })
+    } catch (error: Throwable) {
+      promise.reject("PROTECTION_DEBUG_STATE_FAILED", error)
     }
   }
 
@@ -494,6 +514,21 @@ class SmartAppLockHideBridgeModule(private val context: ReactApplicationContext)
       context.packageName,
     )
     return mode == AppOpsManager.MODE_ALLOWED
+  }
+
+  private fun buildProtectionMetadata(item: ReadableMap): ProtectionMetadataRepository.ProtectionMetadata? {
+    val packageName = item.getString("packageName") ?: return null
+    val credentialRef = item.getString("credentialRef") ?: return null
+    return ProtectionMetadataRepository.ProtectionMetadata(
+      packageName = packageName,
+      isHidden = item.getBoolean("isHidden"),
+      isLocked = item.getBoolean("isLocked"),
+      credentialRef = credentialRef,
+      lockType = item.getString("lockType") ?: "PIN",
+      autoLockTimeoutSeconds = item.getInt("autoLockSeconds"),
+      enabled = item.getBoolean("enabled"),
+      updatedAt = item.getDouble("updatedAt").toLong(),
+    )
   }
 
   private fun isAccessibilityEnabled(): Boolean {

@@ -77,7 +77,7 @@ export function VaultScreen() {
   const [loading, setLoading] = React.useState(true);
   const pendingPackageName = launchCoordinator.getPendingLaunchPackageName();
   const pendingMode = launchCoordinator.getPendingLaunchMode();
-  const hasVaultSession = sessionManager.getState()?.vaultUnlocked === true;
+  const hasVaultSession = sessionManager.isVaultUnlocked();
 
   const loadVault = React.useCallback(async () => {
     setLoading(true);
@@ -117,19 +117,16 @@ export function VaultScreen() {
     }
 
     if (pendingMode === 'LOCK_HIDE') {
-      const result = await nativeBridge.authenticateBiometric();
-      if (result !== 'success') {
-        Alert.alert('Authentication required', 'Biometric verification did not complete.');
+      const outcome = await launchCoordinator.launchFromVault(pendingPackageName);
+      if (outcome === 'auth_required') {
+        navigation.navigate('AuthGate');
         return;
       }
-
-      const outcome = await launchCoordinator.completeAuthentication();
-      if (outcome === 'app_launched') {
+      if (outcome === 'launched') {
         navigation.reset({index: 0, routes: [{name: 'PrivateHome'}]});
         return;
       }
-
-      navigation.navigate('UnlockSuccess');
+      Alert.alert('Launch failed', 'Unable to continue to the protected hidden app.');
       return;
     }
 
@@ -185,7 +182,7 @@ export function VaultScreen() {
             </Text>
             <FigmaActionButton
               variant={variant}
-              label={pendingMode === 'LOCK_HIDE' ? 'Authenticate and open' : 'Open hidden app'}
+              label={pendingMode === 'LOCK_HIDE' ? 'Continue to unlock' : 'Open hidden app'}
               onPress={() => void openPendingApp()}
             />
           </View>

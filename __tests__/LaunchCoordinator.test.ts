@@ -172,10 +172,10 @@ describe('LaunchCoordinator', () => {
 
     expect(authResult).toBe('app_launched');
     expect(mockedNativeBridge.launchApp).not.toHaveBeenCalled();
-    expect(mockedNativeBridge.persistTransientAccess).toHaveBeenCalledWith('com.example.lockhidden', false, expect.any(Number));
+    expect(mockedNativeBridge.persistTransientAccess).toHaveBeenCalledWith('com.example.lockhidden', true, expect.any(Number));
     expect(sessionManager.getState()).toMatchObject({
       packageName: 'com.example.lockhidden',
-      vaultUnlocked: false,
+      vaultUnlocked: true,
     });
     expect(launchCoordinator.getPendingLaunchPackageName()).toBe('com.example.lockhidden');
     expect(launchCoordinator.getPendingLaunchMode()).toBe('LOCK_HIDE');

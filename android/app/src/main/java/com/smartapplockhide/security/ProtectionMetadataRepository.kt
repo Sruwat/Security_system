@@ -7,11 +7,13 @@ class ProtectionMetadataRepository(context: Context) {
 
   data class ProtectionMetadata(
     val packageName: String,
+    val isHidden: Boolean,
     val isLocked: Boolean,
     val credentialRef: String,
     val lockType: String,
     val autoLockTimeoutSeconds: Int,
     val enabled: Boolean,
+    val updatedAt: Long,
   )
 
   data class PendingAuthRequest(
@@ -41,17 +43,27 @@ class ProtectionMetadataRepository(context: Context) {
   fun readProtection(packageName: String): ProtectionMetadata? {
     val encoded = preferences.getString(protectionKey(packageName), null) ?: return null
     val parts = encoded.split(SEPARATOR)
-    if (parts.size != 6) {
+    if (parts.size != 6 && parts.size != 8) {
       return null
     }
 
     return ProtectionMetadata(
       packageName = parts[0],
-      isLocked = parts[1].toBooleanStrictOrNull() ?: false,
-      credentialRef = parts[2],
-      lockType = parts[3],
-      autoLockTimeoutSeconds = parts[4].toIntOrNull() ?: 30,
-      enabled = parts[5].toBooleanStrictOrNull() ?: false,
+      isHidden = if (parts.size == 8) {
+        parts[1].toBooleanStrictOrNull() ?: false
+      } else {
+        false
+      },
+      isLocked = parts[if (parts.size == 8) 2 else 1].toBooleanStrictOrNull() ?: false,
+      credentialRef = parts[if (parts.size == 8) 3 else 2],
+      lockType = parts[if (parts.size == 8) 4 else 3],
+      autoLockTimeoutSeconds = parts[if (parts.size == 8) 5 else 4].toIntOrNull() ?: 30,
+      enabled = parts[if (parts.size == 8) 6 else 5].toBooleanStrictOrNull() ?: false,
+      updatedAt = if (parts.size == 8) {
+        parts[7].toLongOrNull() ?: 0L
+      } else {
+        0L
+      },
     )
   }
 
@@ -88,11 +100,13 @@ class ProtectionMetadataRepository(context: Context) {
   private fun encode(item: ProtectionMetadata): String {
     return listOf(
       item.packageName,
+      item.isHidden.toString(),
       item.isLocked.toString(),
       item.credentialRef,
       item.lockType,
       item.autoLockTimeoutSeconds.toString(),
       item.enabled.toString(),
+      item.updatedAt.toString(),
     ).joinToString(SEPARATOR)
   }
 

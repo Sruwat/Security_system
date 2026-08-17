@@ -4,6 +4,7 @@ import type {
   LaunchableApp,
   LauncherState,
   PermissionStatus,
+  ProtectionDebugState,
 } from '../types/domain';
 
 export interface TransientAccess {
@@ -36,13 +37,16 @@ export interface NativeBridge {
   syncProtectionMetadata(
     protections: Array<{
       packageName: string;
+      isHidden: boolean;
       isLocked: boolean;
       credentialRef: string;
       lockType: string;
       autoLockSeconds: number;
       enabled: boolean;
+      updatedAt: number;
     }>,
   ): Promise<void>;
+  getProtectionDebugState(packageName: string): Promise<ProtectionDebugState | null>;
   getLauncherState(): Promise<LauncherState>;
   requestLauncherSelection(): Promise<void>;
   getPermissionStatuses(): Promise<PermissionStatus[]>;

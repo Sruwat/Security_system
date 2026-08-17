@@ -138,11 +138,13 @@ export class LocalDataRepository {
     await nativeBridge.syncProtectionMetadata(
       apps.map(app => ({
         packageName: app.packageName,
+        isHidden: app.isHidden,
         isLocked: app.isLocked,
         credentialRef: app.credentialRef ?? app.packageName,
         lockType: app.lockType ?? app.authMethod ?? 'PIN',
         autoLockSeconds: app.autoLockSeconds ?? 30,
         enabled: app.enabled,
+        updatedAt: app.updatedAt ?? 0,
       })),
     ).catch(() => undefined);
   }

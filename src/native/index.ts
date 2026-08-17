@@ -55,6 +55,9 @@ const fallback: NativeBridge = {
   async syncProtectionMetadata() {
     return;
   },
+  async getProtectionDebugState() {
+    return null;
+  },
   async getLauncherState() {
     return {
       isDefaultLauncher: false,

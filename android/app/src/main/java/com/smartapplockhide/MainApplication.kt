@@ -12,9 +12,6 @@ import com.facebook.react.defaults.DefaultReactNativeHost
 import com.facebook.react.soloader.OpenSourceMergedSoMapping
 import com.facebook.soloader.SoLoader
 import com.smartapplockhide.bridge.SmartAppLockHideBridgePackage
-import com.smartapplockhide.security.NativeSessionRepository
-import com.smartapplockhide.security.ProtectionMetadataRepository
-import com.smartapplockhide.security.TransientAccessRepository
 
 class MainApplication : Application(), ReactApplication {
   override val reactNativeHost: ReactNativeHost = object : DefaultReactNativeHost(this) {
@@ -38,8 +35,5 @@ class MainApplication : Application(), ReactApplication {
     if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
       load()
     }
-    TransientAccessRepository(this).clear()
-    NativeSessionRepository(this).clear()
-    ProtectionMetadataRepository(this).clearPendingAuthRequest()
   }
 }

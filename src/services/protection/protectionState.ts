@@ -46,6 +46,7 @@ export function normalizeProtection(protection: AppProtection): AppProtection {
     authMethod: protection.authMethod ?? lockType,
     autoLockSeconds: protection.autoLockSeconds ?? 30,
     mode: protectionModeFromFlags(flags),
+    updatedAt: protection.updatedAt ?? Date.now(),
   };
 }
 

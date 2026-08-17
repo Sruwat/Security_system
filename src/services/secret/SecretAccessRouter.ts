@@ -1,6 +1,7 @@
 import {launchCoordinator} from '../launch/LaunchCoordinator';
 import {localDataRepository} from '../../storage/LocalDataRepository';
 import {protectionModeFromFlags} from '../protection/protectionState';
+import {sessionManager} from '../session/SessionManager';
 
 export class SecretAccessRouter {
   async handleSecretAccess(): Promise<'empty' | 'vault' | 'auth_required'> {
@@ -15,9 +16,13 @@ export class SecretAccessRouter {
     const pendingPackageName = launchCoordinator.getPendingLaunchPackageName();
     if (pendingPackageName) {
       const pendingApp = hiddenApps.find(app => app.packageName === pendingPackageName);
-      if (pendingApp && pendingApp.isLocked) {
+      if (pendingApp && pendingApp.isLocked && !sessionManager.isValidFor(pendingPackageName)) {
         return 'auth_required';
       }
+    }
+
+    if (sessionManager.isVaultUnlocked()) {
+      return 'vault';
     }
 
     const requiresPrivateAreaAuth = hiddenApps.some(app => protectionModeFromFlags(app) === 'LOCK_HIDE');

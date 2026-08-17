@@ -81,6 +81,21 @@ export interface LauncherState {
   activeDisguise: DisguiseType;
 }
 
+export interface ProtectionDebugState {
+  packageName: string;
+  enabled: boolean;
+  isHidden: boolean;
+  isLocked: boolean;
+  credentialRef: string | null;
+  lockType: string | null;
+  autoLockSeconds: number;
+  updatedAt: number;
+  sessionValid: boolean;
+  pendingPackage: string | null;
+  accessibilityEnabled: boolean;
+  launcherDefault: boolean;
+}
+
 export type PermissionStatusState =
   | 'enabled'
   | 'not_enabled'
