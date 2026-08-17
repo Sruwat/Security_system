@@ -15,6 +15,8 @@ describe('LaunchCoordinator', () => {
     mockedNativeBridge.launchApp = jest.fn().mockResolvedValue(undefined);
     mockedNativeBridge.persistTransientAccess = jest.fn().mockResolvedValue(undefined);
     mockedNativeBridge.clearTransientAccess = jest.fn().mockResolvedValue(undefined);
+    mockedNativeBridge.setPendingAuthRequest = jest.fn().mockResolvedValue(undefined);
+    mockedNativeBridge.clearPendingAuthRequest = jest.fn().mockResolvedValue(undefined);
     mockedLocalDataRepository.getSettings = jest.fn().mockResolvedValue({
       onboardingComplete: true,
       theme: 'SYSTEM',
@@ -45,6 +47,7 @@ describe('LaunchCoordinator', () => {
     expect(result).toBe('auth_required');
     expect(launchCoordinator.getPendingLaunchPackageName()).toBe('com.example.app');
     expect(mockedNativeBridge.launchApp).not.toHaveBeenCalled();
+    expect(mockedNativeBridge.setPendingAuthRequest).toHaveBeenCalledWith('com.example.app');
   });
 
   it('unlocks the vault for returning users without a pending launch', async () => {
@@ -95,6 +98,7 @@ describe('LaunchCoordinator', () => {
     await expect(launchCoordinator.launchPendingAfterAuthentication()).resolves.toBe(true);
     expect(mockedNativeBridge.launchApp).toHaveBeenCalledWith('com.example.app');
     expect(launchCoordinator.getPendingLaunchPackageName()).toBeNull();
+    expect(mockedNativeBridge.clearPendingAuthRequest).toHaveBeenCalled();
   });
 
   it('requires secret entry before opening a hidden app', async () => {
@@ -113,6 +117,7 @@ describe('LaunchCoordinator', () => {
     expect(launchCoordinator.getPendingLaunchPackageName()).toBe('com.example.hidden');
     expect(launchCoordinator.getPendingLaunchMode()).toBe('HIDE');
     expect(mockedNativeBridge.launchApp).not.toHaveBeenCalled();
+    expect(mockedNativeBridge.setPendingAuthRequest).toHaveBeenCalledWith('com.example.hidden');
   });
 
   it('launches hidden apps immediately after secret entry', async () => {
@@ -137,6 +142,7 @@ describe('LaunchCoordinator', () => {
     expect(mockedNativeBridge.persistTransientAccess).toHaveBeenCalled();
     expect(launchCoordinator.getPendingLaunchPackageName()).toBeNull();
     expect(launchCoordinator.getPendingLaunchMode()).toBeNull();
+    expect(mockedNativeBridge.clearPendingAuthRequest).toHaveBeenCalled();
   });
 
   it('keeps LOCK_HIDE launches gated until secret entry and authentication complete', async () => {
@@ -178,5 +184,18 @@ describe('LaunchCoordinator', () => {
     expect(mockedNativeBridge.launchApp).toHaveBeenCalledWith('com.example.lockhidden');
     expect(launchCoordinator.getPendingLaunchPackageName()).toBeNull();
     expect(launchCoordinator.getPendingLaunchMode()).toBeNull();
+    expect(mockedNativeBridge.clearPendingAuthRequest).toHaveBeenCalled();
+  });
+
+  it('persists and clears pending auth state when restoring launches manually', () => {
+    launchCoordinator.restorePendingLaunch('com.example.manual', 'LOCK_HIDE');
+
+    expect(launchCoordinator.getPendingLaunchPackageName()).toBe('com.example.manual');
+    expect(mockedNativeBridge.setPendingAuthRequest).toHaveBeenCalledWith('com.example.manual');
+
+    launchCoordinator.clearPendingLaunch();
+
+    expect(launchCoordinator.getPendingLaunchPackageName()).toBeNull();
+    expect(mockedNativeBridge.clearPendingAuthRequest).toHaveBeenCalled();
   });
 });

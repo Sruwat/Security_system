@@ -30,6 +30,7 @@ export interface NativeBridge {
   clearTransientAccess(): Promise<void>;
   getTransientAccess(): Promise<TransientAccess | null>;
   getPendingAuthRequest(): Promise<PendingAuthRequest | null>;
+  setPendingAuthRequest(packageName: string): Promise<void>;
   clearPendingAuthRequest(): Promise<void>;
   getDeviceCapabilities(): Promise<DeviceCapabilities>;
   syncProtectionMetadata(

@@ -1,5 +1,6 @@
 import React from 'react';
 import {Modal, Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View} from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {adsManager} from '../services/ads/AdsManager';
 
 export type FigmaVariant = 'light' | 'dark';
@@ -152,11 +153,12 @@ export function FigmaRootLayout(props: {
   bottomNav?: React.ReactNode;
 }) {
   const palette = useFigmaPalette(props.variant);
+  const insets = useSafeAreaInsets();
   return (
     <FigmaPage variant={props.variant}>
       <FigmaTopBar variant={props.variant} title={props.title} mode="root" onMenuPress={props.onDrawerOpen} />
-      <View style={styles.rootBody}>{props.children}</View>
-      {props.bottomNav ? <View style={[styles.fixedBottomNav, {backgroundColor: palette.background}]}>{props.bottomNav}</View> : null}
+      <View style={[styles.rootBody, props.bottomNav ? {paddingBottom: 126 + insets.bottom} : null]}>{props.children}</View>
+      {props.bottomNav ? <View style={[styles.fixedBottomNav, {backgroundColor: palette.background, bottom: insets.bottom + 10}]}>{props.bottomNav}</View> : null}
       <FigmaDrawer
         open={props.drawerOpen}
         variant={props.variant}

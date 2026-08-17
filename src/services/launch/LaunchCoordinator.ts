@@ -9,6 +9,15 @@ export class LaunchCoordinator {
   private pendingLaunchPackageName: string | null = null;
   private pendingLaunchMode: ProtectionMode | null = null;
 
+  private syncPendingAuthRequest(packageName: string | null): void {
+    if (packageName) {
+      void nativeBridge.setPendingAuthRequest(packageName).catch(() => undefined);
+      return;
+    }
+
+    void nativeBridge.clearPendingAuthRequest().catch(() => undefined);
+  }
+
   async launch(packageName: string): Promise<'launched' | 'auth_required' | 'secret_required'> {
     const protection = await protectionManager.getProtection(packageName);
     if (!protection) {
@@ -23,18 +32,21 @@ export class LaunchCoordinator {
     if (decision.requiresSecretEntry && !hasSession) {
       this.pendingLaunchPackageName = packageName;
       this.pendingLaunchMode = mode;
+      this.syncPendingAuthRequest(packageName);
       return 'secret_required';
     }
 
     if (mode === 'LOCK_HIDE' && hasSession) {
       this.pendingLaunchPackageName = packageName;
       this.pendingLaunchMode = mode;
+      this.syncPendingAuthRequest(packageName);
       return 'auth_required';
     }
 
     if (decision.requiresAuthentication && !hasSession) {
       this.pendingLaunchPackageName = packageName;
       this.pendingLaunchMode = mode;
+      this.syncPendingAuthRequest(packageName);
       return 'auth_required';
     }
 
@@ -63,6 +75,7 @@ export class LaunchCoordinator {
   restorePendingLaunch(packageName: string | null, mode: ProtectionMode | null = null): void {
     this.pendingLaunchPackageName = packageName;
     this.pendingLaunchMode = mode;
+    this.syncPendingAuthRequest(packageName);
   }
 
   async completeAuthentication(): Promise<'vault_unlocked' | 'app_launched'> {
@@ -73,6 +86,7 @@ export class LaunchCoordinator {
     if (!pendingPackageName) {
       this.pendingLaunchPackageName = null;
       this.pendingLaunchMode = null;
+      this.syncPendingAuthRequest(null);
       sessionManager.startVaultSession(settings.autoLockSecondsDefault);
       await this.syncTransientAccess();
       return 'vault_unlocked';
@@ -96,6 +110,7 @@ export class LaunchCoordinator {
     await nativeBridge.launchApp(pendingPackageName);
     this.pendingLaunchPackageName = null;
     this.pendingLaunchMode = null;
+    this.syncPendingAuthRequest(null);
     return true;
   }
 
@@ -110,6 +125,7 @@ export class LaunchCoordinator {
       await nativeBridge.launchApp(pendingPackageName);
       this.pendingLaunchPackageName = null;
       this.pendingLaunchMode = null;
+      this.syncPendingAuthRequest(null);
       return 'app_launched';
     }
 
@@ -123,6 +139,7 @@ export class LaunchCoordinator {
   clearPendingLaunch(): void {
     this.pendingLaunchPackageName = null;
     this.pendingLaunchMode = null;
+    this.syncPendingAuthRequest(null);
   }
 }
 

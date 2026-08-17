@@ -13,5 +13,7 @@ describe('AuthGateScreen auth layout', () => {
     expect(source).toContain("loading && value === 'Continue' ? 'Checking...' : value");
     expect(source).toContain("'Use biometrics'");
     expect(source).toContain("pin.length < 4");
+    expect(source).toContain('getPendingAuthRequest()');
+    expect(source).toContain('launchCoordinator.restorePendingLaunch');
   });
 });

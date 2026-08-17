@@ -277,6 +277,16 @@ class SmartAppLockHideBridgeModule(private val context: ReactApplicationContext)
   }
 
   @ReactMethod
+  fun setPendingAuthRequest(packageName: String, promise: Promise) {
+    try {
+      protectionMetadataRepository.setPendingAuthRequest(packageName)
+      promise.resolve(null)
+    } catch (error: Throwable) {
+      promise.reject("PENDING_AUTH_SET_FAILED", error)
+    }
+  }
+
+  @ReactMethod
   fun clearPendingAuthRequest(promise: Promise) {
     try {
       protectionMetadataRepository.clearPendingAuthRequest()

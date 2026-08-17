@@ -9,6 +9,7 @@ import {nativeBridge} from '../../native';
 import {sessionManager} from '../../services/session/SessionManager';
 import type {RootStackParamList} from '../../navigation/routes';
 import {APP_UNLOCK_CREDENTIAL_REF} from '../../services/security/credentialTypes';
+import {protectionManager} from '../../services/protection/ProtectionManager';
 import {localDataRepository} from '../../storage/LocalDataRepository';
 import type {AppProtection, PrimaryAuthMethod} from '../../types/domain';
 
@@ -46,7 +47,9 @@ export function AuthGateScreen() {
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
   const [primaryAuthMethod, setPrimaryAuthMethod] = React.useState<PrimaryAuthMethod>('PIN');
   const [pendingLabel, setPendingLabel] = React.useState<string>('Private space');
-  const pendingLaunchPackageName = launchCoordinator.getPendingLaunchPackageName();
+  const [pendingLaunchPackageName, setPendingLaunchPackageName] = React.useState<string | null>(() =>
+    launchCoordinator.getPendingLaunchPackageName(),
+  );
   const activeSession = sessionManager.getState();
   const sessionExpired = Boolean(activeSession && activeSession.expiresAt <= Date.now());
   const cooldownRemaining = cooldownUntil ? Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000)) : 0;
@@ -157,6 +160,40 @@ export function AuthGateScreen() {
     void localDataRepository.getSettings().then(settings => {
       setPrimaryAuthMethod(settings.primaryAuthMethod);
     });
+  }, []);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    const hydratePendingLaunch = async () => {
+      const currentPending = launchCoordinator.getPendingLaunchPackageName();
+      if (currentPending) {
+        if (!cancelled) {
+          setPendingLaunchPackageName(currentPending);
+        }
+        return;
+      }
+
+      const pendingAuth = await nativeBridge.getPendingAuthRequest().catch(() => null);
+      if (!pendingAuth?.packageName) {
+        if (!cancelled) {
+          setPendingLaunchPackageName(null);
+        }
+        return;
+      }
+
+      const protection = await protectionManager.getProtection(pendingAuth.packageName).catch(() => undefined);
+      launchCoordinator.restorePendingLaunch(pendingAuth.packageName, protection?.mode ?? null);
+      if (!cancelled) {
+        setPendingLaunchPackageName(pendingAuth.packageName);
+      }
+    };
+
+    void hydratePendingLaunch();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   React.useEffect(() => {

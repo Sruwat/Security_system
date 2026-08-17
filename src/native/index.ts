@@ -38,6 +38,9 @@ const fallback: NativeBridge = {
   async getPendingAuthRequest() {
     return null;
   },
+  async setPendingAuthRequest() {
+    return;
+  },
   async clearPendingAuthRequest() {
     return;
   },
