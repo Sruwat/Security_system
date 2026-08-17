@@ -69,6 +69,7 @@ export class LocalDataRepository {
   async getProtectedApps(): Promise<AppProtection[]> {
     const raw = await AsyncStorage.getItem(storageKeys.protections);
     if (!raw) {
+      await this.syncNativeProtectionMetadata([]);
       return [];
     }
 
@@ -77,6 +78,7 @@ export class LocalDataRepository {
       const normalized = Array.isArray(parsed) ? parsed.map(item => normalizeProtection(item as AppProtection)) : [];
       const installedPackages = await nativeBridge.getInstalledPackages().catch(() => []);
       if (installedPackages.length === 0) {
+        await this.syncNativeProtectionMetadata(normalized);
         return normalized;
       }
 
@@ -89,8 +91,10 @@ export class LocalDataRepository {
           await nativeBridge.clearTransientAccess().catch(() => undefined);
         }
       }
+      await this.syncNativeProtectionMetadata(cleaned);
       return cleaned;
     } catch {
+      await this.syncNativeProtectionMetadata([]);
       return [];
     }
   }
@@ -98,16 +102,7 @@ export class LocalDataRepository {
   async saveProtectedApps(apps: AppProtection[]): Promise<void> {
     const normalized = apps.map(app => normalizeProtection(app));
     await AsyncStorage.setItem(storageKeys.protections, JSON.stringify(normalized));
-    await nativeBridge.syncProtectionMetadata(
-      normalized.map(app => ({
-        packageName: app.packageName,
-        isLocked: app.isLocked,
-        credentialRef: app.credentialRef ?? app.packageName,
-        lockType: app.lockType ?? app.authMethod ?? 'PIN',
-        autoLockSeconds: app.autoLockSeconds ?? 30,
-        enabled: app.enabled,
-      })),
-    ).catch(() => undefined);
+    await this.syncNativeProtectionMetadata(normalized);
     this.emitProtectedApps(normalized);
   }
 
@@ -137,6 +132,19 @@ export class LocalDataRepository {
   async setOnboardingResumeRoute(onboardingResumeRoute?: OnboardingResumeRoute): Promise<void> {
     const settings = await this.getSettings();
     await this.saveSettings({...settings, onboardingResumeRoute});
+  }
+
+  private async syncNativeProtectionMetadata(apps: AppProtection[]): Promise<void> {
+    await nativeBridge.syncProtectionMetadata(
+      apps.map(app => ({
+        packageName: app.packageName,
+        isLocked: app.isLocked,
+        credentialRef: app.credentialRef ?? app.packageName,
+        lockType: app.lockType ?? app.authMethod ?? 'PIN',
+        autoLockSeconds: app.autoLockSeconds ?? 30,
+        enabled: app.enabled,
+      })),
+    ).catch(() => undefined);
   }
 }
 
