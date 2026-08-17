@@ -1,18 +1,17 @@
 import React from 'react';
 import {AppState, type AppStateStatus} from 'react-native';
 import {nativeBridge} from '../native';
-import {clearTransientAccess} from '../services/session/TransientAccessManager';
 
 export function useAppSecurityLifecycle() {
   React.useEffect(() => {
     void nativeBridge.setSecureScreen(true).catch(() => undefined);
 
     const handleStateChange = (nextState: AppStateStatus) => {
-      if (nextState !== 'background') {
+      if (nextState === 'background') {
+        // Protected app handoffs briefly background this app. The session is
+        // already persisted with an expiry, so do not clear it here.
         return;
       }
-
-      clearTransientAccess();
     };
 
     const subscription = AppState.addEventListener('change', handleStateChange);

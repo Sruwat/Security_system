@@ -1,10 +1,12 @@
 import React from 'react';
-import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {Alert, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
+import {nativeBridge} from '../../native';
+import {APP_UNLOCK_CREDENTIAL_REF, VAULT_SECRET_CREDENTIAL_REF} from '../../services/security/credentialTypes';
 import {localDataRepository} from '../../storage/LocalDataRepository';
-import type {AppSettings} from '../../types/domain';
+import type {AppSettings, PermissionStatus} from '../../types/domain';
 import type {RootStackParamList} from '../../navigation/routes';
 
 function ToggleRow(props: {label: string; value: boolean; onToggle: () => void; palette: typeof figmaPalette.light}) {
@@ -101,12 +103,125 @@ export function PrivacyCenterScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const palette = figmaPalette.light;
   const {settings, update} = useSettings();
+  const [permissionStatuses, setPermissionStatuses] = React.useState<PermissionStatus[]>([]);
+  const [recoveryBusy, setRecoveryBusy] = React.useState<string | null>(null);
+
+  const refreshPermissionStatuses = React.useCallback(async () => {
+    setPermissionStatuses(await nativeBridge.getPermissionStatuses());
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      void refreshPermissionStatuses();
+    }, [refreshPermissionStatuses]),
+  );
+
+  const runRecoveryGate = React.useCallback(async (): Promise<boolean> => {
+    const result = await nativeBridge.authenticateBiometric();
+    if (result === 'success') {
+      return true;
+    }
+    if (result === 'fail') {
+      Alert.alert('Verification failed', 'Device verification did not complete, so the reset was cancelled.');
+      return false;
+    }
+
+    return await new Promise<boolean>(resolve => {
+      Alert.alert(
+        'Device verification unavailable',
+        'This device cannot complete secure biometric verification right now. Continue with a controlled local reset?',
+        [
+          {text: 'Cancel', style: 'cancel', onPress: () => resolve(false)},
+          {text: 'Continue reset', style: 'destructive', onPress: () => resolve(true)},
+        ],
+      );
+    });
+  }, []);
+
+  const resetPrimaryLock = React.useCallback(async () => {
+    setRecoveryBusy('primary');
+    try {
+      const allowed = await runRecoveryGate();
+      if (!allowed) {
+        return;
+      }
+      await nativeBridge.deleteCredential(APP_UNLOCK_CREDENTIAL_REF);
+      await nativeBridge.clearTransientAccess();
+      const current = await localDataRepository.getSettings();
+      await localDataRepository.saveSettings({
+        ...current,
+        onboardingComplete: false,
+        onboardingResumeRoute: 'PrimaryLock',
+      });
+      navigation.reset({index: 0, routes: [{name: 'PrimaryLock'}]});
+    } finally {
+      setRecoveryBusy(null);
+    }
+  }, [navigation, runRecoveryGate]);
+
+  const resetAllProtection = React.useCallback(async () => {
+    setRecoveryBusy('all');
+    try {
+      const allowed = await runRecoveryGate();
+      if (!allowed) {
+        return;
+      }
+      await nativeBridge.deleteCredential(APP_UNLOCK_CREDENTIAL_REF);
+      await nativeBridge.deleteCredential(VAULT_SECRET_CREDENTIAL_REF);
+      await nativeBridge.clearTransientAccess();
+      await localDataRepository.saveProtectedApps([]);
+      const current = await localDataRepository.getSettings();
+      await localDataRepository.saveSettings({
+        ...current,
+        onboardingComplete: false,
+        onboardingResumeRoute: 'Welcome',
+        secretAccessType: 'calculator',
+        disguiseType: 'default',
+      });
+      navigation.reset({index: 0, routes: [{name: 'Welcome'}]});
+    } finally {
+      setRecoveryBusy(null);
+    }
+  }, [navigation, runRecoveryGate]);
 
   return (
     <FigmaPage variant="light">
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={[styles.title, {color: palette.textPrimary}]}>Privacy Center</Text>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Control the privacy options that govern banners, native ads, and local-only behavior.</Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Review the live Android setup state alongside the local privacy options that stay on this device.</Text>
+
+        <View style={[styles.heroCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+          <Text style={[styles.heroTitle, {color: palette.textPrimary}]}>Permissions and protection</Text>
+          <Text style={[styles.heroBody, {color: palette.textSecondary}]}>Open the relevant Android settings, then return here to re-check the current state automatically.</Text>
+        </View>
+
+        <View style={styles.list}>
+          {permissionStatuses.map(item => (
+            <Pressable
+              key={item.key}
+              onPress={() => {
+                void nativeBridge.openSystemSetting(item.settingsAction).then(refreshPermissionStatuses);
+              }}
+              style={({pressed}) => [
+                styles.row,
+                {
+                  backgroundColor: palette.surface,
+                  borderColor: palette.border,
+                  opacity: pressed ? 0.94 : 1,
+                },
+              ]}>
+              <View style={styles.rowBody}>
+                <Text style={[styles.rowTitle, {color: palette.textPrimary}]}>{item.label}</Text>
+                <Text style={[styles.rowSubtitle, {color: palette.textSecondary}]}>
+                  {item.status.replace(/_/g, ' ')}
+                </Text>
+              </View>
+              <View style={[styles.toggle, {backgroundColor: palette.accentSoft}]}>
+                <Text style={[styles.toggleText, {color: palette.accent}]}>Open</Text>
+              </View>
+            </Pressable>
+          ))}
+        </View>
 
         <View style={[styles.heroCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
           <Text style={[styles.heroTitle, {color: palette.textPrimary}]}>On-device privacy settings</Text>
@@ -119,6 +234,32 @@ export function PrivacyCenterScreen() {
             <ToggleRow label="Native ads" value={settings.nativeAdEnabled} onToggle={() => void update({nativeAdEnabled: !settings.nativeAdEnabled})} palette={palette} />
           </View>
         ) : null}
+
+        <View style={[styles.heroCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+          <Text style={[styles.heroTitle, {color: palette.textPrimary}]}>Recovery</Text>
+          <Text style={[styles.heroBody, {color: palette.textSecondary}]}>Reset local protection only after device verification, or use a controlled local reset if verification is unavailable.</Text>
+        </View>
+
+        <View style={styles.list}>
+          <Pressable onPress={() => void resetPrimaryLock()} style={({pressed}) => [styles.row, {backgroundColor: palette.surface, borderColor: palette.border, opacity: pressed ? 0.94 : 1}]}>
+            <View style={styles.rowBody}>
+              <Text style={[styles.rowTitle, {color: palette.textPrimary}]}>Reset primary lock</Text>
+              <Text style={[styles.rowSubtitle, {color: palette.textSecondary}]}>Recreate PIN, password, or pattern without revealing the previous credential.</Text>
+            </View>
+            <View style={[styles.toggle, {backgroundColor: palette.accentSoft}]}>
+              <Text style={[styles.toggleText, {color: palette.accent}]}>{recoveryBusy === 'primary' ? 'Working' : 'Reset'}</Text>
+            </View>
+          </Pressable>
+          <Pressable onPress={() => void resetAllProtection()} style={({pressed}) => [styles.row, {backgroundColor: palette.surface, borderColor: palette.border, opacity: pressed ? 0.94 : 1}]}>
+            <View style={styles.rowBody}>
+              <Text style={[styles.rowTitle, {color: palette.textPrimary}]}>Reset all protection</Text>
+              <Text style={[styles.rowSubtitle, {color: palette.textSecondary}]}>Clear credentials, protected apps, and secret access setup from this device.</Text>
+            </View>
+            <View style={[styles.toggle, {backgroundColor: palette.accentSoft}]}>
+              <Text style={[styles.toggleText, {color: palette.accent}]}>{recoveryBusy === 'all' ? 'Working' : 'Reset'}</Text>
+            </View>
+          </Pressable>
+        </View>
 
         <View style={styles.spacer} />
 

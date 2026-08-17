@@ -1,20 +1,22 @@
 import React from 'react';
-import {Alert, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions} from 'react-native';
+import {Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import {launchCoordinator} from '../../services/launch/LaunchCoordinator';
 import {nativeBridge} from '../../native';
 import {sessionManager} from '../../services/session/SessionManager';
 import type {RootStackParamList} from '../../navigation/routes';
-import {APP_UNLOCK_CREDENTIAL_TYPE} from '../../services/security/credentialTypes';
+import {APP_UNLOCK_CREDENTIAL_REF} from '../../services/security/credentialTypes';
 import {localDataRepository} from '../../storage/LocalDataRepository';
-import type {PrimaryAuthMethod} from '../../types/domain';
+import type {AppProtection, PrimaryAuthMethod} from '../../types/domain';
 
 const keypadRows = [
   ['1', '2', '3'],
   ['4', '5', '6'],
   ['7', '8', '9'],
+  ['Clear', '0', 'Continue'],
 ] as const;
 
 function UnlockGlyph() {
@@ -34,6 +36,7 @@ function UnlockGlyph() {
 export function AuthGateScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const palette = figmaPalette.dark;
+  const insets = useSafeAreaInsets();
   const {width, height} = useWindowDimensions();
   const [pin, setPin] = React.useState('');
   const [manualValue, setManualValue] = React.useState('');
@@ -43,24 +46,25 @@ export function AuthGateScreen() {
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
   const [primaryAuthMethod, setPrimaryAuthMethod] = React.useState<PrimaryAuthMethod>('PIN');
   const [pendingLabel, setPendingLabel] = React.useState<string>('Private space');
-  const promptAttemptedRef = React.useRef(false);
   const pendingLaunchPackageName = launchCoordinator.getPendingLaunchPackageName();
-  const pendingLaunchMode = launchCoordinator.getPendingLaunchMode();
   const activeSession = sessionManager.getState();
   const sessionExpired = Boolean(activeSession && activeSession.expiresAt <= Date.now());
   const cooldownRemaining = cooldownUntil ? Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000)) : 0;
-  const credentialLabel = primaryAuthMethod === 'PASSWORD' ? 'password' : primaryAuthMethod === 'PATTERN' ? 'pattern' : '4-digit PIN';
-  const compactLayout = height < 800;
-  const keypadGap = compactLayout ? 10 : 14;
-  const keypadHorizontalInset = compactLayout ? 48 : 42;
-  const keySize = Math.max(62, Math.min(78, (width - keypadHorizontalInset * 2 - keypadGap * 2) / 3));
+  const credentialLabel = primaryAuthMethod === 'PASSWORD' ? 'password' : primaryAuthMethod === 'PATTERN' ? 'pattern' : '4-6 digit PIN';
+  const compactLayout = height < 1200;
+  const ultraCompactLayout = height < 900;
+  const keypadGap = ultraCompactLayout ? 8 : compactLayout ? 10 : 14;
+  const keypadHorizontalInset = ultraCompactLayout ? 24 : compactLayout ? 30 : 42;
+  const keySize = Math.max(54, Math.min(76, (width - keypadHorizontalInset * 2 - keypadGap * 2) / 3));
+  const [pendingProtection, setPendingProtection] = React.useState<AppProtection | null>(null);
 
   const verifyPin = React.useCallback(async (pinValue: string) => {
-    const verified = await nativeBridge.verifyCredential(APP_UNLOCK_CREDENTIAL_TYPE, pinValue.trim());
+    const credentialRef = pendingProtection?.credentialRef ?? APP_UNLOCK_CREDENTIAL_REF;
+    const verified = await nativeBridge.verifyCredential(credentialRef, pinValue.trim());
     if (!verified) {
       throw new Error(primaryAuthMethod === 'PASSWORD' ? 'The password did not match the stored credential.' : primaryAuthMethod === 'PATTERN' ? 'The pattern did not match the stored credential.' : 'The PIN did not match the stored credential.');
     }
-  }, [primaryAuthMethod]);
+  }, [pendingProtection?.credentialRef, primaryAuthMethod]);
 
   const finishAuthentication = React.useCallback(
     async (pinValue?: string) => {
@@ -76,6 +80,32 @@ export function AuthGateScreen() {
       }
     },
     [navigation, verifyPin],
+  );
+
+  const submitPin = React.useCallback(
+    async (pinValue: string) => {
+      if (cooldownRemaining > 0 || pinValue.length < 4 || pinValue.length > 6) {
+        return;
+      }
+
+      setLoading(true);
+      try {
+        await finishAuthentication(pinValue);
+      } catch (error) {
+        const nextAttempts = attempts + 1;
+        setAttempts(nextAttempts);
+        setStatusMessage('Wrong PIN. Try again.');
+        if (nextAttempts >= 3) {
+          setCooldownUntil(Date.now() + 30000);
+          setStatusMessage('Recovery required. Cooldown started for 30 seconds.');
+        }
+        Alert.alert('Authentication failed', error instanceof Error ? error.message : 'Unable to verify the PIN.');
+        setPin('');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [attempts, cooldownRemaining, finishAuthentication],
   );
 
   const authenticate = React.useCallback(async () => {
@@ -111,31 +141,17 @@ export function AuthGateScreen() {
 
   const submitDigit = React.useCallback(
     (digit: string) => {
-      const next = `${pin}${digit}`.slice(0, 4);
+      const next = `${pin}${digit}`.slice(0, 6);
       setPin(next);
-      if (next.length === 4) {
-        void finishAuthentication(next).catch(error => {
-          const nextAttempts = attempts + 1;
-          setAttempts(nextAttempts);
-          setStatusMessage('Wrong PIN. Try again.');
-          if (nextAttempts >= 3) {
-            setCooldownUntil(Date.now() + 30000);
-            setStatusMessage('Recovery required. Cooldown started for 30 seconds.');
-          }
-          Alert.alert('Authentication failed', error instanceof Error ? error.message : 'Unable to verify the PIN.');
-          setPin('');
-        });
-      }
+      setStatusMessage(null);
     },
-    [attempts, finishAuthentication, pin],
+    [pin],
   );
 
-  React.useEffect(() => {
-    if (!promptAttemptedRef.current) {
-      promptAttemptedRef.current = true;
-      void authenticate();
-    }
-  }, [authenticate]);
+  const clearPin = React.useCallback(() => {
+    setPin('');
+    setStatusMessage(null);
+  }, []);
 
   React.useEffect(() => {
     void localDataRepository.getSettings().then(settings => {
@@ -145,12 +161,14 @@ export function AuthGateScreen() {
 
   React.useEffect(() => {
     if (!pendingLaunchPackageName) {
+      setPendingProtection(null);
       setPendingLabel('Private space');
       return;
     }
 
     void localDataRepository.getProtectedApps().then(apps => {
       const matchingApp = apps.find(app => app.packageName === pendingLaunchPackageName);
+      setPendingProtection(matchingApp ?? null);
       setPendingLabel(matchingApp?.label ?? pendingLaunchPackageName);
     });
   }, [pendingLaunchPackageName]);
@@ -160,23 +178,35 @@ export function AuthGateScreen() {
       return;
     }
 
-    void finishAuthentication(manualValue).catch(error => {
-      const nextAttempts = attempts + 1;
-      setAttempts(nextAttempts);
-      setStatusMessage(primaryAuthMethod === 'PASSWORD' ? 'Wrong password. Try again.' : primaryAuthMethod === 'PATTERN' ? 'Wrong pattern. Try again.' : 'Wrong PIN. Try again.');
-      if (nextAttempts >= 3) {
-        setCooldownUntil(Date.now() + 30000);
-        setStatusMessage('Recovery required. Cooldown started for 30 seconds.');
-      }
-      Alert.alert('Authentication failed', error instanceof Error ? error.message : 'Unable to verify the credential.');
-      setManualValue('');
-      setPin('');
-    });
+    setLoading(true);
+    void finishAuthentication(manualValue)
+      .catch(error => {
+        const nextAttempts = attempts + 1;
+        setAttempts(nextAttempts);
+        setStatusMessage(primaryAuthMethod === 'PASSWORD' ? 'Wrong password. Try again.' : primaryAuthMethod === 'PATTERN' ? 'Wrong pattern. Try again.' : 'Wrong PIN. Try again.');
+        if (nextAttempts >= 3) {
+          setCooldownUntil(Date.now() + 30000);
+          setStatusMessage('Recovery required. Cooldown started for 30 seconds.');
+        }
+        Alert.alert('Authentication failed', error instanceof Error ? error.message : 'Unable to verify the credential.');
+        setManualValue('');
+        setPin('');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, [attempts, cooldownRemaining, finishAuthentication, manualValue, primaryAuthMethod]);
 
   return (
     <FigmaPage variant="dark">
-      <View style={styles.fill}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.fill,
+          compactLayout ? styles.fillCompact : null,
+          {paddingBottom: insets.bottom + (ultraCompactLayout ? 16 : 24)},
+        ]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}>
         <View style={styles.headerRow}>
           <Text style={[styles.time, {color: palette.textPrimary}]}>9:41</Text>
           <View style={[styles.statePill, {backgroundColor: palette.surface, borderColor: palette.border}]}>
@@ -184,13 +214,13 @@ export function AuthGateScreen() {
           </View>
         </View>
 
-        <Text style={[styles.title, {color: palette.textPrimary}]}>Unlock access</Text>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
+        <Text style={[styles.title, compactLayout && styles.titleCompact, {color: palette.textPrimary}]}>Unlock access</Text>
+        <Text style={[styles.subtitle, compactLayout && styles.subtitleCompact, {color: palette.textSecondary}]}>
           {pendingLaunchPackageName ? `Continue to ${pendingLabel}` : 'Authenticate to continue.'}
         </Text>
 
         {sessionExpired ? (
-          <View style={[styles.contextCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+          <View style={[styles.contextCard, compactLayout && styles.contextCardCompact, {backgroundColor: palette.surface, borderColor: palette.border}]}>
             <View style={styles.contextBody}>
               <Text style={[styles.contextLabel, {color: palette.textPrimary}]}>Session expired</Text>
               <Text style={[styles.contextHint, {color: palette.textSecondary}]}>The previous temporary access is no longer valid. Authenticate again.</Text>
@@ -198,8 +228,8 @@ export function AuthGateScreen() {
           </View>
         ) : null}
 
-        <View style={[styles.contextCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-          <View style={[styles.contextIcon, {backgroundColor: palette.accentSoft}]}>
+        <View style={[styles.contextCard, compactLayout && styles.contextCardCompact, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+          <View style={[styles.contextIcon, compactLayout && styles.contextIconCompact, {backgroundColor: palette.accentSoft}]}>
             <Text style={[styles.contextIconText, {color: palette.accent}]}>AP</Text>
           </View>
           <View style={styles.contextBody}>
@@ -210,7 +240,7 @@ export function AuthGateScreen() {
           </View>
         </View>
 
-        <View style={styles.centerArea}>
+        <View style={[styles.centerArea, compactLayout && styles.centerAreaCompact]}>
           <UnlockGlyph />
           <Text style={[styles.instruction, {color: palette.textSecondary}]}>Use Face ID, fingerprint, or your {credentialLabel}.</Text>
           {statusMessage ? <Text style={[styles.errorLine, {color: '#FECACA'}]}>{statusMessage}</Text> : null}
@@ -219,13 +249,13 @@ export function AuthGateScreen() {
 
         {primaryAuthMethod === 'PIN' ? (
           <>
-            <View style={styles.dotsRow}>
-              {[0, 1, 2, 3].map(index => (
-                <View key={index} style={[styles.dot, {backgroundColor: pin.length > index ? palette.accent : palette.accentSoft}]} />
+            <View style={[styles.dotsRow, compactLayout && styles.dotsRowCompact]}>
+              {[0, 1, 2, 3, 4, 5].map(index => (
+                <View key={index} style={[styles.dot, compactLayout && styles.dotCompact, {backgroundColor: pin.length > index ? palette.accent : palette.accentSoft}]} />
               ))}
             </View>
 
-            <View style={styles.keypadWrap}>
+            <View style={[styles.keypadWrap, compactLayout && styles.keypadWrapCompact]}>
               <View style={[styles.keypad, {gap: keypadGap}]}>
                 {keypadRows.map((row, rowIndex) => (
                   <View key={`row-${rowIndex}`} style={[styles.keyRow, {gap: keypadGap}]}>
@@ -236,25 +266,64 @@ export function AuthGateScreen() {
                           if (cooldownRemaining > 0) {
                             return;
                           }
+                          if (value === 'Clear') {
+                            clearPin();
+                            return;
+                          }
+
+                          if (value === 'Continue') {
+                            submitPin(pin);
+                            return;
+                          }
+
                           submitDigit(value);
                         }}
+                        disabled={(value === 'Continue' && pin.length < 4) || cooldownRemaining > 0}
                         style={[
                           styles.key,
                           {
                             width: keySize,
-                            height: compactLayout ? 58 : 64,
+                            minHeight: ultraCompactLayout ? 48 : compactLayout ? 54 : 60,
                             backgroundColor: palette.surface,
                             borderColor: palette.border,
-                            opacity: cooldownRemaining > 0 ? 0.5 : 1,
+                            opacity:
+                              cooldownRemaining > 0 || (value === 'Continue' && pin.length < 4)
+                                ? 0.5
+                                : 1,
                           },
+                          value === 'Continue' ? styles.primaryKey : null,
                         ]}>
-                        <Text style={[styles.keyText, compactLayout && styles.keyTextCompact, {color: palette.textPrimary}]}>{value}</Text>
+                        <Text
+                          style={[
+                            styles.keyText,
+                            compactLayout && styles.keyTextCompact,
+                            (value === 'Clear' || value === 'Continue') ? styles.keyTextAction : null,
+                            {color: value === 'Continue' ? '#FFFFFF' : palette.textPrimary},
+                          ]}>
+                          {loading && value === 'Continue' ? 'Checking...' : value}
+                        </Text>
                       </Pressable>
                     ))}
                   </View>
                 ))}
               </View>
             </View>
+
+            <Pressable
+              onPress={() => void authenticate()}
+              disabled={loading}
+              style={({pressed}) => [
+                styles.biometricButton,
+                {
+                  backgroundColor: palette.surface,
+                  borderColor: palette.border,
+                  opacity: pressed || loading ? 0.94 : 1,
+                },
+              ]}>
+              <Text style={[styles.biometricButtonText, {color: palette.textSecondary}]}>
+                {loading ? 'Checking...' : 'Use biometrics'}
+              </Text>
+            </Pressable>
           </>
         ) : (
           <View style={[styles.manualCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
@@ -275,28 +344,17 @@ export function AuthGateScreen() {
             </Pressable>
           </View>
         )}
-
-        <View style={styles.footerRow}>
-          <Pressable
-            onPress={() => {
-              setPin('');
-              setManualValue('');
-            }}
-            style={[styles.footerPill, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-            <Text style={[styles.footerText, {color: palette.textSecondary}]}>Clear</Text>
-          </Pressable>
-          <Pressable onPress={() => void authenticate()} style={[styles.footerPill, styles.primaryPill, {backgroundColor: palette.accent}]}>
-            <Text style={[styles.footerText, {color: '#FFFFFF'}]}>{loading ? 'Checking...' : 'Use biometrics'}</Text>
-          </Pressable>
-        </View>
-      </View>
+      </ScrollView>
     </FigmaPage>
   );
 }
 
 const styles = StyleSheet.create({
   fill: {
-    flex: 1,
+    flexGrow: 1,
+  },
+  fillCompact: {
+    paddingBottom: 12,
   },
   headerRow: {
     flexDirection: 'row',
@@ -321,19 +379,28 @@ const styles = StyleSheet.create({
     lineHeight: 10,
   },
   title: {
-    marginTop: 28,
+    marginTop: 18,
     fontSize: 28,
     fontWeight: '800',
     lineHeight: 33,
     letterSpacing: -0.2,
   },
+  titleCompact: {
+    marginTop: 12,
+    fontSize: 24,
+    lineHeight: 28,
+  },
   subtitle: {
-    marginTop: 10,
+    marginTop: 8,
     fontSize: 13,
     lineHeight: 18,
   },
+  subtitleCompact: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
   contextCard: {
-    marginTop: 18,
+    marginTop: 12,
     borderWidth: 1,
     borderRadius: 22,
     paddingHorizontal: 14,
@@ -342,12 +409,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+  contextCardCompact: {
+    marginTop: 10,
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
   contextIcon: {
     width: 42,
     height: 42,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  contextIconCompact: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
   },
   contextIconText: {
     fontSize: 9,
@@ -368,29 +446,32 @@ const styles = StyleSheet.create({
     lineHeight: 11,
   },
   centerArea: {
-    marginTop: 30,
+    marginTop: 18,
     alignItems: 'center',
   },
+  centerAreaCompact: {
+    marginTop: 10,
+  },
   unlockShell: {
-    width: 202,
-    height: 202,
+    width: 144,
+    height: 144,
     alignItems: 'center',
     justifyContent: 'center',
   },
   unlockOrb: {
     position: 'absolute',
-    width: 202,
-    height: 202,
-    borderRadius: 101,
+    width: 144,
+    height: 144,
+    borderRadius: 72,
     backgroundColor: '#171F2F',
   },
   unlockCard: {
-    width: 80,
+    width: 58,
     alignItems: 'center',
   },
   unlockShackle: {
-    width: 34,
-    height: 24,
+    width: 28,
+    height: 20,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     borderWidth: 4,
@@ -399,21 +480,21 @@ const styles = StyleSheet.create({
     marginBottom: -1,
   },
   unlockBody: {
-    width: 72,
-    height: 68,
-    borderRadius: 24,
+    width: 56,
+    height: 52,
+    borderRadius: 18,
     backgroundColor: '#A78BFA',
     alignItems: 'center',
     justifyContent: 'center',
   },
   unlockKeyhole: {
-    width: 13,
-    height: 20,
-    borderRadius: 6,
+    width: 10,
+    height: 16,
+    borderRadius: 5,
     backgroundColor: '#FFFFFF',
   },
   instruction: {
-    marginTop: 14,
+    marginTop: 10,
     textAlign: 'center',
     fontSize: 10,
     lineHeight: 13,
@@ -426,23 +507,47 @@ const styles = StyleSheet.create({
     lineHeight: 12,
   },
   dotsRow: {
-    marginTop: 18,
+    marginTop: 10,
     alignSelf: 'center',
     flexDirection: 'row',
-    gap: 14,
+    gap: 10,
+  },
+  dotsRowCompact: {
+    marginTop: 8,
   },
   dot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  dotCompact: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  biometricButton: {
+    marginTop: 10,
+    minHeight: 44,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  biometricButtonText: {
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 13,
   },
   keypad: {
     width: '100%',
     alignItems: 'center',
   },
   keypadWrap: {
-    marginTop: 24,
+    marginTop: 12,
     alignItems: 'center',
+  },
+  keypadWrapCompact: {
+    marginTop: 8,
   },
   keyRow: {
     flexDirection: 'row',
@@ -462,10 +567,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 17,
   },
-  footerRow: {
-    marginTop: 24,
-    flexDirection: 'row',
-    gap: 12,
+  keyTextAction: {
+    fontSize: 12,
+    lineHeight: 15,
+  },
+  primaryKey: {
+    backgroundColor: figmaPalette.dark.accent,
+    borderColor: 'transparent',
   },
   manualCard: {
     marginTop: 22,
@@ -497,22 +605,6 @@ const styles = StyleSheet.create({
   },
   manualSubmitText: {
     color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '700',
-    lineHeight: 13,
-  },
-  footerPill: {
-    flex: 1,
-    minHeight: 48,
-    borderRadius: 18,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  primaryPill: {
-    borderColor: 'transparent',
-  },
-  footerText: {
     fontSize: 11,
     fontWeight: '700',
     lineHeight: 13,

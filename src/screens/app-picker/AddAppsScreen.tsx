@@ -1,12 +1,13 @@
 import React from 'react';
 import {Alert, FlatList, Image, Pressable, StyleSheet, Text, TextInput, View} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useRoute} from '@react-navigation/native';
+import type {RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
+import {FigmaActionButton, FigmaInnerLayout, figmaPalette} from '../../components/FigmaKit';
+import type {RootStackParamList} from '../../navigation/routes';
 import {nativeBridge} from '../../native';
 import {localDataRepository} from '../../storage/LocalDataRepository';
-import type {LaunchableApp} from '../../types/domain';
-import type {RootStackParamList} from '../../navigation/routes';
+import type {LaunchableApp, ProtectionMode} from '../../types/domain';
 
 function appInitials(label: string) {
   return label
@@ -20,6 +21,7 @@ function appInitials(label: string) {
 
 export function AddAppsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const route = useRoute<RouteProp<RootStackParamList, 'AddApps'>>();
   const palette = figmaPalette.light;
   const [apps, setApps] = React.useState<LaunchableApp[]>([]);
   const [selectedPackageNames, setSelectedPackageNames] = React.useState<string[]>([]);
@@ -27,6 +29,7 @@ export function AddAppsScreen() {
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState('');
+  const presetMode: ProtectionMode = route.params?.preset ?? 'LOCK_HIDE';
 
   const loadApps = React.useCallback(async () => {
     setLoading(true);
@@ -37,9 +40,7 @@ export function AddAppsScreen() {
       const protectedPackages = new Set(protectedApps.map(app => app.packageName));
       const available = discovered.filter(app => !protectedPackages.has(app.packageName));
       setApps(available);
-      setSelectedPackageNames(current =>
-        current.filter(packageName => available.some(app => app.packageName === packageName)),
-      );
+      setSelectedPackageNames(current => current.filter(packageName => available.some(app => app.packageName === packageName)));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load installed apps.');
     } finally {
@@ -54,28 +55,19 @@ export function AddAppsScreen() {
 
   const toggleSelection = React.useCallback((packageName: string) => {
     setSelectedPackageNames(current =>
-      current.includes(packageName)
-        ? current.filter(currentPackageName => currentPackageName !== packageName)
-        : [...current, packageName],
+      current.includes(packageName) ? current.filter(currentPackageName => currentPackageName !== packageName) : [...current, packageName],
     );
   }, []);
 
   const selectedApps = React.useMemo(
-    () =>
-      apps
-        .filter(app => selectedPackageNames.includes(app.packageName))
-        .sort((a, b) => a.label.localeCompare(b.label)),
+    () => apps.filter(app => selectedPackageNames.includes(app.packageName)).sort((a, b) => a.label.localeCompare(b.label)),
     [apps, selectedPackageNames],
   );
 
   const visibleApps = React.useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     const filtered = normalizedQuery
-      ? apps.filter(
-          app =>
-            app.label.toLowerCase().includes(normalizedQuery) ||
-            app.packageName.toLowerCase().includes(normalizedQuery),
-        )
+      ? apps.filter(app => app.label.toLowerCase().includes(normalizedQuery) || app.packageName.toLowerCase().includes(normalizedQuery))
       : apps;
 
     return [...filtered].sort((a, b) => {
@@ -108,8 +100,8 @@ export function AddAppsScreen() {
         draft: {
           app: selected[0],
           apps: selected,
-          mode: 'LOCK_HIDE',
-          authMethod: 'BIOMETRIC_FALLBACK',
+          mode: presetMode,
+          authMethod: settings.defaultLockType ?? 'PIN',
           autoLockSeconds: settings.autoLockSecondsDefault,
         },
         onboarding: !settings.onboardingComplete,
@@ -119,16 +111,20 @@ export function AddAppsScreen() {
     } finally {
       setSaving(false);
     }
-  }, [apps, navigation, selectedPackageNames]);
+  }, [apps, navigation, presetMode, selectedPackageNames]);
+
+  const headline = presetMode === 'HIDE' ? 'Hide apps' : presetMode === 'LOCK' ? 'Lock apps' : 'Hide + Lock apps';
+  const helperCopy =
+    presetMode === 'HIDE'
+      ? 'Choose apps that should disappear from your managed launcher and stay in Hidden Apps.'
+      : presetMode === 'LOCK'
+        ? 'Choose apps that should stay visible but require authentication before opening.'
+        : 'Choose apps that should stay hidden and require authentication before access.';
 
   const renderHeader = React.useCallback(
     () => (
       <View>
-        <Text style={[styles.time, {color: palette.textPrimary}]}>9:41</Text>
-        <Text style={[styles.title, {color: palette.textPrimary}]}>Select apps</Text>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
-          Scan your phone, choose the apps you want to protect, and continue in one simple flow.
-        </Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>{helperCopy}</Text>
 
         <View style={[styles.searchBar, {backgroundColor: palette.surface, borderColor: palette.border}]}>
           <TextInput
@@ -148,9 +144,7 @@ export function AddAppsScreen() {
             <Text style={[styles.metaLabel, {color: palette.textSecondary}]}>Ready to choose</Text>
           </View>
           <View style={[styles.metaCard, {backgroundColor: palette.accentSoft, borderColor: palette.border}]}>
-            <Text style={[styles.metaValue, {color: palette.accent}]}>
-              {selectedPackageNames.length} selected
-            </Text>
+            <Text style={[styles.metaValue, {color: palette.accent}]}>{selectedPackageNames.length} selected</Text>
             <Text style={[styles.metaLabel, {color: palette.textSecondary}]}>Tap again to remove</Text>
           </View>
         </View>
@@ -174,14 +168,14 @@ export function AddAppsScreen() {
         <View style={[styles.helpCard, {backgroundColor: palette.accentSoft, borderColor: palette.border}]}>
           <Text style={[styles.helpTitle, {color: palette.accent}]}>Easy to understand</Text>
           <Text style={[styles.helpText, {color: palette.textSecondary}]}>
-            Choose any app here first. On normal Android phones, Hide is reliable inside this launcher flow, but other launchers may still show the app unless this app is set as the Home launcher.
+            Hide works inside this managed launcher experience. Lock protection continues through the app-auth flow after you save protection.
           </Text>
         </View>
 
         <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Installed apps</Text>
       </View>
     ),
-    [apps.length, palette, query, selectedApps, selectedPackageNames.length, toggleSelection],
+    [apps.length, helperCopy, palette, query, selectedApps, selectedPackageNames.length, toggleSelection],
   );
 
   const renderEmpty = React.useCallback(
@@ -191,9 +185,7 @@ export function AddAppsScreen() {
           {query.trim() ? 'No app matched your search' : 'No launchable apps found'}
         </Text>
         <Text style={[styles.stateText, {color: palette.textSecondary}]}>
-          {query.trim()
-            ? 'Try a shorter app name or clear the search.'
-            : 'Check launcher setup and app discovery permissions, then try again.'}
+          {query.trim() ? 'Try a shorter app name or clear the search.' : 'Check launcher setup and app discovery permissions, then try again.'}
         </Text>
       </View>
     ),
@@ -219,9 +211,7 @@ export function AddAppsScreen() {
             <Image source={{uri: item.iconUri}} style={styles.appArtwork} resizeMode="contain" />
           ) : (
             <View style={[styles.appIcon, {backgroundColor: isSelected ? palette.accent : palette.accentSoft}]}>
-              <Text style={[styles.appIconText, {color: isSelected ? '#FFFFFF' : palette.accent}]}>
-                {appInitials(item.label)}
-              </Text>
+              <Text style={[styles.appIconText, {color: isSelected ? '#FFFFFF' : palette.accent}]}>{appInitials(item.label)}</Text>
             </View>
           )}
           <View style={styles.appBody}>
@@ -229,7 +219,7 @@ export function AddAppsScreen() {
               {item.label}
             </Text>
             <Text style={[styles.appMeta, {color: palette.textSecondary}]} numberOfLines={1}>
-              {item.systemApp ? 'System app' : 'Installed app'} · {item.packageName}
+              {item.systemApp ? 'System app' : 'Installed app'} {'|'} {item.packageName}
             </Text>
           </View>
           <View style={[styles.statusPill, {backgroundColor: isSelected ? palette.accent : palette.accentSoft}]}>
@@ -244,7 +234,7 @@ export function AddAppsScreen() {
   );
 
   return (
-    <FigmaPage variant="light">
+    <FigmaInnerLayout variant="light" title={headline} onBackPress={() => navigation.goBack()}>
       <View style={styles.fill}>
         {loading ? (
           <View style={[styles.stateBox, {backgroundColor: palette.surface, borderColor: palette.border}]}>
@@ -255,9 +245,7 @@ export function AddAppsScreen() {
           <View style={[styles.stateBox, {backgroundColor: palette.surface, borderColor: palette.border}]}>
             <Text style={[styles.stateTitle, {color: palette.textPrimary}]}>Could not load apps</Text>
             <Text style={[styles.stateText, {color: '#D92D20'}]}>{error}</Text>
-            <Pressable
-              onPress={() => void loadApps()}
-              style={[styles.retryButton, {backgroundColor: palette.accentSoft}]}>
+            <Pressable onPress={() => void loadApps()} style={[styles.retryButton, {backgroundColor: palette.accentSoft}]}>
               <Text style={[styles.retryText, {color: palette.accent}]}>Try again</Text>
             </Pressable>
           </View>
@@ -284,7 +272,7 @@ export function AddAppsScreen() {
           onPress={() => void continueNext()}
         />
       </View>
-    </FigmaPage>
+    </FigmaInnerLayout>
   );
 }
 
@@ -292,20 +280,8 @@ const styles = StyleSheet.create({
   fill: {
     flex: 1,
   },
-  time: {
-    fontSize: 10,
-    fontWeight: '700',
-    lineHeight: 12,
-  },
-  title: {
-    marginTop: 28,
-    fontSize: 40,
-    fontWeight: '800',
-    lineHeight: 48,
-    letterSpacing: -0.8,
-  },
   subtitle: {
-    marginTop: 10,
+    marginTop: 6,
     fontSize: 14,
     lineHeight: 18,
   },

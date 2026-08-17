@@ -2,122 +2,92 @@ import React from 'react';
 import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {FigmaBanner, FigmaBottomNav, FigmaPage, figmaPalette} from '../../components/FigmaKit';
+import {FigmaBottomNav, FigmaRootLayout, figmaPalette} from '../../components/FigmaKit';
 import type {RootStackParamList} from '../../navigation/routes';
+import {usePrimaryDrawer} from '../../navigation/usePrimaryDrawer';
+import {nativeBridge} from '../../native';
+import {describeProtection, lockTypeLabel} from '../../services/protection/protectionState';
 import {localDataRepository} from '../../storage/LocalDataRepository';
-import type {AppProtection, AppSettings} from '../../types/domain';
+import type {AppProtection, AppSettings, PermissionStatus} from '../../types/domain';
 
-function formatPrimaryLock(settings: AppSettings): string {
-  return settings.primaryAuthMethod === 'PASSWORD'
-    ? 'Password'
-    : settings.primaryAuthMethod === 'PATTERN'
-      ? 'Pattern'
-      : 'Fingerprint + PIN';
-}
-
-function formatSecretAccess(settings: AppSettings): string {
-  return settings.secretEntryMethod === 'CALCULATOR_CODE'
-    ? 'Calculator code'
-    : settings.secretEntryMethod === 'DOUBLE_TAP'
-      ? 'Double tap'
-      : settings.secretEntryMethod === 'TRIPLE_TAP'
-        ? 'Triple tap'
-        : settings.secretEntryMethod === 'LONG_PRESS'
-          ? 'Long press'
-          : 'Pinch / spread';
-}
-
-function formatAutoLock(seconds: number): string {
-  return seconds <= 30 ? '30 seconds' : seconds < 60 ? `${seconds} seconds` : `${seconds / 60} minutes`;
-}
-
-function SettingRow(props: {title: string; subtitle: string; onPress?: () => void; palette: typeof figmaPalette.light}) {
+function GroupCard(props: {
+  title: string;
+  rows: Array<{title: string; subtitle: string; onPress: () => void}>;
+  palette: typeof figmaPalette.light;
+}) {
   return (
-    <Pressable
-      onPress={props.onPress}
-      style={({pressed}) => [
-        styles.row,
-        {
-          backgroundColor: props.palette.surface,
-          borderColor: props.palette.border,
-          opacity: pressed ? 0.94 : 1,
-        },
-      ]}>
-      <View style={styles.rowBody}>
-        <Text style={[styles.rowTitle, {color: props.palette.textPrimary}]}>{props.title}</Text>
-        <Text style={[styles.rowSubtitle, {color: props.palette.textSecondary}]}>{props.subtitle}</Text>
+    <View style={[styles.groupCard, {backgroundColor: props.palette.surface, borderColor: props.palette.border}]}>
+      <Text style={[styles.groupTitle, {color: props.palette.textPrimary}]}>{props.title}</Text>
+      <View style={styles.groupRows}>
+        {props.rows.map(row => (
+          <Pressable key={row.title} onPress={row.onPress} style={styles.row}>
+            <View style={styles.rowBody}>
+              <Text style={[styles.rowTitle, {color: props.palette.textPrimary}]}>{row.title}</Text>
+              <Text style={[styles.rowSubtitle, {color: props.palette.textSecondary}]}>{row.subtitle}</Text>
+            </View>
+            <Text style={[styles.rowChevron, {color: props.palette.textSecondary}]}>{'>'}</Text>
+          </Pressable>
+        ))}
       </View>
-      <Text style={[styles.chevron, {color: props.palette.textSecondary}]}>{'>'}</Text>
-    </Pressable>
+    </View>
   );
 }
 
 export function SettingsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const palette = figmaPalette.light;
+  const {drawerOpen, openDrawer, closeDrawer, drawerDestinations} = usePrimaryDrawer();
   const [settings, setSettings] = React.useState<AppSettings | null>(null);
   const [protectedApps, setProtectedApps] = React.useState<AppProtection[]>([]);
+  const [permissionStatuses, setPermissionStatuses] = React.useState<PermissionStatus[]>([]);
 
   React.useEffect(() => {
     void localDataRepository.getSettings().then(setSettings);
     void localDataRepository.getProtectedApps().then(setProtectedApps);
-    const unsubscribeSettings = localDataRepository.subscribeToSettings(next => {
-      setSettings(next);
-    });
-    const unsubscribeApps = localDataRepository.subscribeToProtectedApps(next => {
-      setProtectedApps(next);
-    });
+    void nativeBridge.getPermissionStatuses().then(setPermissionStatuses);
+    const unsubscribeSettings = localDataRepository.subscribeToSettings(setSettings);
+    const unsubscribeApps = localDataRepository.subscribeToProtectedApps(setProtectedApps);
+
     return () => {
       unsubscribeSettings();
       unsubscribeApps();
     };
   }, []);
 
-  const rows = settings
-    ? [
-        ['Appearance', settings.theme === 'SYSTEM' ? 'System / Light / Dark' : settings.theme],
-        ['Primary lock', formatPrimaryLock(settings)],
-        ['Secret access', formatSecretAccess(settings)],
-        ['Auto-lock', formatAutoLock(settings.autoLockSecondsDefault)],
-        ['Manage apps', `${protectedApps.length} protected`],
-        ['Privacy info', 'On-device only'],
-      ]
-    : [];
+  if (!settings) {
+    return (
+      <FigmaRootLayout
+        variant="light"
+        title="Settings"
+        drawerTitle="Smart App Lock"
+        drawerOpen={drawerOpen}
+        onDrawerOpen={openDrawer}
+        onDrawerClose={closeDrawer}
+        drawerDestinations={drawerDestinations}>
+        <View style={styles.loadingShell}>
+          <Text style={[styles.loadingText, {color: palette.textSecondary}]}>Loading settings...</Text>
+        </View>
+      </FigmaRootLayout>
+    );
+  }
+
+  const hiddenApps = protectedApps.filter(app => app.isHidden);
+  const lockedApps = protectedApps.filter(app => app.isLocked);
+  const hideAndLockApps = protectedApps.filter(app => app.isHidden && app.isLocked);
+  const sampleProtectedApp = protectedApps[0];
+  const launcherStatus = permissionStatuses.find(item => item.key === 'defaultLauncher');
+  const backgroundStatus = permissionStatuses.find(item => item.key === 'backgroundProtection');
 
   return (
-    <FigmaPage variant="light">
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.time, {color: palette.textPrimary}]}>9:41</Text>
-        <Text style={[styles.title, {color: palette.textPrimary}]}>Settings</Text>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Privacy & appearance.</Text>
-
-        <FigmaBanner screen="settings" variant="light" title="Banner ad" tone="surface" />
-
-        <View style={styles.list}>
-          {rows.map(([title, subtitle]) => (
-            <SettingRow
-              key={title}
-              title={title}
-              subtitle={subtitle}
-              palette={palette}
-              onPress={
-                title === 'Appearance'
-                  ? () => navigation.navigate('AppearanceSettings')
-                  : title === 'Primary lock'
-                    ? () => navigation.navigate('PrimaryLock')
-                    : title === 'Secret access'
-                      ? () => navigation.navigate('SecretEntry')
-                      : title === 'Auto-lock'
-                        ? () => navigation.navigate('AutoLockSettings')
-                        : title === 'Manage apps'
-                          ? () => navigation.navigate('ManageApps')
-                          : () => navigation.navigate('PrivacyCenter')
-              }
-            />
-          ))}
-        </View>
-
-        <View style={styles.bottomSpacer} />
+    <FigmaRootLayout
+      variant="light"
+      title="Settings"
+      drawerTitle="Smart App Lock"
+      drawerOpen={drawerOpen}
+      onDrawerOpen={openDrawer}
+      onDrawerClose={closeDrawer}
+      drawerDestinations={drawerDestinations}
+      bottomNav={
         <FigmaBottomNav
           variant="light"
           active="settings"
@@ -125,8 +95,115 @@ export function SettingsScreen() {
           onGalleryPress={() => navigation.navigate('Gallery')}
           onSettingsPress={() => navigation.navigate('Settings')}
         />
+      }>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
+          Update security, secret access, disguise, and protected-app controls from one place.
+        </Text>
+
+        <GroupCard
+          title="Security"
+          palette={palette}
+          rows={[
+            {
+              title: 'Primary Lock',
+              subtitle: `Current default: ${lockTypeLabel(settings.defaultLockType)}`,
+              onPress: () => navigation.navigate('PrimaryLock'),
+            },
+            {
+              title: 'Per-App Lock',
+              subtitle: sampleProtectedApp ? `${sampleProtectedApp.label}: ${describeProtection(sampleProtectedApp)}` : 'No protected apps yet',
+              onPress: () => navigation.navigate('ManageApps'),
+            },
+          ]}
+        />
+
+        <GroupCard
+          title="Secret Access"
+          palette={palette}
+          rows={[
+            {
+              title: 'Access Method',
+              subtitle: settings.secretAccessType.replace('_', ' '),
+              onPress: () => navigation.navigate('SecretEntry'),
+            },
+            {
+              title: 'Calculator Secret',
+              subtitle: settings.calculatorSecret ? 'Configured' : 'Not set',
+              onPress: () => navigation.navigate('SecretEntry'),
+            },
+          ]}
+        />
+
+        <GroupCard
+          title="App Disguise"
+          palette={palette}
+          rows={[
+            {
+              title: 'Current Disguise',
+              subtitle: settings.disguiseType,
+              onPress: () => navigation.navigate('SecretEntry'),
+            },
+          ]}
+        />
+
+        <GroupCard
+          title="Protected Apps"
+          palette={palette}
+          rows={[
+            {
+              title: 'Hidden Apps',
+              subtitle: `${hiddenApps.length} app${hiddenApps.length === 1 ? '' : 's'}`,
+              onPress: () => navigation.navigate('Vault'),
+            },
+            {
+              title: 'Locked Apps',
+              subtitle: `${lockedApps.length} app${lockedApps.length === 1 ? '' : 's'}`,
+              onPress: () => navigation.navigate('ManageApps'),
+            },
+            {
+              title: 'Hide + Lock',
+              subtitle: `${hideAndLockApps.length} app${hideAndLockApps.length === 1 ? '' : 's'}`,
+              onPress: () => navigation.navigate('ManageApps'),
+            },
+          ]}
+        />
+
+        <GroupCard
+          title="Recovery"
+          palette={palette}
+          rows={[
+            {
+              title: 'Forgot PIN',
+              subtitle: 'Reset local credentials without any cloud bypass',
+              onPress: () => navigation.navigate('PrivacyCenter'),
+            },
+            {
+              title: 'Reset Security',
+              subtitle: 'Reconfigure credentials and secret access',
+              onPress: () => navigation.navigate('PrivacyCenter'),
+            },
+          ]}
+        />
+
+        <GroupCard
+          title="Permissions"
+          palette={palette}
+          rows={[
+            {
+              title: 'Launcher Status',
+              subtitle: launcherStatus ? launcherStatus.status.replace(/_/g, ' ') : 'Check launcher role and setup',
+              onPress: () => navigation.navigate('PrivacyCenter'),
+            },
+            {
+              title: 'Background Protection',
+              subtitle: backgroundStatus ? backgroundStatus.status.replace(/_/g, ' ') : `Auto-lock ${settings.autoLockSecondsDefault}s`,
+              onPress: () => navigation.navigate('AutoLockSettings'),
+            },
+          ]}
+        />
       </ScrollView>
-    </FigmaPage>
+    </FigmaRootLayout>
   );
 }
 
@@ -134,55 +211,58 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 18,
   },
-  time: {
-    fontSize: 10,
-    fontWeight: '700',
-    lineHeight: 12,
+  loadingShell: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  title: {
-    marginTop: 28,
-    fontSize: 40,
-    fontWeight: '800',
-    lineHeight: 48,
-    letterSpacing: -0.8,
-  },
-  subtitle: {
-    marginTop: 10,
+  loadingText: {
     fontSize: 14,
     lineHeight: 18,
   },
-  list: {
-    marginTop: 34,
-    gap: 14,
+  subtitle: {
+    marginTop: 6,
+    fontSize: 14,
+    lineHeight: 19,
+  },
+  groupCard: {
+    marginTop: 18,
+    borderRadius: 28,
+    borderWidth: 1,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+  },
+  groupTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    lineHeight: 20,
+  },
+  groupRows: {
+    marginTop: 10,
+    gap: 10,
   },
   row: {
-    minHeight: 112,
-    borderWidth: 1,
-    borderRadius: 30,
-    paddingHorizontal: 32,
-    paddingVertical: 22,
+    minHeight: 68,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
   },
   rowBody: {
     flex: 1,
-    gap: 10,
   },
   rowTitle: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '700',
-    lineHeight: 22,
+    lineHeight: 18,
   },
   rowSubtitle: {
+    marginTop: 4,
     fontSize: 11,
     lineHeight: 15,
   },
-  chevron: {
-    fontSize: 24,
-    lineHeight: 28,
+  rowChevron: {
+    fontSize: 20,
+    lineHeight: 24,
     fontWeight: '700',
-  },
-  bottomSpacer: {
-    height: 372,
   },
 });

@@ -2,58 +2,43 @@ import React from 'react';
 import {Image, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import type {RouteProp} from '@react-navigation/native';
 import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import type {RootStackParamList} from '../../navigation/routes';
-import type {RouteProp} from '@react-navigation/native';
+import type {AppProtection, AuthMethod} from '../../types/domain';
 import {protectionManager} from '../../services/protection/ProtectionManager';
-import type {AppProtection, AuthMethod, ProtectionMode} from '../../types/domain';
 import {buildProtectionPolicy} from '../app-picker/buildProtectionPolicy';
+import {describeProtection, lockTypeLabel, normalizeProtection, protectionModeFromFlags} from '../../services/protection/protectionState';
 import {localDataRepository} from '../../storage/LocalDataRepository';
 
-function ModeCard(props: {
+function ToggleCard(props: {
   title: string;
   subtitle: string;
-  selected?: boolean;
+  enabled: boolean;
+  onPress: () => void;
   palette: typeof figmaPalette.dark;
-  onPress?: () => void;
 }) {
   return (
     <Pressable
       onPress={props.onPress}
       style={({pressed}) => [
-        styles.modeCard,
+        styles.toggleCard,
         {
-          backgroundColor: props.selected ? props.palette.accentSoft : props.palette.surface,
-          borderColor: props.selected ? props.palette.accent : props.palette.border,
+          backgroundColor: props.enabled ? props.palette.accentSoft : props.palette.surface,
+          borderColor: props.enabled ? props.palette.accent : props.palette.border,
           opacity: pressed ? 0.94 : 1,
         },
       ]}>
-      <View style={[styles.modeBadge, {backgroundColor: props.selected ? props.palette.accent : props.palette.accentSoft}]}>
-        <Text style={[styles.modeBadgeText, {color: props.selected ? '#FFFFFF' : props.palette.accent}]}>
-          {props.selected ? 'Selected' : 'Mode'}
+      <View style={styles.toggleBody}>
+        <Text style={[styles.toggleTitle, {color: props.palette.textPrimary}]}>{props.title}</Text>
+        <Text style={[styles.toggleSubtitle, {color: props.palette.textSecondary}]}>{props.subtitle}</Text>
+      </View>
+      <View style={[styles.togglePill, {backgroundColor: props.enabled ? props.palette.accent : props.palette.accentSoft}]}>
+        <Text style={[styles.togglePillText, {color: props.enabled ? '#FFFFFF' : props.palette.accent}]}>
+          {props.enabled ? 'On' : 'Off'}
         </Text>
       </View>
-      <View style={styles.modeBody}>
-        <Text style={[styles.modeTitle, {color: props.palette.textPrimary}]}>{props.title}</Text>
-        <Text style={[styles.modeSubtitle, {color: props.palette.textSecondary}]}>{props.subtitle}</Text>
-      </View>
     </Pressable>
-  );
-}
-
-function AppArtwork(props: {
-  label: string;
-  iconUri?: string;
-  palette: typeof figmaPalette.dark;
-}) {
-  if (props.iconUri) {
-    return <Image source={{uri: props.iconUri}} style={styles.appArtwork} resizeMode="contain" />;
-  }
-
-  return (
-    <View style={[styles.appIcon, {backgroundColor: props.palette.accentSoft}]}>
-      <Text style={[styles.appIconText, {color: props.palette.accent}]}>{props.label.slice(0, 2).toUpperCase()}</Text>
-    </View>
   );
 }
 
@@ -61,15 +46,11 @@ export function ProtectionModeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'ProtectionMode'>>();
   const palette = figmaPalette.dark;
-  const [draft, setDraft] = React.useState<AppProtection>(() => buildProtectionPolicy(route.params.draft));
-  const selectedApps = route.params.draft.apps ?? [route.params.draft.app];
+  const [draft, setDraft] = React.useState<AppProtection>(() => normalizeProtection(buildProtectionPolicy(route.params.draft)));
   const [saving, setSaving] = React.useState(false);
+  const selectedApps = route.params.draft.apps ?? [route.params.draft.app];
   const authOptions: AuthMethod[] = ['PIN', 'PASSWORD', 'PATTERN', 'BIOMETRIC_FALLBACK'];
   const autoLockOptions = [30, 60, 300, 900];
-
-  const updateDraft = React.useCallback((patch: Partial<AppProtection>) => {
-    setDraft(current => ({...current, ...patch}));
-  }, []);
 
   React.useEffect(() => {
     if (route.params.onboarding) {
@@ -77,70 +58,127 @@ export function ProtectionModeScreen() {
     }
   }, [route.params.onboarding]);
 
+  const updateDraft = React.useCallback((patch: Partial<AppProtection>) => {
+    setDraft(current => normalizeProtection({...current, ...patch}));
+  }, []);
+
+  const saveProtection = React.useCallback(async () => {
+    setSaving(true);
+    try {
+      const protection = normalizeProtection(draft);
+      await Promise.all(
+        selectedApps.map(app =>
+          protectionManager.upsertProtection({
+            ...protection,
+            packageName: app.packageName,
+            label: app.label,
+            appName: app.label,
+            iconUri: app.iconUri,
+            icon: app.iconUri,
+            updatedAt: Date.now(),
+          }),
+        ),
+      );
+
+      if (route.params.onboarding) {
+        await localDataRepository.setOnboardingResumeRoute('SecretEntry');
+        navigation.navigate('SecretEntry');
+      } else {
+        navigation.reset({index: 0, routes: [{name: 'PrivateHome'}]});
+      }
+    } finally {
+      setSaving(false);
+    }
+  }, [draft, navigation, route.params.onboarding, selectedApps]);
+
+  const selectionTitle = selectedApps.length === 1 ? draft.label : `${selectedApps.length} selected apps`;
+  const summary = describeProtection(draft);
+
   return (
     <FigmaPage variant="dark">
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.topRow}>
           <Text style={[styles.time, {color: palette.textPrimary}]}>9:41</Text>
           <View style={[styles.stepPill, {backgroundColor: palette.accentSoft}]}>
-            <Text style={[styles.stepText, {color: palette.accent}]}>4 of 4</Text>
+            <Text style={[styles.stepText, {color: palette.accent}]}>
+              {route.params.onboarding ? 'Setup' : 'Edit'}
+            </Text>
           </View>
         </View>
 
-        <Text style={[styles.title, {color: palette.textPrimary}]}>Set protection mode</Text>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Pick the exact protection, authentication, and timeout you want for this app.</Text>
+        <Text style={[styles.title, {color: palette.textPrimary}]}>App protection</Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
+          Turn Hide and Lock on or off independently, then adjust the lock type if this app needs authentication.
+        </Text>
 
         <View style={[styles.appCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-          <AppArtwork label={draft.label} iconUri={draft.iconUri} palette={palette} />
+          {draft.iconUri ? (
+            <Image source={{uri: draft.iconUri}} style={styles.appArtwork} resizeMode="contain" />
+          ) : (
+            <View style={[styles.appIcon, {backgroundColor: palette.accentSoft}]}>
+              <Text style={[styles.appIconText, {color: palette.accent}]}>{draft.label.slice(0, 2).toUpperCase()}</Text>
+            </View>
+          )}
           <View style={styles.appBody}>
-          <Text style={[styles.appTitle, {color: palette.textPrimary}]}>{selectedApps.length === 1 ? draft.label : `${selectedApps.length} selected apps`}</Text>
-          <Text style={[styles.appSubtitle, {color: palette.textSecondary}]}>{selectedApps.length === 1 ? 'Protected app profile' : 'Shared protection profile'}</Text>
+            <Text style={[styles.appTitle, {color: palette.textPrimary}]}>{selectionTitle}</Text>
+            <Text style={[styles.appSubtitle, {color: palette.textSecondary}]}>{summary}</Text>
           </View>
         </View>
 
         <View style={styles.cards}>
-          <ModeCard palette={palette} title="None" subtitle="Open normally" selected={draft.mode === 'NONE'} onPress={() => updateDraft({mode: 'NONE'})} />
-          <ModeCard palette={palette} title="Lock" subtitle="Authenticate to open" selected={draft.mode === 'LOCK'} onPress={() => updateDraft({mode: 'LOCK'})} />
-          <ModeCard palette={palette} title="Hide" subtitle="Remove from launcher" selected={draft.mode === 'HIDE'} onPress={() => updateDraft({mode: 'HIDE'})} />
-          <ModeCard palette={palette} title="Lock + Hide" subtitle="Hide + authenticate" selected={draft.mode === 'LOCK_HIDE'} onPress={() => updateDraft({mode: 'LOCK_HIDE'})} />
+          <ToggleCard
+            title="Hide"
+            subtitle="Keep the app out of the managed launcher and show it only in Hidden Apps."
+            enabled={draft.isHidden}
+            onPress={() => updateDraft({isHidden: !draft.isHidden, enabled: !draft.isHidden || draft.isLocked})}
+            palette={palette}
+          />
+          <ToggleCard
+            title="Lock"
+            subtitle="Require authentication before opening the app."
+            enabled={draft.isLocked}
+            onPress={() => updateDraft({isLocked: !draft.isLocked, enabled: draft.isHidden || !draft.isLocked})}
+            palette={palette}
+          />
         </View>
 
         <View style={[styles.notice, {backgroundColor: palette.accentSoft, borderColor: palette.border}]}>
           <Text style={[styles.noticeText, {color: palette.accent}]}>
-            {draft.mode === 'NONE'
-              ? 'None keeps the app visible and launches it normally through the central policy check.'
-              : draft.mode === 'LOCK'
-                ? 'Lock keeps the app visible and requires authentication before it opens.'
-                : draft.mode === 'HIDE'
-                  ? 'Hide keeps the app inside this launcher flow and still available in the vault.'
-                  : 'Lock + Hide keeps the app inside the vault flow and still requires authentication before opening.'}
+            {draft.isHidden && draft.isLocked
+              ? 'Hide + Lock: Secret Access opens the lock screen first, then Hidden Apps.'
+              : draft.isHidden
+                ? 'Hide only: Secret Access opens Hidden Apps directly.'
+                : draft.isLocked
+                  ? 'Lock only: the app stays visible and opens through the lock screen.'
+                  : 'This app is currently visible and unlocked.'}
           </Text>
         </View>
 
         <View style={styles.infoStack}>
           <View style={[styles.infoSection, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-            <Text style={[styles.infoTitle, {color: palette.textPrimary}]}>Authentication</Text>
+            <Text style={[styles.infoTitle, {color: palette.textPrimary}]}>Lock type</Text>
             <View style={styles.optionWrap}>
               {authOptions.map(option => {
-                const selected = draft.authMethod === option;
+                const selected = (draft.lockType ?? draft.authMethod ?? 'PIN') === option;
                 return (
                   <Pressable
                     key={option}
-                    onPress={() => updateDraft({authMethod: option})}
+                    onPress={() => updateDraft({lockType: option, authMethod: option})}
                     style={[styles.optionPill, {backgroundColor: selected ? palette.accent : palette.accentSoft}]}>
                     <Text style={[styles.optionText, {color: selected ? '#FFFFFF' : palette.accent}]}>
-                      {option === 'BIOMETRIC_FALLBACK' ? 'Biometric + fallback' : option}
+                      {option === 'BIOMETRIC_FALLBACK' ? 'Biometric + PIN' : lockTypeLabel(option)}
                     </Text>
                   </Pressable>
                 );
               })}
             </View>
           </View>
+
           <View style={[styles.infoSection, {backgroundColor: palette.surface, borderColor: palette.border}]}>
             <Text style={[styles.infoTitle, {color: palette.textPrimary}]}>Auto-lock</Text>
             <View style={styles.optionWrap}>
               {autoLockOptions.map(seconds => {
-                const selected = draft.autoLockSeconds === seconds;
+                const selected = (draft.autoLockSeconds ?? 30) === seconds;
                 return (
                   <Pressable
                     key={seconds}
@@ -156,36 +194,25 @@ export function ProtectionModeScreen() {
           </View>
         </View>
 
+        <View style={[styles.summaryCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+          <Text style={[styles.summaryTitle, {color: palette.textPrimary}]}>Resulting flow</Text>
+          <Text style={[styles.summaryBody, {color: palette.textSecondary}]}>
+            {protectionModeFromFlags(draft) === 'HIDE'
+              ? 'Secret Access → Hidden Apps'
+              : protectionModeFromFlags(draft) === 'LOCK'
+                ? 'Open App → Lock Screen → App'
+                : protectionModeFromFlags(draft) === 'LOCK_HIDE'
+                  ? 'Secret Access → Lock Screen → Hidden Apps'
+                  : 'Open App normally'}
+          </Text>
+        </View>
+
         <View style={styles.spacer} />
 
         <FigmaActionButton
           variant="dark"
-          label={saving ? 'Saving...' : 'Save protection'}
-          onPress={() => {
-            void (async () => {
-              setSaving(true);
-              try {
-                await Promise.all(
-                  selectedApps.map(app =>
-                    protectionManager.upsertProtection({
-                      ...draft,
-                      packageName: app.packageName,
-                      label: app.label,
-                      updatedAt: Date.now(),
-                    }),
-                  ),
-                );
-                if (route.params.onboarding) {
-                  await localDataRepository.setOnboardingResumeRoute('SecretEntry');
-                  navigation.navigate('SecretEntry');
-                } else {
-                  navigation.reset({index: 0, routes: [{name: 'PrivateHome'}]});
-                }
-              } finally {
-                setSaving(false);
-              }
-            })();
-          }}
+          label={saving ? 'Saving...' : route.params.onboarding ? 'Save and continue' : 'Save protection'}
+          onPress={() => void saveProtection()}
         />
       </ScrollView>
     </FigmaPage>
@@ -220,15 +247,15 @@ const styles = StyleSheet.create({
   },
   title: {
     marginTop: 28,
-    fontSize: 40,
+    fontSize: 34,
     fontWeight: '800',
-    lineHeight: 48,
-    letterSpacing: -0.8,
+    lineHeight: 40,
+    letterSpacing: -0.5,
   },
   subtitle: {
     marginTop: 10,
     fontSize: 14,
-    lineHeight: 18,
+    lineHeight: 19,
   },
   appCard: {
     marginTop: 24,
@@ -267,15 +294,15 @@ const styles = StyleSheet.create({
   },
   appSubtitle: {
     marginTop: 4,
-    fontSize: 10,
-    lineHeight: 13,
+    fontSize: 11,
+    lineHeight: 15,
   },
   cards: {
     marginTop: 18,
     gap: 14,
   },
-  modeCard: {
-    minHeight: 88,
+  toggleCard: {
+    minHeight: 96,
     borderRadius: 28,
     borderWidth: 1,
     paddingHorizontal: 18,
@@ -284,31 +311,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 16,
   },
-  modeBadge: {
-    minWidth: 88,
-    minHeight: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 14,
-  },
-  modeBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    lineHeight: 12,
-  },
-  modeBody: {
+  toggleBody: {
     flex: 1,
   },
-  modeTitle: {
+  toggleTitle: {
     fontSize: 15,
     fontWeight: '800',
     lineHeight: 18,
   },
-  modeSubtitle: {
-    marginTop: 4,
+  toggleSubtitle: {
+    marginTop: 6,
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  togglePill: {
+    minWidth: 60,
+    minHeight: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  togglePillText: {
     fontSize: 10,
-    lineHeight: 14,
+    fontWeight: '700',
+    lineHeight: 12,
   },
   notice: {
     marginTop: 16,
@@ -356,6 +383,23 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     lineHeight: 13,
+  },
+  summaryCard: {
+    marginTop: 16,
+    borderRadius: 24,
+    borderWidth: 1,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+  },
+  summaryTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 16,
+  },
+  summaryBody: {
+    marginTop: 8,
+    fontSize: 12,
+    lineHeight: 17,
   },
   spacer: {
     flex: 1,

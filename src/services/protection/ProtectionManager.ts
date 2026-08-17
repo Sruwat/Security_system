@@ -1,6 +1,7 @@
 import {localDataRepository} from '../../storage/LocalDataRepository';
 import type {AppProtection, LaunchDecision, ProtectionMode} from '../../types/domain';
 import {sessionManager} from '../session/SessionManager';
+import {normalizeProtection, protectionModeFromFlags} from './protectionState';
 
 export class ProtectionManager {
   async getProtection(packageName: string): Promise<AppProtection | undefined> {
@@ -13,7 +14,7 @@ export class ProtectionManager {
   }
 
   async upsertProtection(policy: AppProtection): Promise<void> {
-    await localDataRepository.addProtectedApp(policy);
+    await localDataRepository.addProtectedApp(normalizeProtection(policy));
   }
 
   async removeProtection(packageName: string): Promise<void> {
@@ -50,6 +51,10 @@ export class ProtectionManager {
       default:
         return {launchable: false, requiresAuthentication: false, requiresSecretEntry: false, reason: 'Unknown mode'};
     }
+  }
+
+  evaluateProtection(protection: Pick<AppProtection, 'isHidden' | 'isLocked'>, packageName: string, hasSession = false): LaunchDecision {
+    return this.evaluateDecision(protectionModeFromFlags(protection), packageName, hasSession);
   }
 }
 

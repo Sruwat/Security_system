@@ -1,10 +1,12 @@
 import React from 'react';
-import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {Alert, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
+import {FigmaActionButton, FigmaInnerLayout, figmaPalette} from '../../components/FigmaKit';
+import {nativeBridge} from '../../native';
 import type {RootStackParamList} from '../../navigation/routes';
 import {localDataRepository} from '../../storage/LocalDataRepository';
+import type {LauncherState} from '../../types/domain';
 
 function LauncherRow(props: {title: string; subtitle: string; palette: typeof figmaPalette.light; onPress: () => void}) {
   return (
@@ -30,21 +32,43 @@ function LauncherRow(props: {title: string; subtitle: string; palette: typeof fi
 export function LauncherSetupScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const palette = figmaPalette.light;
+  const [launcherState, setLauncherState] = React.useState<LauncherState>({isDefaultLauncher: false, activeDisguise: 'default'});
+
+  const refreshLauncherState = React.useCallback(async () => {
+    setLauncherState(await nativeBridge.getLauncherState());
+  }, []);
 
   React.useEffect(() => {
     void localDataRepository.setOnboardingResumeRoute('LauncherSetup');
-  }, []);
+    void refreshLauncherState();
+  }, [refreshLauncherState]);
 
   return (
-    <FigmaPage variant="light">
+    <FigmaInnerLayout variant="light" title="Launcher Setup" onBackPress={() => navigation.goBack()}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.time, {color: palette.textPrimary}]}>9:41</Text>
-        <Text style={[styles.title, {color: palette.textPrimary}]}>Launcher setup</Text>
         <Text style={[styles.subtitle, {color: palette.textSecondary}]}>One-time Android setup.</Text>
 
         <View style={styles.rows}>
-          <LauncherRow palette={palette} title="Default launcher" subtitle="Set this app as Home launcher" onPress={() => undefined} />
-          <LauncherRow palette={palette} title="App discovery" subtitle="Allow permitted app discovery" onPress={() => undefined} />
+          <LauncherRow
+            palette={palette}
+            title="Default launcher"
+            subtitle={launcherState.isDefaultLauncher ? 'Enabled on this device' : 'Set this app as Home launcher'}
+            onPress={() => {
+              void nativeBridge.requestLauncherSelection()
+                .then(refreshLauncherState)
+                .catch(error => {
+                  Alert.alert('Launcher setup failed', error instanceof Error ? error.message : 'Unable to open launcher settings.');
+                });
+            }}
+          />
+          <LauncherRow
+            palette={palette}
+            title="App discovery"
+            subtitle="Refresh installed apps and confirm package access is working."
+            onPress={() => {
+              void refreshLauncherState();
+            }}
+          />
         </View>
 
         <View style={[styles.noteCard, {backgroundColor: palette.accentSoft, borderColor: palette.border}]}>
@@ -63,7 +87,7 @@ export function LauncherSetupScreen() {
           }}
         />
       </ScrollView>
-    </FigmaPage>
+    </FigmaInnerLayout>
   );
 }
 
@@ -71,32 +95,8 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 24,
   },
-  time: {
-    fontSize: 10,
-    fontWeight: '700',
-    lineHeight: 12,
-  },
-  title: {
-    marginTop: 28,
-    fontSize: 40,
-    fontWeight: '800',
-    lineHeight: 48,
-    letterSpacing: -0.8,
-  },
-  stepPill: {
-    minHeight: 30,
-    borderRadius: 15,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepPillText: {
-    fontSize: 8,
-    lineHeight: 10,
-    fontWeight: '700',
-  },
   subtitle: {
-    marginTop: 10,
+    marginTop: 6,
     fontSize: 14,
     lineHeight: 18,
   },
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     minHeight: 112,
     borderWidth: 1,
     borderRadius: 30,
-    paddingHorizontal: 32,
+    paddingHorizontal: 24,
     paddingVertical: 22,
     flexDirection: 'row',
     alignItems: 'center',
@@ -128,11 +128,11 @@ const styles = StyleSheet.create({
   },
   noteCard: {
     marginTop: 16,
-    minHeight: 218,
+    minHeight: 148,
     borderWidth: 1,
     borderRadius: 30,
-    paddingHorizontal: 36,
-    paddingVertical: 44,
+    paddingHorizontal: 24,
+    paddingVertical: 28,
   },
   noteTitle: {
     fontSize: 18,
@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   noteBody: {
-    marginTop: 34,
+    marginTop: 20,
     fontSize: 11,
     lineHeight: 15,
   },
@@ -151,5 +151,6 @@ const styles = StyleSheet.create({
   },
   spacer: {
     flex: 1,
+    minHeight: 20,
   },
 });

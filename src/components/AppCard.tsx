@@ -2,16 +2,18 @@ import React from 'react';
 import {Pressable, StyleSheet, Text, View, useColorScheme} from 'react-native';
 import {themeTokens} from '../theme';
 import type {AppProtection} from '../types/domain';
+import {lockTypeLabel, protectionModeFromFlags} from '../services/protection/protectionState';
 
 export function AppCard(props: {app: AppProtection; onPress?: () => void}) {
   const scheme = useColorScheme();
   const palette = themeTokens.colors[scheme === 'dark' ? 'dark' : 'light'];
+  const mode = props.app.mode ?? protectionModeFromFlags(props.app);
   const modeColor =
-    props.app.mode === 'NONE'
+    mode === 'NONE'
       ? palette.textSecondary
-      : props.app.mode === 'LOCK'
+      : mode === 'LOCK'
         ? palette.success
-        : props.app.mode === 'HIDE'
+        : mode === 'HIDE'
           ? palette.accent
           : palette.danger;
 
@@ -26,13 +28,15 @@ export function AppCard(props: {app: AppProtection; onPress?: () => void}) {
         <Text style={[styles.title, {color: palette.textPrimary}]}>{props.app.label}</Text>
         <View style={styles.metaRow}>
           <View style={[styles.pill, {backgroundColor: palette.accentSoft, borderColor: palette.border}]}>
-            <Text style={[styles.pillText, {color: modeColor}]}>{props.app.mode}</Text>
+            <Text style={[styles.pillText, {color: modeColor}]}>{mode}</Text>
           </View>
           <View style={[styles.pill, {backgroundColor: palette.surfaceElevated, borderColor: palette.border}]}>
-            <Text style={[styles.pillText, {color: palette.textSecondary}]}>{props.app.authMethod}</Text>
+            <Text style={[styles.pillText, {color: palette.textSecondary}]}>
+              {lockTypeLabel(props.app.lockType ?? props.app.authMethod)}
+            </Text>
           </View>
         </View>
-        <Text style={[styles.meta, {color: palette.textSecondary}]}>Auto-lock {props.app.autoLockSeconds}s</Text>
+        <Text style={[styles.meta, {color: palette.textSecondary}]}>Auto-lock {props.app.autoLockSeconds ?? 30}s</Text>
       </View>
     </Pressable>
   );

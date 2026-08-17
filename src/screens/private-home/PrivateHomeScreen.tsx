@@ -2,66 +2,112 @@ import React from 'react';
 import {Alert, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {FigmaBanner, FigmaBottomNav, FigmaPage, figmaPalette} from '../../components/FigmaKit';
+import {FigmaBottomNav, FigmaRootLayout, figmaPalette} from '../../components/FigmaKit';
+import type {RootStackParamList} from '../../navigation/routes';
+import {usePrimaryDrawer} from '../../navigation/usePrimaryDrawer';
 import {launchCoordinator} from '../../services/launch/LaunchCoordinator';
+import {describeProtection, lockTypeLabel, normalizeProtection, protectionModeFromFlags} from '../../services/protection/protectionState';
 import {localDataRepository} from '../../storage/LocalDataRepository';
 import type {AppProtection} from '../../types/domain';
-import type {RootStackParamList} from '../../navigation/routes';
-import {useAppVariant} from '../../hooks/useAppVariant';
 
-type Palette = (typeof figmaPalette)[keyof typeof figmaPalette];
-
-function modeLabel(mode: AppProtection['mode']): string {
-  if (mode === 'LOCK_HIDE') {
-    return 'BOTH';
-  }
-  if (mode === 'HIDE') {
-    return 'HIDDEN';
-  }
-  if (mode === 'LOCK') {
-    return 'LOCKED';
-  }
-  return 'OPEN';
+function countLabel(value: number, singular: string, plural = singular) {
+  return `${value} ${value === 1 ? singular : plural}`;
 }
 
-function PrivateCard(props: {
-  app: AppProtection;
-  palette: Palette;
+function StatCard(props: {
+  label: string;
+  value: string;
+  subtitle: string;
+  accent: string;
+  accentSoft: string;
+  textPrimary: string;
+  textSecondary: string;
+}) {
+  return (
+    <View style={[styles.statCard, {backgroundColor: props.accentSoft}]}>
+      <Text style={[styles.statValue, {color: props.accent}]}>{props.value}</Text>
+      <Text style={[styles.statLabel, {color: props.textPrimary}]}>{props.label}</Text>
+      <Text style={[styles.statSubtitle, {color: props.textSecondary}]}>{props.subtitle}</Text>
+    </View>
+  );
+}
+
+function QuickAction(props: {
+  title: string;
+  subtitle: string;
   onPress: () => void;
+  palette: typeof figmaPalette.light;
 }) {
   return (
     <Pressable
       onPress={props.onPress}
       style={({pressed}) => [
-        styles.appCard,
+        styles.quickAction,
         {
           backgroundColor: props.palette.surface,
           borderColor: props.palette.border,
           opacity: pressed ? 0.94 : 1,
         },
       ]}>
-      <View style={[styles.appIcon, {backgroundColor: props.palette.accentSoft}]}>
-        <Text style={[styles.appIconText, {color: props.palette.accent}]}>{props.app.label.slice(0, 2).toUpperCase()}</Text>
+      <Text style={[styles.quickActionTitle, {color: props.palette.textPrimary}]}>{props.title}</Text>
+      <Text style={[styles.quickActionSubtitle, {color: props.palette.textSecondary}]}>{props.subtitle}</Text>
+    </Pressable>
+  );
+}
+
+function AppRow(props: {
+  app: AppProtection;
+  palette: typeof figmaPalette.light;
+  onPress: () => void;
+  onLaunch: () => void;
+}) {
+  const status = describeProtection(props.app);
+  const accent = props.app.isHidden && props.app.isLocked ? '#D92D20' : props.app.isHidden ? props.palette.accent : '#1D4ED8';
+
+  return (
+    <Pressable
+      onPress={props.onPress}
+      style={({pressed}) => [
+        styles.appRow,
+        {
+          backgroundColor: props.palette.surface,
+          borderColor: props.palette.border,
+          opacity: pressed ? 0.95 : 1,
+        },
+      ]}>
+      <View style={[styles.appAvatar, {backgroundColor: props.palette.accentSoft}]}>
+        <Text style={[styles.appAvatarText, {color: props.palette.accent}]}>
+          {props.app.label.slice(0, 2).toUpperCase()}
+        </Text>
       </View>
-      <Text style={[styles.appLabel, {color: props.palette.textPrimary}]}>{props.app.label}</Text>
-      <View style={[styles.badgePill, {backgroundColor: props.palette.accentSoft}]}>
-        <Text style={[styles.badgeText, {color: props.palette.accent}]}>{modeLabel(props.app.mode)}</Text>
+      <View style={styles.appBody}>
+        <Text style={[styles.appName, {color: props.palette.textPrimary}]} numberOfLines={1}>
+          {props.app.label}
+        </Text>
+        <Text style={[styles.appStatus, {color: accent}]}>{status}</Text>
+        <Text style={[styles.appMeta, {color: props.palette.textSecondary}]}>
+          {props.app.isLocked ? `${lockTypeLabel(props.app.lockType)} lock` : 'No lock'} {'|'} Auto-lock {props.app.autoLockSeconds ?? 30}s
+        </Text>
       </View>
+      <Pressable onPress={props.onLaunch} style={[styles.launchPill, {backgroundColor: props.palette.accentSoft}]}>
+        <Text style={[styles.launchPillText, {color: props.palette.accent}]}>Open</Text>
+      </Pressable>
     </Pressable>
   );
 }
 
 export function PrivateHomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const variant = useAppVariant();
-  const palette = figmaPalette[variant];
+  const palette = figmaPalette.light;
+  const {drawerOpen, openDrawer, closeDrawer, drawerDestinations} = usePrimaryDrawer();
   const [apps, setApps] = React.useState<AppProtection[]>([]);
   const [loading, setLoading] = React.useState(true);
 
   const loadApps = React.useCallback(async () => {
     setLoading(true);
     try {
-      setApps(await localDataRepository.getProtectedApps());
+      const stored = await localDataRepository.getProtectedApps();
+      setApps(stored.map(normalizeProtection));
     } finally {
       setLoading(false);
     }
@@ -73,17 +119,16 @@ export function PrivateHomeScreen() {
     }, [loadApps]),
   );
 
-  const prioritizedApps = React.useMemo(() => {
-    const priority: Record<AppProtection['mode'], number> = {
-      LOCK_HIDE: 0,
-      HIDE: 1,
-      LOCK: 2,
-      NONE: 3,
-    };
+  const counts = React.useMemo(() => {
+    const protectedApps = apps.filter(app => app.enabled);
+    const hiddenApps = protectedApps.filter(app => app.isHidden);
+    const lockedApps = protectedApps.filter(app => app.isLocked);
 
-    return [...apps]
-      .sort((a, b) => priority[a.mode] - priority[b.mode] || a.label.localeCompare(b.label))
-      .slice(0, 3);
+    return {
+      protectedApps,
+      hiddenApps,
+      lockedApps,
+    };
   }, [apps]);
 
   const openApp = React.useCallback(
@@ -104,185 +149,286 @@ export function PrivateHomeScreen() {
     [navigation],
   );
 
+  const editApp = React.useCallback(
+    (app: AppProtection) => {
+      navigation.navigate('ProtectionMode', {
+        draft: {
+          app: {
+            packageName: app.packageName,
+            label: app.label,
+            iconUri: app.iconUri,
+            systemApp: false,
+          },
+          mode: protectionModeFromFlags(app),
+          authMethod: app.lockType ?? app.authMethod ?? 'PIN',
+          autoLockSeconds: app.autoLockSeconds ?? 30,
+        },
+        onboarding: false,
+      });
+    },
+    [navigation],
+  );
+
   return (
-    <FigmaPage variant={variant} style={variant === 'dark' ? styles.darkPage : styles.lightPage}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.time, {color: palette.textPrimary}]}>9:41</Text>
-        <Text style={[styles.title, {color: palette.textPrimary}]}>Private Apps</Text>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
-          {variant === 'dark' ? 'Your selected private apps.' : 'Light theme.'}
-        </Text>
-
-        <FigmaBanner screen="private-home" variant={variant} title="Banner ad" tone="surface" />
-
-        <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>My Private Apps</Text>
-
-        <View style={styles.grid}>
-          {prioritizedApps.map(app => (
-            <PrivateCard key={app.packageName} app={app} palette={palette} onPress={() => void openApp(app)} />
-          ))}
-
-          {loading ? (
-            <View style={[styles.appCard, {backgroundColor: propsBg(variant), borderColor: palette.border, alignItems: 'center', justifyContent: 'center'}]}>
-              <Text style={[styles.loadingText, {color: palette.textSecondary}]}>Loading...</Text>
-            </View>
-          ) : (
-            <Pressable
-              onPress={() => navigation.navigate('AddApps')}
-              style={({pressed}) => [
-                styles.addCard,
-                {
-                  backgroundColor: palette.accentSoft,
-                  borderColor: palette.accent,
-                  opacity: pressed ? 0.94 : 1,
-                },
-              ]}>
-              <Text style={[styles.addGlyph, {color: palette.accent}]}>+</Text>
-              <Text style={[styles.addLabel, {color: palette.accent}]}>Add Apps</Text>
-            </Pressable>
-          )}
-        </View>
-
-        <Pressable onPress={() => navigation.navigate('ManageApps')} style={[styles.manageRow, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-          <Text style={[styles.manageText, {color: palette.textPrimary}]}>Manage Apps</Text>
-        </Pressable>
-
-        <FigmaBanner screen="private-home" variant={variant} placement="native" title="Native advertisement" subtitle="Placed after functional content" tone="surfaceElevated" />
-
-        <View style={styles.bottomSpacer} />
+    <FigmaRootLayout
+      variant="light"
+      title="Protection Dashboard"
+      drawerTitle="Smart App Lock"
+      drawerOpen={drawerOpen}
+      onDrawerOpen={openDrawer}
+      onDrawerClose={closeDrawer}
+      drawerDestinations={drawerDestinations}
+      bottomNav={
         <FigmaBottomNav
-          variant={variant}
+          variant="light"
           active="home"
           onHomePress={() => navigation.navigate('PrivateHome')}
           onGalleryPress={() => navigation.navigate('Gallery')}
           onSettingsPress={() => navigation.navigate('Settings')}
         />
+      }>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
+          Hide apps, lock apps, or combine both protections from one simple control center.
+        </Text>
+
+        <View style={styles.statsRow}>
+          <StatCard
+            label="Protected Apps"
+            value={String(counts.protectedApps.length)}
+            subtitle={countLabel(counts.protectedApps.length, 'app')}
+            accent={palette.accent}
+            accentSoft={palette.accentSoft}
+            textPrimary={palette.textPrimary}
+            textSecondary={palette.textSecondary}
+          />
+          <StatCard
+            label="Hidden Apps"
+            value={String(counts.hiddenApps.length)}
+            subtitle={countLabel(counts.hiddenApps.length, 'hidden app', 'hidden apps')}
+            accent="#1D4ED8"
+            accentSoft="#DBEAFE"
+            textPrimary={palette.textPrimary}
+            textSecondary={palette.textSecondary}
+          />
+          <StatCard
+            label="Locked Apps"
+            value={String(counts.lockedApps.length)}
+            subtitle={countLabel(counts.lockedApps.length, 'locked app', 'locked apps')}
+            accent="#D92D20"
+            accentSoft="#FEE4E2"
+            textPrimary={palette.textPrimary}
+            textSecondary={palette.textSecondary}
+          />
+        </View>
+
+        <View style={styles.quickActions}>
+          <QuickAction
+            title="Hide Apps"
+            subtitle="Select apps that should live only in the hidden area."
+            onPress={() => navigation.navigate('AddApps', {preset: 'HIDE'})}
+            palette={palette}
+          />
+          <QuickAction
+            title="Lock Apps"
+            subtitle="Add a PIN, password, pattern, or biometric gate."
+            onPress={() => navigation.navigate('AddApps', {preset: 'LOCK'})}
+            palette={palette}
+          />
+          <QuickAction
+            title="Hide + Lock"
+            subtitle="Keep apps private and require authentication before access."
+            onPress={() => navigation.navigate('AddApps', {preset: 'LOCK_HIDE'})}
+            palette={palette}
+          />
+          <QuickAction
+            title="Secret Access"
+            subtitle="Open the hidden area through your configured secret method."
+            onPress={() => navigation.navigate('Calculator')}
+            palette={palette}
+          />
+        </View>
+
+        <View style={[styles.sectionCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Protected Apps</Text>
+            <Pressable onPress={() => navigation.navigate('ManageApps')}>
+              <Text style={[styles.sectionLink, {color: palette.accent}]}>Manage all</Text>
+            </Pressable>
+          </View>
+
+          {loading ? (
+            <Text style={[styles.stateText, {color: palette.textSecondary}]}>Loading protected apps...</Text>
+          ) : counts.protectedApps.length === 0 ? (
+            <Text style={[styles.stateText, {color: palette.textSecondary}]}>
+              No protected apps yet. Start with Hide Apps, Lock Apps, or Hide + Lock.
+            </Text>
+          ) : (
+            <View style={styles.appList}>
+              {counts.protectedApps.map(app => (
+                <AppRow
+                  key={app.packageName}
+                  app={app}
+                  palette={palette}
+                  onPress={() => editApp(app)}
+                  onLaunch={() => void openApp(app)}
+                />
+              ))}
+            </View>
+          )}
+        </View>
+
+        <View style={[styles.sectionCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+          <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Current user flow</Text>
+          <Text style={[styles.flowLine, {color: palette.textSecondary}]}>Hide only: Secret Access {'>'} Hidden Apps</Text>
+          <Text style={[styles.flowLine, {color: palette.textSecondary}]}>Lock only: Open App {'>'} Lock Screen {'>'} App</Text>
+          <Text style={[styles.flowLine, {color: palette.textSecondary}]}>Hide + Lock: Secret Access {'>'} Lock Screen {'>'} Hidden Apps</Text>
+        </View>
       </ScrollView>
-    </FigmaPage>
+    </FigmaRootLayout>
   );
 }
 
-function propsBg(variant: 'light' | 'dark') {
-  return variant === 'dark' ? '#1B2232' : '#FFFFFF';
-}
-
 const styles = StyleSheet.create({
-  darkPage: {
-    backgroundColor: '#090D16',
-  },
-  lightPage: {
-    backgroundColor: '#F7F8FC',
-  },
   scrollContent: {
     paddingBottom: 18,
   },
-  time: {
-    fontSize: 10,
-    fontWeight: '700',
-    lineHeight: 12,
-  },
-  title: {
-    marginTop: 28,
-    fontSize: 40,
-    fontWeight: '800',
-    lineHeight: 48,
-    letterSpacing: -0.8,
-  },
   subtitle: {
-    marginTop: 10,
+    marginTop: 6,
     fontSize: 14,
-    lineHeight: 18,
+    lineHeight: 20,
   },
-  sectionTitle: {
-    marginTop: 40,
-    marginBottom: 24,
+  statsRow: {
+    marginTop: 24,
+    gap: 12,
+  },
+  statCard: {
+    borderRadius: 28,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+  },
+  statValue: {
     fontSize: 28,
     fontWeight: '800',
     lineHeight: 34,
-    letterSpacing: -0.4,
   },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-  },
-  appCard: {
-    width: '47.5%',
-    minHeight: 232,
-    borderWidth: 1,
-    borderRadius: 34,
-    paddingHorizontal: 26,
-    paddingVertical: 26,
-  },
-  appIcon: {
-    width: 88,
-    height: 88,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  appIconText: {
-    fontSize: 20,
+  statLabel: {
+    marginTop: 4,
+    fontSize: 16,
     fontWeight: '700',
-    lineHeight: 24,
+    lineHeight: 20,
   },
-  appLabel: {
-    marginTop: 28,
-    fontSize: 18,
-    fontWeight: '700',
-    lineHeight: 22,
+  statSubtitle: {
+    marginTop: 6,
+    fontSize: 12,
+    lineHeight: 17,
   },
-  badgePill: {
+  quickActions: {
     marginTop: 20,
-    alignSelf: 'flex-start',
-    minHeight: 40,
-    paddingHorizontal: 18,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+    gap: 12,
   },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    lineHeight: 14,
-  },
-  addCard: {
-    width: '47.5%',
-    minHeight: 232,
-    borderWidth: 2,
-    borderRadius: 34,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  addGlyph: {
-    fontSize: 56,
-    lineHeight: 60,
-    fontWeight: '300',
-  },
-  addLabel: {
-    marginTop: 32,
-    fontSize: 18,
-    fontWeight: '700',
-    lineHeight: 22,
-  },
-  manageRow: {
-    marginTop: 30,
-    minHeight: 98,
+  quickAction: {
     borderRadius: 28,
     borderWidth: 1,
-    paddingHorizontal: 28,
-    justifyContent: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 18,
   },
-  manageText: {
-    fontSize: 15,
-    fontWeight: '700',
-    lineHeight: 19,
+  quickActionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    lineHeight: 22,
   },
-  loadingText: {
+  quickActionSubtitle: {
+    marginTop: 8,
     fontSize: 12,
+    lineHeight: 17,
+  },
+  sectionCard: {
+    marginTop: 20,
+    borderRadius: 30,
+    borderWidth: 1,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    lineHeight: 22,
+  },
+  sectionLink: {
+    fontSize: 13,
+    fontWeight: '700',
     lineHeight: 16,
   },
-  bottomSpacer: {
-    height: 8,
+  stateText: {
+    marginTop: 14,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  appList: {
+    marginTop: 14,
+    gap: 12,
+  },
+  appRow: {
+    borderRadius: 24,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  appAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  appAvatarText: {
+    fontSize: 16,
+    fontWeight: '800',
+    lineHeight: 20,
+  },
+  appBody: {
+    flex: 1,
+  },
+  appName: {
+    fontSize: 15,
+    fontWeight: '800',
+    lineHeight: 18,
+  },
+  appStatus: {
+    marginTop: 4,
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 16,
+  },
+  appMeta: {
+    marginTop: 4,
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  launchPill: {
+    minHeight: 36,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  launchPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 15,
+  },
+  flowLine: {
+    marginTop: 10,
+    fontSize: 12,
+    lineHeight: 17,
   },
 });

@@ -19,6 +19,7 @@ import {LauncherSetupScreen} from '../screens/onboarding/LauncherSetupScreen';
 import {PrimaryLockScreen} from '../screens/onboarding/PrimaryLockScreen';
 import {ProtectionModeScreen} from '../screens/onboarding/ProtectionModeScreen';
 import {CalculatorScreen} from '../screens/secret-entry/CalculatorScreen';
+import {CalendarDisguiseScreen, ClockDisguiseScreen} from '../screens/secret-entry/DisguiseScreens';
 import {SecretEntryScreen} from '../screens/secret-entry/SecretEntryScreen';
 import {AdManagerRulesScreen, AppearanceSettingsScreen, AutoLockSettingsScreen, PrivacyCenterScreen} from '../screens/settings/SettingsDetailScreens';
 import {SettingsScreen} from '../screens/settings/SettingsScreen';
@@ -42,6 +43,8 @@ export function AppNavigator(props: {initialRouteName: keyof RootStackParamList}
       <Stack.Screen name="RebootRestored" component={RebootRestoredScreen} />
       <Stack.Screen name="UnlockSuccess" component={UnlockSuccessScreen} />
       <Stack.Screen name="Calculator" component={CalculatorScreen} />
+      <Stack.Screen name="Clock" component={ClockDisguiseScreen} />
+      <Stack.Screen name="Calendar" component={CalendarDisguiseScreen} />
       <Stack.Screen name="AuthGate" component={AuthGateScreen} />
       <Stack.Screen name="PrivateHome" component={PrivateHomeScreen} />
       <Stack.Screen name="AddApps" component={AddAppsScreen} />

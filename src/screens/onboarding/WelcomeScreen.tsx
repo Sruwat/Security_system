@@ -37,8 +37,8 @@ export function WelcomeScreen() {
         <View style={styles.spacer} />
 
         {/* Security flow wiring remains native-backed:
-            createCredential(APP_UNLOCK_CREDENTIAL_TYPE, ...)
-            createCredential(VAULT_SECRET_CREDENTIAL_TYPE, ...) */}
+            createCredential(APP_UNLOCK_CREDENTIAL_REF, ...)
+            createCredential(VAULT_SECRET_CREDENTIAL_REF, ...) */}
         <FigmaActionButton
           variant="dark"
           label="Start setup"

@@ -4,7 +4,7 @@ import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import {nativeBridge} from '../../native';
-import {APP_UNLOCK_CREDENTIAL_TYPE} from '../../services/security/credentialTypes';
+import {APP_UNLOCK_CREDENTIAL_REF} from '../../services/security/credentialTypes';
 import type {RootStackParamList} from '../../navigation/routes';
 import {localDataRepository} from '../../storage/LocalDataRepository';
 import type {OnboardingResumeRoute} from '../../types/domain';
@@ -13,7 +13,7 @@ type CredentialKind = 'PIN' | 'PASSWORD' | 'PATTERN';
 
 function normalizeCredential(kind: CredentialKind, text: string): string {
   if (kind === 'PIN') {
-    return text.replace(/[^0-9]/g, '').slice(0, 4);
+    return text.replace(/[^0-9]/g, '').slice(0, 6);
   }
 
   if (kind === 'PATTERN') {
@@ -52,8 +52,8 @@ function CredentialSetupBase(props: {
       return;
     }
 
-    if (props.kind === 'PIN' && !/^\d{4}$/.test(normalized)) {
-      setError('Enter a 4 digit PIN.');
+    if (props.kind === 'PIN' && !/^\d{4,6}$/.test(normalized)) {
+      setError('Enter a 4 to 6 digit PIN.');
       return;
     }
 
@@ -65,7 +65,7 @@ function CredentialSetupBase(props: {
     setSaving(true);
     setError(null);
     try {
-      await nativeBridge.createCredential(APP_UNLOCK_CREDENTIAL_TYPE, normalized);
+      await nativeBridge.createCredential(APP_UNLOCK_CREDENTIAL_REF, props.kind, normalized);
       const settings = await localDataRepository.getSettings();
       await localDataRepository.saveSettings({...settings, primaryAuthMethod: props.kind, onboardingResumeRoute: props.nextRoute});
       navigation.navigate(props.nextRoute as never);
@@ -121,7 +121,7 @@ function CredentialSetupBase(props: {
               keyboardType={props.kind === 'PIN' ? 'number-pad' : 'default'}
               autoCapitalize="none"
               autoCorrect={false}
-              maxLength={props.kind === 'PIN' ? 4 : undefined}
+              maxLength={props.kind === 'PIN' ? 6 : undefined}
               style={[styles.fieldInput, {color: palette.textPrimary}]}
             />
           </View>
@@ -139,7 +139,7 @@ function CredentialSetupBase(props: {
               keyboardType={props.kind === 'PIN' ? 'number-pad' : 'default'}
               autoCapitalize="none"
               autoCorrect={false}
-              maxLength={props.kind === 'PIN' ? 4 : undefined}
+              maxLength={props.kind === 'PIN' ? 6 : undefined}
               style={[styles.fieldInput, {color: palette.textPrimary}]}
             />
           </View>
@@ -162,7 +162,7 @@ export function PinSetupScreen() {
     <CredentialSetupBase
       kind="PIN"
       title="Create your PIN"
-      subtitle="Set a 4-digit PIN for quick fallback access."
+      subtitle="Set a 4 to 6 digit PIN for quick fallback access."
       hint="PIN is the default option for protected launches and vault recovery."
       icon="1234"
       nextRoute="BiometricSetup"

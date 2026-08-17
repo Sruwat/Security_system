@@ -2,7 +2,7 @@ import React from 'react';
 import {Alert, StyleSheet, Text, View} from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import type {NativeStackNavigationProp, NativeStackScreenProps} from '@react-navigation/native-stack';
-import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
+import {FigmaActionButton, FigmaInnerLayout, figmaPalette} from '../../components/FigmaKit';
 import type {RootStackParamList} from '../../navigation/routes';
 import {protectionManager} from '../../services/protection/ProtectionManager';
 
@@ -27,11 +27,9 @@ export function RemoveAppScreen() {
   }, [app.label, app.packageName, navigation]);
 
   return (
-    <FigmaPage variant="dark">
+    <FigmaInnerLayout variant="dark" title="Remove App" onBackPress={() => navigation.goBack()}>
       <View style={styles.fill}>
-        <Text style={[styles.time, {color: palette.textPrimary}]}>9:41</Text>
-        <Text style={[styles.title, {color: palette.textPrimary}]}>Remove App</Text>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Remove {app.label} from private list?</Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Remove {app.label} from the private list?</Text>
 
         <View style={[styles.card, {backgroundColor: palette.surface, borderColor: palette.border}]}>
           <Text style={[styles.cardTitle, {color: palette.textPrimary}]}>Remove protection?</Text>
@@ -45,9 +43,9 @@ export function RemoveAppScreen() {
           <FigmaActionButton variant="dark" label="Cancel" tone="secondary" onPress={() => navigation.goBack()} />
         </View>
 
-        <Text style={styles.warning}>No ad inside destructive confirmation.</Text>
+        <Text style={styles.warning}>This action removes the stored protection for this app.</Text>
       </View>
-    </FigmaPage>
+    </FigmaInnerLayout>
   );
 }
 
@@ -55,30 +53,18 @@ const styles = StyleSheet.create({
   fill: {
     flex: 1,
   },
-  time: {
-    fontSize: 10,
-    fontWeight: '700',
-    lineHeight: 12,
-  },
-  title: {
-    marginTop: 28,
-    fontSize: 28,
-    fontWeight: '800',
-    lineHeight: 33,
-    letterSpacing: -0.2,
-  },
   subtitle: {
-    marginTop: 10,
+    marginTop: 6,
     fontSize: 13,
     lineHeight: 18,
   },
   card: {
-    marginTop: 160,
+    marginTop: 28,
     borderWidth: 1,
     borderRadius: 34,
-    paddingHorizontal: 36,
-    paddingVertical: 56,
-    gap: 28,
+    paddingHorizontal: 24,
+    paddingVertical: 28,
+    gap: 20,
   },
   cardTitle: {
     fontSize: 28,
@@ -90,11 +76,11 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   actions: {
-    marginTop: 96,
-    gap: 28,
+    marginTop: 24,
+    gap: 18,
   },
   warning: {
-    marginTop: 104,
+    marginTop: 28,
     textAlign: 'center',
     color: '#FFB4A7',
     fontSize: 13,

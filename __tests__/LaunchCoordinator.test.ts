@@ -71,11 +71,29 @@ describe('LaunchCoordinator', () => {
     const result = await launchCoordinator.completeAuthentication();
 
     expect(result).toBe('app_launched');
-    expect(mockedNativeBridge.launchApp).toHaveBeenCalledWith('com.example.app');
+    expect(mockedNativeBridge.launchApp).not.toHaveBeenCalled();
     expect(sessionManager.getState()).toMatchObject({
       packageName: 'com.example.app',
       vaultUnlocked: false,
     });
+    expect(launchCoordinator.getPendingLaunchPackageName()).toBe('com.example.app');
+  });
+
+  it('launches the pending protected app after the success handoff', async () => {
+    mockedProtectionManager.getProtection = jest.fn().mockResolvedValue({
+      packageName: 'com.example.app',
+      label: 'Example App',
+      mode: 'LOCK',
+      authMethod: 'BIOMETRIC',
+      autoLockSeconds: 42,
+      updatedAt: Date.now(),
+    });
+
+    await launchCoordinator.launch('com.example.app');
+    await launchCoordinator.completeAuthentication();
+
+    await expect(launchCoordinator.launchPendingAfterAuthentication()).resolves.toBe(true);
+    expect(mockedNativeBridge.launchApp).toHaveBeenCalledWith('com.example.app');
     expect(launchCoordinator.getPendingLaunchPackageName()).toBeNull();
   });
 
@@ -147,12 +165,17 @@ describe('LaunchCoordinator', () => {
     const authResult = await launchCoordinator.completeAuthentication();
 
     expect(authResult).toBe('app_launched');
-    expect(mockedNativeBridge.launchApp).toHaveBeenCalledWith('com.example.lockhidden');
+    expect(mockedNativeBridge.launchApp).not.toHaveBeenCalled();
     expect(mockedNativeBridge.persistTransientAccess).toHaveBeenCalledWith('com.example.lockhidden', false, expect.any(Number));
     expect(sessionManager.getState()).toMatchObject({
       packageName: 'com.example.lockhidden',
       vaultUnlocked: false,
     });
+    expect(launchCoordinator.getPendingLaunchPackageName()).toBe('com.example.lockhidden');
+    expect(launchCoordinator.getPendingLaunchMode()).toBe('LOCK_HIDE');
+
+    await expect(launchCoordinator.launchPendingAfterAuthentication()).resolves.toBe(true);
+    expect(mockedNativeBridge.launchApp).toHaveBeenCalledWith('com.example.lockhidden');
     expect(launchCoordinator.getPendingLaunchPackageName()).toBeNull();
     expect(launchCoordinator.getPendingLaunchMode()).toBeNull();
   });

@@ -1,4 +1,5 @@
 import type {ProtectionDraft} from '../screens/app-picker/buildProtectionPolicy';
+import type {ProtectionMode} from '../types/domain';
 
 export type RootStackParamList = {
   Welcome: undefined;
@@ -13,9 +14,11 @@ export type RootStackParamList = {
   RebootRestored: undefined;
   UnlockSuccess: undefined;
   Calculator: undefined;
+  Clock: undefined;
+  Calendar: undefined;
   AuthGate: undefined;
   PrivateHome: undefined;
-  AddApps: undefined;
+  AddApps: {preset?: ProtectionMode} | undefined;
   ProtectionMode: {draft: ProtectionDraft; onboarding: boolean};
   ManageApps: undefined;
   RemoveApp: {app: {packageName: string; label: string; mode: 'NONE' | 'LOCK' | 'HIDE' | 'LOCK_HIDE'}};

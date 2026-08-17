@@ -7,10 +7,10 @@ function read(filePath: string): string {
 
 describe('security flow architecture', () => {
   it('uses native credential APIs for onboarding, auth, and secret entry', () => {
-    expect(read('src/screens/onboarding/WelcomeScreen.tsx')).toContain('createCredential(APP_UNLOCK_CREDENTIAL_TYPE');
-    expect(read('src/screens/onboarding/WelcomeScreen.tsx')).toContain('createCredential(VAULT_SECRET_CREDENTIAL_TYPE');
-    expect(read('src/screens/auth/AuthGateScreen.tsx')).toContain('verifyCredential(APP_UNLOCK_CREDENTIAL_TYPE');
-    expect(read('src/screens/secret-entry/SecretEntryScreen.tsx')).toContain('verifyCredential(VAULT_SECRET_CREDENTIAL_TYPE');
+    expect(read('src/screens/onboarding/CredentialSetupScreens.tsx')).toContain('createCredential(APP_UNLOCK_CREDENTIAL_REF');
+    expect(read('src/screens/secret-entry/SecretEntryScreen.tsx')).toContain("createCredential(VAULT_SECRET_CREDENTIAL_REF, 'PIN'");
+    expect(read('src/screens/auth/AuthGateScreen.tsx')).toContain('verifyCredential(credentialRef');
+    expect(read('src/screens/secret-entry/CalculatorScreen.tsx')).toContain('verifyCredential(VAULT_SECRET_CREDENTIAL_REF');
   });
 
   it('enables device credential fallback in the native biometric prompt', () => {

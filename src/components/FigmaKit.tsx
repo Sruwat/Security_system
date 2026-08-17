@@ -1,5 +1,5 @@
 import React from 'react';
-import {Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View} from 'react-native';
+import {Modal, Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View} from 'react-native';
 import {adsManager} from '../services/ads/AdsManager';
 
 export type FigmaVariant = 'light' | 'dark';
@@ -49,6 +49,136 @@ export function FigmaHeader(props: {variant: FigmaVariant; title: string; subtit
       <Text style={[styles.title, {color: palette.textPrimary}]}>{props.title}</Text>
       <Text style={[styles.subtitle, {color: palette.textSecondary}]}>{props.subtitle}</Text>
     </View>
+  );
+}
+
+type DrawerDestination = {
+  label: string;
+  description: string;
+  onPress: () => void;
+};
+
+export function FigmaTopBar(props: {
+  variant: FigmaVariant;
+  title: string;
+  mode: 'root' | 'inner';
+  onMenuPress?: () => void;
+  onBackPress?: () => void;
+  rightActionLabel?: string;
+  onRightActionPress?: () => void;
+}) {
+  const palette = useFigmaPalette(props.variant);
+  return (
+    <View style={[styles.topBar, {borderColor: palette.border, backgroundColor: palette.surface}]}>
+      <Pressable
+        onPress={props.mode === 'root' ? props.onMenuPress : props.onBackPress}
+        hitSlop={10}
+        style={({pressed}) => [styles.leadingAction, {backgroundColor: palette.accentSoft, opacity: pressed ? 0.92 : 1}]}>
+        <Text style={[styles.leadingActionText, {color: palette.accent}]}>
+          {props.mode === 'root' ? '=' : '<'}
+        </Text>
+      </Pressable>
+      <Text style={[styles.topBarTitle, {color: palette.textPrimary}]} numberOfLines={1}>
+        {props.title}
+      </Text>
+      {props.rightActionLabel ? (
+        <Pressable
+          onPress={props.onRightActionPress}
+          hitSlop={10}
+          style={({pressed}) => [styles.trailingAction, {backgroundColor: palette.accentSoft, opacity: pressed ? 0.92 : 1}]}>
+          <Text style={[styles.trailingActionText, {color: palette.accent}]}>{props.rightActionLabel}</Text>
+        </Pressable>
+      ) : (
+        <View style={styles.trailingPlaceholder} />
+      )}
+    </View>
+  );
+}
+
+export function FigmaDrawer(props: {
+  open: boolean;
+  variant: FigmaVariant;
+  title: string;
+  destinations: DrawerDestination[];
+  onClose: () => void;
+}) {
+  const palette = useFigmaPalette(props.variant);
+
+  return (
+    <Modal visible={props.open} transparent animationType="fade" onRequestClose={props.onClose}>
+      <View style={styles.drawerOverlay}>
+        <Pressable style={styles.drawerScrim} onPress={props.onClose} />
+        <View style={[styles.drawerSheet, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+          <View style={styles.drawerHeader}>
+            <View>
+              <Text style={[styles.drawerKicker, {color: palette.textSecondary}]}>Quick Access</Text>
+              <Text style={[styles.drawerTitle, {color: palette.textPrimary}]}>{props.title}</Text>
+            </View>
+            <Pressable onPress={props.onClose} style={[styles.drawerClose, {backgroundColor: palette.accentSoft}]}>
+              <Text style={[styles.drawerCloseText, {color: palette.accent}]}>x</Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.drawerList}>
+            {props.destinations.map(item => (
+              <FigmaRowCard
+                key={item.label}
+                variant={props.variant}
+                title={item.label}
+                subtitle={item.description}
+                icon={item.label.slice(0, 2).toUpperCase()}
+                onPress={() => {
+                  props.onClose();
+                  item.onPress();
+                }}
+              />
+            ))}
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+export function FigmaRootLayout(props: {
+  variant: FigmaVariant;
+  title: string;
+  drawerTitle: string;
+  drawerOpen: boolean;
+  onDrawerOpen: () => void;
+  onDrawerClose: () => void;
+  drawerDestinations: DrawerDestination[];
+  children: React.ReactNode;
+  bottomNav?: React.ReactNode;
+}) {
+  const palette = useFigmaPalette(props.variant);
+  return (
+    <FigmaPage variant={props.variant}>
+      <FigmaTopBar variant={props.variant} title={props.title} mode="root" onMenuPress={props.onDrawerOpen} />
+      <View style={styles.rootBody}>{props.children}</View>
+      {props.bottomNav ? <View style={[styles.fixedBottomNav, {backgroundColor: palette.background}]}>{props.bottomNav}</View> : null}
+      <FigmaDrawer
+        open={props.drawerOpen}
+        variant={props.variant}
+        title={props.drawerTitle}
+        destinations={props.drawerDestinations}
+        onClose={props.onDrawerClose}
+      />
+    </FigmaPage>
+  );
+}
+
+export function FigmaInnerLayout(props: {
+  variant: FigmaVariant;
+  title: string;
+  onBackPress?: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <FigmaPage variant={props.variant}>
+      <FigmaTopBar variant={props.variant} title={props.title} mode="inner" onBackPress={props.onBackPress} />
+      <View style={styles.innerBody}>{props.children}</View>
+    </FigmaPage>
   );
 }
 
@@ -321,6 +451,115 @@ const styles = StyleSheet.create({
     marginTop: 18,
     position: 'relative',
     overflow: 'hidden',
+  },
+  topBar: {
+    minHeight: 60,
+    borderWidth: 1,
+    borderRadius: 22,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  leadingAction: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  leadingActionText: {
+    fontSize: 18,
+    fontWeight: '800',
+    lineHeight: 22,
+  },
+  topBarTitle: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '800',
+    lineHeight: 22,
+  },
+  trailingAction: {
+    minWidth: 58,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  trailingActionText: {
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 13,
+  },
+  trailingPlaceholder: {
+    width: 40,
+    height: 40,
+  },
+  drawerOverlay: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: 'rgba(15, 23, 42, 0.18)',
+  },
+  drawerScrim: {
+    flex: 1,
+  },
+  drawerSheet: {
+    width: '82%',
+    maxWidth: 340,
+    borderLeftWidth: 1,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 24,
+  },
+  drawerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  drawerKicker: {
+    fontSize: 10,
+    fontWeight: '700',
+    lineHeight: 12,
+  },
+  drawerTitle: {
+    marginTop: 6,
+    fontSize: 20,
+    fontWeight: '800',
+    lineHeight: 24,
+  },
+  drawerClose: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  drawerCloseText: {
+    fontSize: 20,
+    fontWeight: '700',
+    lineHeight: 24,
+  },
+  drawerList: {
+    marginTop: 20,
+    gap: 10,
+  },
+  rootBody: {
+    flex: 1,
+    paddingTop: 14,
+    paddingBottom: 94,
+  },
+  innerBody: {
+    flex: 1,
+    paddingTop: 14,
+  },
+  fixedBottomNav: {
+    position: 'absolute',
+    left: 18,
+    right: 18,
+    bottom: 10,
+    paddingTop: 8,
   },
   navPill: {
     position: 'absolute',

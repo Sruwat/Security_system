@@ -22,7 +22,8 @@ class SecurityRepository(context: Context) {
   }
   private val secureRandom = SecureRandom()
 
-  fun createCredential(type: String, value: String) {
+  fun createCredential(ref: String, type: String, value: String) {
+    require(ref.isNotBlank()) { "Credential ref cannot be blank." }
     require(type.isNotBlank()) { "Credential type cannot be blank." }
     require(value.isNotBlank()) { "Credential value cannot be blank." }
 
@@ -34,24 +35,31 @@ class SecurityRepository(context: Context) {
       Base64.encodeToString(hash, Base64.NO_WRAP),
     ).joinToString(SEPARATOR)
 
-    preferences.edit().putString(storageKey(type), encrypt(payload)).apply()
+    preferences.edit().putString(storageKey(ref), encrypt(payload)).apply()
   }
 
-  fun verifyCredential(type: String, value: String): Boolean {
-    val encodedPayload = preferences.getString(storageKey(type), null) ?: return false
+  fun verifyCredential(ref: String, value: String): Boolean {
+    require(ref.isNotBlank()) { "Credential ref cannot be blank." }
+    val encodedPayload = preferences.getString(storageKey(ref), null) ?: return false
     val payload = runCatching { decrypt(encodedPayload) }.getOrNull() ?: return false
     val parts = payload.split(SEPARATOR)
-    if (parts.size != 3 || parts[0] != type) {
+    if (parts.size != 3) {
       return false
     }
 
+    val type = parts[0]
     val salt = runCatching { Base64.decode(parts[1], Base64.NO_WRAP) }.getOrNull() ?: return false
     val expectedHash = runCatching { Base64.decode(parts[2], Base64.NO_WRAP) }.getOrNull() ?: return false
     val actualHash = hashCredential(type, value, salt)
     return MessageDigest.isEqual(expectedHash, actualHash)
   }
 
-  private fun storageKey(type: String): String = "$PREFS_PREFIX$type"
+  fun deleteCredential(ref: String) {
+    require(ref.isNotBlank()) { "Credential ref cannot be blank." }
+    preferences.edit().remove(storageKey(ref)).apply()
+  }
+
+  private fun storageKey(ref: String): String = "$PREFS_PREFIX$ref"
 
   private fun hashCredential(type: String, value: String, salt: ByteArray): ByteArray {
     val digest = MessageDigest.getInstance(HASH_ALGORITHM)

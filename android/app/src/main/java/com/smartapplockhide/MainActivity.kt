@@ -20,6 +20,11 @@ class MainActivity : ReactActivity() {
     window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
   }
 
+  override fun onNewIntent(intent: android.content.Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
+  }
+
   override fun onDestroy() {
     window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
     super.onDestroy()
@@ -27,5 +32,10 @@ class MainActivity : ReactActivity() {
 
   override fun createReactActivityDelegate(): ReactActivityDelegate {
     return DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled)
+  }
+
+  companion object {
+    const val ACTION_AUTH_GATE = "com.smartapplockhide.action.AUTH_GATE"
+    const val EXTRA_PENDING_PACKAGE_NAME = "pendingPackageName"
   }
 }

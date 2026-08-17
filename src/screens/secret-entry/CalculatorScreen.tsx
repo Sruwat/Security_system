@@ -5,7 +5,8 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import {launchCoordinator} from '../../services/launch/LaunchCoordinator';
 import {nativeBridge} from '../../native';
-import {VAULT_SECRET_CREDENTIAL_TYPE} from '../../services/security/credentialTypes';
+import {VAULT_SECRET_CREDENTIAL_REF} from '../../services/security/credentialTypes';
+import {secretAccessRouter} from '../../services/secret/SecretAccessRouter';
 import type {RootStackParamList} from '../../navigation/routes';
 
 const keypadRows = [
@@ -78,14 +79,20 @@ export function CalculatorScreen() {
     try {
       const normalized = expression.trim();
       if (/^\d{4,6}$/.test(normalized)) {
-        const verified = await nativeBridge.verifyCredential(VAULT_SECRET_CREDENTIAL_TYPE, normalized);
+        const verified = await nativeBridge.verifyCredential(VAULT_SECRET_CREDENTIAL_REF, normalized);
         if (verified) {
-          const outcome = await launchCoordinator.completeSecretEntry();
-          if (outcome === 'app_launched') {
+          const launchOutcome = await launchCoordinator.completeSecretEntry();
+          if (launchOutcome === 'app_launched') {
             navigation.reset({index: 0, routes: [{name: 'PrivateHome'}]});
             return;
           }
-          if (outcome === 'auth_required') {
+          if (launchOutcome === 'auth_required') {
+            navigation.reset({index: 0, routes: [{name: 'AuthGate'}]});
+            return;
+          }
+
+          const route = await secretAccessRouter.handleSecretAccess();
+          if (route === 'auth_required') {
             navigation.reset({index: 0, routes: [{name: 'AuthGate'}]});
             return;
           }
@@ -93,7 +100,8 @@ export function CalculatorScreen() {
           return;
         }
 
-        setMessage('Secret code did not match. Try again or go back to secret entry.');
+        setExpression(evaluateExpression(normalized));
+        setMessage('Calculation complete.');
         return;
       }
 

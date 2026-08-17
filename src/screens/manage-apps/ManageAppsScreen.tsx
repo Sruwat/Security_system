@@ -2,11 +2,12 @@ import React from 'react';
 import {Alert, Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {FigmaBanner, FigmaBottomNav, FigmaPage, figmaPalette} from '../../components/FigmaKit';
+import {FigmaBanner, FigmaInnerLayout, figmaPalette} from '../../components/FigmaKit';
+import type {RootStackParamList} from '../../navigation/routes';
 import {localDataRepository} from '../../storage/LocalDataRepository';
 import {protectionManager} from '../../services/protection/ProtectionManager';
 import type {AppProtection, ProtectionMode} from '../../types/domain';
-import type {RootStackParamList} from '../../navigation/routes';
+import {describeProtection, normalizeProtection, protectionFlagsFromMode, protectionModeFromFlags} from '../../services/protection/protectionState';
 
 const protectionModes: ProtectionMode[] = ['LOCK_HIDE', 'HIDE', 'LOCK', 'NONE'];
 
@@ -47,7 +48,17 @@ export function ManageAppsScreen() {
     async (app: AppProtection) => {
       setBusyPackage(app.packageName);
       try {
-        await protectionManager.upsertProtection({...app, mode: cycleMode(app.mode), updatedAt: Date.now()});
+        const nextMode = cycleMode(app.mode ?? protectionModeFromFlags(app));
+        const nextFlags = protectionFlagsFromMode(nextMode);
+        await protectionManager.upsertProtection(
+          normalizeProtection({
+            ...app,
+            ...nextFlags,
+            enabled: nextMode !== 'NONE',
+            mode: nextMode,
+            updatedAt: Date.now(),
+          }),
+        );
         await loadApps();
       } catch (error) {
         Alert.alert('Update failed', error instanceof Error ? error.message : 'Unable to change protection mode.');
@@ -64,7 +75,7 @@ export function ManageAppsScreen() {
         app: {
           packageName: app.packageName,
           label: app.label,
-          mode: app.mode,
+          mode: app.mode ?? protectionModeFromFlags(app),
         },
       });
     },
@@ -72,10 +83,8 @@ export function ManageAppsScreen() {
   );
 
   return (
-    <FigmaPage variant="dark">
+    <FigmaInnerLayout variant="dark" title="Manage Apps" onBackPress={() => navigation.goBack()}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.time, {color: palette.textPrimary}]}>9:41</Text>
-        <Text style={[styles.title, {color: palette.textPrimary}]}>Manage Apps</Text>
         <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Change, add or remove apps.</Text>
 
         <FigmaBanner screen="manage-apps" variant="dark" title="Banner ad" tone="surfaceElevated" />
@@ -120,7 +129,9 @@ export function ManageAppsScreen() {
                       {app.packageName}
                     </Text>
                     <View style={[styles.modePill, {backgroundColor: palette.accentSoft}]}>
-                      <Text style={[styles.modeText, {color: palette.accent}]}>{describeMode(app.mode)}</Text>
+                      <Text style={[styles.modeText, {color: palette.accent}]}>
+                        {describeProtection(normalizeProtection(app))} {'|'} {describeMode(app.mode ?? protectionModeFromFlags(app))}
+                      </Text>
                     </View>
                   </View>
                 </View>
@@ -154,17 +165,8 @@ export function ManageAppsScreen() {
           subtitle="Placed after functional content"
           tone="surfaceElevated"
         />
-
-        <View style={styles.bottomSpacer} />
-        <FigmaBottomNav
-          variant="dark"
-          active="home"
-          onHomePress={() => navigation.navigate('PrivateHome')}
-          onGalleryPress={() => navigation.navigate('Gallery')}
-          onSettingsPress={() => navigation.navigate('Settings')}
-        />
       </ScrollView>
-    </FigmaPage>
+    </FigmaInnerLayout>
   );
 }
 
@@ -172,20 +174,8 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 8,
   },
-  time: {
-    fontSize: 10,
-    fontWeight: '700',
-    lineHeight: 12,
-  },
-  title: {
-    marginTop: 28,
-    fontSize: 40,
-    fontWeight: '800',
-    lineHeight: 48,
-    letterSpacing: -0.8,
-  },
   subtitle: {
-    marginTop: 10,
+    marginTop: 6,
     fontSize: 14,
     lineHeight: 18,
   },
@@ -309,8 +299,5 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     lineHeight: 22,
-  },
-  bottomSpacer: {
-    height: 10,
   },
 });

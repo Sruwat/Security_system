@@ -22,15 +22,22 @@ function TransitionGlyph(props: {palette: typeof figmaPalette.dark; accentLabel:
 export function UnlockSuccessScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const palette = figmaPalette.dark;
+  const pendingPackageName = launchCoordinator.getPendingLaunchPackageName();
 
   React.useEffect(() => {
     adsManager.showInterstitialIfReady('unlock-success');
     const timer = setTimeout(() => {
+      if (pendingPackageName) {
+        navigation.reset({index: 0, routes: [{name: 'PrivateHome'}]});
+        void launchCoordinator.launchPendingAfterAuthentication();
+        return;
+      }
+
       navigation.reset({index: 0, routes: [{name: 'PrivateHome'}]});
     }, 700);
 
     return () => clearTimeout(timer);
-  }, [navigation]);
+  }, [navigation, pendingPackageName]);
 
   return (
     <FigmaPage variant="dark">

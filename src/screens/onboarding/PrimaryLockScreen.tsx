@@ -2,7 +2,7 @@ import React from 'react';
 import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
+import {FigmaActionButton, FigmaInnerLayout, figmaPalette} from '../../components/FigmaKit';
 import type {RootStackParamList} from '../../navigation/routes';
 import {localDataRepository} from '../../storage/LocalDataRepository';
 
@@ -41,10 +41,8 @@ export function PrimaryLockScreen() {
   }, [navigation]);
 
   return (
-    <FigmaPage variant="dark">
+    <FigmaInnerLayout variant="dark" title="Primary Lock" onBackPress={() => navigation.goBack()}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.time, {color: palette.textPrimary}]}>9:41</Text>
-        <Text style={[styles.title, {color: palette.textPrimary}]}>Primary lock</Text>
         <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Create once; reuse for protected access.</Text>
 
         <View style={styles.choices}>
@@ -63,7 +61,7 @@ export function PrimaryLockScreen() {
 
         <FigmaActionButton variant="dark" label="Create primary lock" onPress={() => goTo('PinSetup')} />
       </ScrollView>
-    </FigmaPage>
+    </FigmaInnerLayout>
   );
 }
 
@@ -71,44 +69,20 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 24,
   },
-  time: {
-    fontSize: 10,
-    fontWeight: '700',
-    lineHeight: 12,
-  },
-  stepPill: {
-    minHeight: 30,
-    borderRadius: 15,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepText: {
-    fontSize: 8,
-    fontWeight: '700',
-    lineHeight: 10,
-  },
-  title: {
-    marginTop: 28,
-    fontSize: 40,
-    fontWeight: '800',
-    lineHeight: 48,
-    letterSpacing: -0.8,
-  },
   subtitle: {
-    marginTop: 10,
+    marginTop: 6,
     fontSize: 14,
     lineHeight: 18,
   },
   choices: {
-    marginTop: 58,
+    marginTop: 24,
     gap: 14,
   },
   choiceCard: {
     minHeight: 112,
     borderRadius: 30,
     borderWidth: 1,
-    paddingHorizontal: 32,
+    paddingHorizontal: 24,
     paddingVertical: 22,
     flexDirection: 'row',
     alignItems: 'center',
@@ -127,12 +101,12 @@ const styles = StyleSheet.create({
     lineHeight: 15,
   },
   noteCard: {
-    marginTop: 80,
-    minHeight: 176,
+    marginTop: 28,
+    minHeight: 148,
     borderRadius: 30,
     borderWidth: 1,
-    paddingHorizontal: 36,
-    paddingVertical: 44,
+    paddingHorizontal: 24,
+    paddingVertical: 28,
   },
   noteTitle: {
     fontSize: 18,
@@ -140,7 +114,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   noteBody: {
-    marginTop: 28,
+    marginTop: 20,
     fontSize: 11,
     lineHeight: 15,
   },
@@ -151,5 +125,6 @@ const styles = StyleSheet.create({
   },
   spacer: {
     flex: 1,
+    minHeight: 20,
   },
 });

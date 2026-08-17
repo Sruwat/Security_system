@@ -1,5 +1,6 @@
 import {nativeBridge} from '../../native';
 import {protectionManager} from '../protection/ProtectionManager';
+import {protectionModeFromFlags} from '../protection/protectionState';
 import {sessionManager} from '../session/SessionManager';
 import {localDataRepository} from '../../storage/LocalDataRepository';
 import type {ProtectionMode} from '../../types/domain';
@@ -15,24 +16,25 @@ export class LaunchCoordinator {
       return 'launched';
     }
 
-    const decision = protectionManager.evaluateDecision(protection.mode, packageName);
+    const mode = protection.mode ?? protectionModeFromFlags(protection);
+    const decision = protectionManager.evaluateDecision(mode, packageName);
     const hasSession = sessionManager.isValidFor(packageName);
 
     if (decision.requiresSecretEntry && !hasSession) {
       this.pendingLaunchPackageName = packageName;
-      this.pendingLaunchMode = protection.mode;
+      this.pendingLaunchMode = mode;
       return 'secret_required';
     }
 
-    if (protection.mode === 'LOCK_HIDE' && hasSession) {
+    if (mode === 'LOCK_HIDE' && hasSession) {
       this.pendingLaunchPackageName = packageName;
-      this.pendingLaunchMode = protection.mode;
+      this.pendingLaunchMode = mode;
       return 'auth_required';
     }
 
     if (decision.requiresAuthentication && !hasSession) {
       this.pendingLaunchPackageName = packageName;
-      this.pendingLaunchMode = protection.mode;
+      this.pendingLaunchMode = mode;
       return 'auth_required';
     }
 
@@ -82,10 +84,19 @@ export class LaunchCoordinator {
       sessionManager.startSession(pendingPackageName, autoLockSeconds);
     }
     await this.syncTransientAccess();
+    return 'app_launched';
+  }
+
+  async launchPendingAfterAuthentication(): Promise<boolean> {
+    const pendingPackageName = this.pendingLaunchPackageName;
+    if (!pendingPackageName) {
+      return false;
+    }
+
     await nativeBridge.launchApp(pendingPackageName);
     this.pendingLaunchPackageName = null;
     this.pendingLaunchMode = null;
-    return 'app_launched';
+    return true;
   }
 
   async completeSecretEntry(): Promise<'vault_opened' | 'auth_required' | 'app_launched'> {

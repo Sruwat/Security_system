@@ -2,14 +2,16 @@ import React from 'react';
 import {Alert, Image, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {FigmaActionButton, FigmaBanner, FigmaBottomNav, FigmaPage, figmaPalette} from '../../components/FigmaKit';
-import {launchCoordinator} from '../../services/launch/LaunchCoordinator';
-import {nativeBridge} from '../../native';
-import {localDataRepository} from '../../storage/LocalDataRepository';
-import {sessionManager} from '../../services/session/SessionManager';
-import type {AppProtection} from '../../types/domain';
-import type {RootStackParamList} from '../../navigation/routes';
+import {FigmaActionButton, FigmaBanner, FigmaBottomNav, FigmaRootLayout, figmaPalette} from '../../components/FigmaKit';
 import {useAppVariant} from '../../hooks/useAppVariant';
+import type {RootStackParamList} from '../../navigation/routes';
+import {usePrimaryDrawer} from '../../navigation/usePrimaryDrawer';
+import {nativeBridge} from '../../native';
+import {launchCoordinator} from '../../services/launch/LaunchCoordinator';
+import {normalizeProtection, protectionModeFromFlags} from '../../services/protection/protectionState';
+import {sessionManager} from '../../services/session/SessionManager';
+import {localDataRepository} from '../../storage/LocalDataRepository';
+import type {AppProtection} from '../../types/domain';
 
 type Palette = (typeof figmaPalette)[keyof typeof figmaPalette];
 
@@ -70,6 +72,7 @@ export function VaultScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const variant = useAppVariant();
   const palette = figmaPalette[variant];
+  const {drawerOpen, openDrawer, closeDrawer, drawerDestinations} = usePrimaryDrawer();
   const [apps, setApps] = React.useState<AppProtection[]>([]);
   const [loading, setLoading] = React.useState(true);
   const pendingPackageName = launchCoordinator.getPendingLaunchPackageName();
@@ -92,7 +95,7 @@ export function VaultScreen() {
   );
 
   const hiddenApps = React.useMemo(() => {
-    return apps.filter(app => app.mode === 'HIDE' || app.mode === 'LOCK_HIDE');
+    return apps.map(normalizeProtection).filter(app => app.isHidden);
   }, [apps]);
   const pendingApp = React.useMemo(
     () => hiddenApps.find(app => app.packageName === pendingPackageName),
@@ -100,8 +103,8 @@ export function VaultScreen() {
   );
   const pendingLabel = pendingApp?.label ?? pendingPackageName ?? 'Private space';
 
-  const visibleHiddenApps = hiddenApps.filter(app => app.mode === 'HIDE');
-  const lockedHiddenApps = hiddenApps.filter(app => app.mode === 'LOCK_HIDE');
+  const visibleHiddenApps = hiddenApps.filter(app => !app.isLocked);
+  const lockedHiddenApps = hiddenApps.filter(app => app.isLocked);
 
   const openPendingApp = React.useCallback(async () => {
     if (!pendingPackageName) {
@@ -145,10 +148,24 @@ export function VaultScreen() {
   }, [hasVaultSession, navigation, pendingMode, pendingPackageName]);
 
   return (
-    <FigmaPage variant={variant} style={variant === 'dark' ? styles.darkPage : styles.lightPage}>
+    <FigmaRootLayout
+      variant={variant}
+      title="Vault"
+      drawerTitle="Smart App Lock"
+      drawerOpen={drawerOpen}
+      onDrawerOpen={openDrawer}
+      onDrawerClose={closeDrawer}
+      drawerDestinations={drawerDestinations}
+      bottomNav={
+        <FigmaBottomNav
+          variant={variant}
+          active="home"
+          onHomePress={() => navigation.navigate('PrivateHome')}
+          onGalleryPress={() => navigation.navigate('Gallery')}
+          onSettingsPress={() => navigation.navigate('Settings')}
+        />
+      }>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.time, {color: palette.textPrimary}]}>9:41</Text>
-        <Text style={[styles.title, {color: palette.textPrimary}]}>Vault</Text>
         <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Hidden apps and private content.</Text>
 
         <FigmaBanner screen="vault" variant={variant} title="Banner ad" tone="surface" />
@@ -223,7 +240,7 @@ export function VaultScreen() {
                   palette={palette}
                   label={app.label}
                   onPress={() => {
-                    launchCoordinator.restorePendingLaunch(app.packageName, app.mode);
+                    launchCoordinator.restorePendingLaunch(app.packageName, app.mode ?? protectionModeFromFlags(app));
                     navigation.navigate(hasVaultSession ? 'AuthGate' : 'Calculator');
                   }}
                 />
@@ -232,7 +249,7 @@ export function VaultScreen() {
           )}
 
           <Pressable
-            onPress={() => navigation.navigate(hiddenApps.length === 0 ? 'AddApps' : 'AddApps')}
+            onPress={() => navigation.navigate('AddApps')}
             style={({pressed}) => [
               styles.addCard,
               {backgroundColor: palette.accentSoft, borderColor: palette.accent, opacity: pressed ? 0.94 : 1},
@@ -247,17 +264,8 @@ export function VaultScreen() {
         </Pressable>
 
         <FigmaBanner screen="vault" variant={variant} placement="native" title="Native advertisement" subtitle="Placed after functional content" tone="surfaceElevated" />
-
-        <View style={styles.bottomSpacer} />
-        <FigmaBottomNav
-          variant={variant}
-          active="home"
-          onHomePress={() => navigation.navigate('PrivateHome')}
-          onGalleryPress={() => navigation.navigate('Gallery')}
-          onSettingsPress={() => navigation.navigate('Settings')}
-        />
       </ScrollView>
-    </FigmaPage>
+    </FigmaRootLayout>
   );
 }
 
@@ -271,20 +279,8 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 18,
   },
-  time: {
-    fontSize: 10,
-    fontWeight: '700',
-    lineHeight: 12,
-  },
-  title: {
-    marginTop: 28,
-    fontSize: 40,
-    fontWeight: '800',
-    lineHeight: 48,
-    letterSpacing: -0.8,
-  },
   subtitle: {
-    marginTop: 10,
+    marginTop: 6,
     fontSize: 14,
     lineHeight: 18,
   },
@@ -415,9 +411,6 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 12,
     lineHeight: 16,
-  },
-  bottomSpacer: {
-    height: 8,
   },
 });
 

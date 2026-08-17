@@ -1,9 +1,18 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {nativeBridge} from '../native';
 import {storageKeys} from './keys';
 import type {AppProtection, AppSettings, OnboardingResumeRoute} from '../types/domain';
+import {normalizeProtection, normalizeSettings} from '../services/protection/protectionState';
 
 const defaultSettings: AppSettings = {
   onboardingComplete: false,
+  disguiseType: 'default',
+  secretAccessType: 'calculator',
+  calculatorSecret: '2468',
+  clockSecretValue: '5',
+  calendarSecretDate: '18',
+  gallerySecretConfig: 'triple_tap_cover',
+  defaultLockType: 'PIN',
   theme: 'SYSTEM',
   secretEntryMethod: 'CALCULATOR_CODE',
   primaryAuthMethod: 'PIN',
@@ -45,15 +54,16 @@ export class LocalDataRepository {
     }
 
     try {
-      return {...defaultSettings, ...JSON.parse(raw)};
+      return normalizeSettings({...defaultSettings, ...JSON.parse(raw)});
     } catch {
       return defaultSettings;
     }
   }
 
   async saveSettings(settings: AppSettings): Promise<void> {
-    await AsyncStorage.setItem(storageKeys.settings, JSON.stringify(settings));
-    this.emitSettings(settings);
+    const normalized = normalizeSettings({...defaultSettings, ...settings});
+    await AsyncStorage.setItem(storageKeys.settings, JSON.stringify(normalized));
+    this.emitSettings(normalized);
   }
 
   async getProtectedApps(): Promise<AppProtection[]> {
@@ -64,15 +74,41 @@ export class LocalDataRepository {
 
     try {
       const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
+      const normalized = Array.isArray(parsed) ? parsed.map(item => normalizeProtection(item as AppProtection)) : [];
+      const installedPackages = await nativeBridge.getInstalledPackages().catch(() => []);
+      if (installedPackages.length === 0) {
+        return normalized;
+      }
+
+      const installedSet = new Set(installedPackages);
+      const cleaned = normalized.filter(item => installedSet.has(item.packageName));
+      if (cleaned.length !== normalized.length) {
+        await this.saveProtectedApps(cleaned);
+        const transient = await nativeBridge.getTransientAccess().catch(() => null);
+        if (transient?.packageName && !installedSet.has(transient.packageName)) {
+          await nativeBridge.clearTransientAccess().catch(() => undefined);
+        }
+      }
+      return cleaned;
     } catch {
       return [];
     }
   }
 
   async saveProtectedApps(apps: AppProtection[]): Promise<void> {
-    await AsyncStorage.setItem(storageKeys.protections, JSON.stringify(apps));
-    this.emitProtectedApps(apps);
+    const normalized = apps.map(app => normalizeProtection(app));
+    await AsyncStorage.setItem(storageKeys.protections, JSON.stringify(normalized));
+    await nativeBridge.syncProtectionMetadata(
+      normalized.map(app => ({
+        packageName: app.packageName,
+        isLocked: app.isLocked,
+        credentialRef: app.credentialRef ?? app.packageName,
+        lockType: app.lockType ?? app.authMethod ?? 'PIN',
+        autoLockSeconds: app.autoLockSeconds ?? 30,
+        enabled: app.enabled,
+      })),
+    ).catch(() => undefined);
+    this.emitProtectedApps(normalized);
   }
 
   async addProtectedApp(policy: AppProtection): Promise<void> {

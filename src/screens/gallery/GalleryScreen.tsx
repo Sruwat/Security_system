@@ -2,24 +2,82 @@ import React from 'react';
 import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {FigmaBanner, FigmaBottomNav, FigmaPage, figmaPalette} from '../../components/FigmaKit';
+import {FigmaBanner, FigmaBottomNav, FigmaRootLayout, figmaPalette} from '../../components/FigmaKit';
+import {useTimedTapTrigger} from '../../hooks/useTimedTapTrigger';
 import type {RootStackParamList} from '../../navigation/routes';
+import {usePrimaryDrawer} from '../../navigation/usePrimaryDrawer';
+import {launchCoordinator} from '../../services/launch/LaunchCoordinator';
+import {secretAccessRouter} from '../../services/secret/SecretAccessRouter';
+import {localDataRepository} from '../../storage/LocalDataRepository';
 
 export function GalleryScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const palette = figmaPalette.dark;
+  const {drawerOpen, openDrawer, closeDrawer, drawerDestinations} = usePrimaryDrawer();
   const recentTiles = Array.from({length: 6}, (_, index) => index);
+  const [secretAccessType, setSecretAccessType] = React.useState<'gallery' | 'triple_tap' | 'other'>('other');
+
+  React.useEffect(() => {
+    void localDataRepository.getSettings().then(settings => {
+      if (settings.secretAccessType === 'gallery') {
+        setSecretAccessType('gallery');
+        return;
+      }
+      if (settings.secretAccessType === 'triple_tap') {
+        setSecretAccessType('triple_tap');
+        return;
+      }
+      setSecretAccessType('other');
+    });
+  }, []);
+
+  const triggerSecret = useTimedTapTrigger({
+    key: 'gallery-secret',
+    onTrigger: async () => {
+      const launchOutcome = await launchCoordinator.completeSecretEntry();
+      if (launchOutcome === 'app_launched') {
+        navigation.reset({index: 0, routes: [{name: 'PrivateHome'}]});
+        return;
+      }
+      if (launchOutcome === 'auth_required') {
+        navigation.reset({index: 0, routes: [{name: 'AuthGate'}]});
+        return;
+      }
+      const next = await secretAccessRouter.handleSecretAccess();
+      if (next === 'auth_required') {
+        navigation.reset({index: 0, routes: [{name: 'AuthGate'}]});
+        return;
+      }
+      if (next === 'vault') {
+        navigation.reset({index: 0, routes: [{name: 'Vault'}]});
+      }
+    },
+  });
 
   return (
-    <FigmaPage variant="dark">
+    <FigmaRootLayout
+      variant="dark"
+      title="Gallery"
+      drawerTitle="Smart App Lock"
+      drawerOpen={drawerOpen}
+      onDrawerOpen={openDrawer}
+      onDrawerClose={closeDrawer}
+      drawerDestinations={drawerDestinations}
+      bottomNav={
+        <FigmaBottomNav
+          variant="dark"
+          active="gallery"
+          onHomePress={() => navigation.navigate('PrivateHome')}
+          onGalleryPress={() => navigation.navigate('Gallery')}
+          onSettingsPress={() => navigation.navigate('Settings')}
+        />
+      }>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.time, {color: palette.textPrimary}]}>9:41</Text>
-        <Text style={[styles.title, {color: palette.textPrimary}]}>Gallery</Text>
         <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Private Gallery / protected media.</Text>
 
         <FigmaBanner screen="gallery" variant="dark" title="Banner ad" tone="surfaceElevated" />
 
-        <View style={styles.heroCard}>
+        <Pressable onPress={secretAccessType === 'triple_tap' ? triggerSecret : undefined} style={styles.heroCard}>
           <View style={[styles.heroGlyphWrap, {borderColor: palette.accent}]}>
             <View style={[styles.heroGlyphInner, {backgroundColor: palette.accent}]} />
           </View>
@@ -27,9 +85,11 @@ export function GalleryScreen() {
             <Text style={[styles.heroTitle, {color: palette.textPrimary}]}>Private Gallery</Text>
             <Text style={[styles.heroBody, {color: palette.textSecondary}]}>Protected media on this device</Text>
           </View>
-        </View>
+        </Pressable>
 
-        <Pressable style={({pressed}) => [styles.openButton, {backgroundColor: '#A78BFA', opacity: pressed ? 0.92 : 1}]}>
+        <Pressable
+          onPress={secretAccessType === 'gallery' ? triggerSecret : undefined}
+          style={({pressed}) => [styles.openButton, {backgroundColor: '#A78BFA', opacity: pressed ? 0.92 : 1}]}>
           <Text style={styles.openButtonText}>Open Gallery</Text>
         </Pressable>
 
@@ -49,17 +109,8 @@ export function GalleryScreen() {
           subtitle="Placed after functional content"
           tone="surfaceElevated"
         />
-
-        <View style={styles.bottomSpacer} />
-        <FigmaBottomNav
-          variant="dark"
-          active="gallery"
-          onHomePress={() => navigation.navigate('PrivateHome')}
-          onGalleryPress={() => navigation.navigate('Gallery')}
-          onSettingsPress={() => navigation.navigate('Settings')}
-        />
       </ScrollView>
-    </FigmaPage>
+    </FigmaRootLayout>
   );
 }
 
@@ -67,20 +118,8 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 17,
   },
-  time: {
-    fontSize: 10,
-    fontWeight: '700',
-    lineHeight: 12,
-  },
-  title: {
-    marginTop: 28,
-    fontSize: 40,
-    fontWeight: '800',
-    lineHeight: 48,
-    letterSpacing: -0.8,
-  },
   subtitle: {
-    marginTop: 10,
+    marginTop: 6,
     fontSize: 14,
     lineHeight: 18,
   },
@@ -150,8 +189,5 @@ const styles = StyleSheet.create({
     width: '30.5%',
     aspectRatio: 1,
     borderRadius: 28,
-  },
-  bottomSpacer: {
-    height: 10,
   },
 });
