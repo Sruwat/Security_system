@@ -69,11 +69,23 @@ export function LauncherSetupScreen() {
               void refreshLauncherState();
             }}
           />
+          {launcherState.isDefaultLauncher ? (
+            <LauncherRow
+              palette={palette}
+              title="Use phone launcher"
+              subtitle="Open Android Home settings and switch back to your OEM launcher at any time."
+              onPress={() => {
+                void nativeBridge.openSystemSetting('home').catch(error => {
+                  Alert.alert('Home settings unavailable', error instanceof Error ? error.message : 'Unable to open Home settings.');
+                });
+              }}
+            />
+          ) : null}
         </View>
 
         <View style={[styles.noteCard, {backgroundColor: palette.accentSoft, borderColor: palette.border}]}>
-          <Text style={[styles.noteTitle, {color: palette.accent}]}>Hide works inside this Smart Launcher.</Text>
-          <Text style={[styles.noteBody, {color: palette.textSecondary}]}>No Android-wide hiding claim.</Text>
+          <Text style={[styles.noteTitle, {color: palette.accent}]}>Hide works inside this Smart Launcher only.</Text>
+          <Text style={[styles.noteBody, {color: palette.textSecondary}]}>Your OEM launcher stays available through Home settings. Android does not allow third-party apps to remove other apps from every launcher.</Text>
         </View>
 
         <View style={styles.spacer} />

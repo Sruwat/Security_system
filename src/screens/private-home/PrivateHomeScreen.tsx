@@ -367,6 +367,14 @@ export function PrivateHomeScreen() {
         </View>
 
         <View style={styles.quickActions}>
+          {launcherStatus?.status === 'enabled' ? (
+            <QuickAction
+              title="Use Phone Launcher"
+              subtitle="Open Android Home settings and switch back to your OEM launcher any time."
+              onPress={() => void openPermissionSetting('home')}
+              palette={palette}
+            />
+          ) : null}
           <QuickAction
             title="Hide Apps"
             subtitle="Select apps that should live only in the hidden area."
