@@ -76,6 +76,36 @@ function QuickAction(props: {
   );
 }
 
+function PermissionBanner(props: {
+  title: string;
+  body: string;
+  actionLabel: string;
+  onPress: () => void;
+  backgroundColor: string;
+  borderColor: string;
+  titleColor: string;
+  bodyColor: string;
+}) {
+  return (
+    <Pressable
+      onPress={props.onPress}
+      style={({pressed}) => [
+        styles.warningCard,
+        {
+          backgroundColor: props.backgroundColor,
+          borderColor: props.borderColor,
+          opacity: pressed ? 0.96 : 1,
+        },
+      ]}>
+      <Text style={[styles.warningTitle, {color: props.titleColor}]}>{props.title}</Text>
+      <Text style={[styles.warningBody, {color: props.bodyColor}]}>{props.body}</Text>
+      <View style={[styles.warningActionPill, {borderColor: props.titleColor}]}>
+        <Text style={[styles.warningActionText, {color: props.titleColor}]}>{props.actionLabel}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
 function AppRow(props: {
   app: AppProtection;
   palette: typeof figmaPalette.light;
@@ -243,6 +273,16 @@ export function PrivateHomeScreen() {
     });
   }, [navigation]);
 
+  const openPermissionSetting = React.useCallback(async (settingsAction: string) => {
+    try {
+      await nativeBridge.openSystemSetting(settingsAction);
+    } catch (error) {
+      Alert.alert('Unable to open settings', error instanceof Error ? error.message : 'Android settings could not be opened.');
+    }
+  }, []);
+
+  const hasPermissionIssue = launcherStatus?.status !== 'enabled' || accessibilityStatus?.status !== 'enabled';
+
   return (
     <FigmaRootLayout
       variant="light"
@@ -267,21 +307,29 @@ export function PrivateHomeScreen() {
         </Text>
 
         {launcherStatus?.status !== 'enabled' ? (
-          <View style={[styles.warningCard, {backgroundColor: '#FEF3C7', borderColor: '#F59E0B'}]}>
-            <Text style={[styles.warningTitle, {color: '#92400E'}]}>Managed launcher not active</Text>
-            <Text style={[styles.warningBody, {color: '#92400E'}]}>
-              Hidden apps stay out of this launcher only after Smart App Lock is selected as the default Home app.
-            </Text>
-          </View>
+          <PermissionBanner
+            title="Managed launcher not active"
+            body="Hidden apps stay out of this launcher only after Smart App Lock is selected as the default Home app."
+            actionLabel="Open Home settings"
+            onPress={() => void openPermissionSetting('home')}
+            backgroundColor="#FEF3C7"
+            borderColor="#F59E0B"
+            titleColor="#92400E"
+            bodyColor="#92400E"
+          />
         ) : null}
 
         {accessibilityStatus?.status !== 'enabled' ? (
-          <View style={[styles.warningCard, {backgroundColor: '#FEE2E2', borderColor: '#EF4444'}]}>
-            <Text style={[styles.warningTitle, {color: '#991B1B'}]}>Lock protection needs Accessibility</Text>
-            <Text style={[styles.warningBody, {color: '#991B1B'}]}>
-              Locked apps are saved, but Android launch interception will not enforce them until Accessibility is enabled.
-            </Text>
-          </View>
+          <PermissionBanner
+            title="Lock protection needs Accessibility"
+            body="Locked apps are saved, but Android launch interception will not enforce them until Accessibility is enabled."
+            actionLabel="Open Accessibility"
+            onPress={() => void openPermissionSetting('accessibility')}
+            backgroundColor="#FEE2E2"
+            borderColor="#EF4444"
+            titleColor="#991B1B"
+            bodyColor="#991B1B"
+          />
         ) : null}
 
         <View style={styles.statsRow}>
@@ -340,6 +388,14 @@ export function PrivateHomeScreen() {
             onPress={openSecretAccess}
             palette={palette}
           />
+          {hasPermissionIssue ? (
+            <QuickAction
+              title="Fix Permissions"
+              subtitle="Open Android settings for Accessibility, Home launcher, and protection requirements."
+              onPress={() => navigation.navigate('PrivacyCenter')}
+              palette={palette}
+            />
+          ) : null}
         </View>
 
         <View style={[styles.sectionCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
@@ -457,6 +513,20 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontSize: 12,
     lineHeight: 18,
+  },
+  warningActionPill: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+    minHeight: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+  },
+  warningActionText: {
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 15,
   },
   statsRow: {
     marginTop: 24,
