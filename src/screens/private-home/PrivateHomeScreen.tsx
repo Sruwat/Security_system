@@ -116,14 +116,12 @@ function AppRow(props: {
   const accent = props.app.isHidden && props.app.isLocked ? '#D92D20' : props.app.isHidden ? props.palette.accent : '#1D4ED8';
 
   return (
-    <Pressable
-      onPress={props.onPress}
-      style={({pressed}) => [
+    <View
+      style={[
         styles.appRow,
         {
           backgroundColor: props.palette.surface,
           borderColor: props.palette.border,
-          opacity: pressed ? 0.95 : 1,
         },
       ]}>
       <View style={[styles.appAvatar, {backgroundColor: props.palette.accentSoft}]}>
@@ -140,10 +138,15 @@ function AppRow(props: {
           {props.app.isLocked ? `${lockTypeLabel(props.app.lockType)} lock` : 'No lock'} {'|'} Auto-lock {props.app.autoLockSeconds ?? 30}s
         </Text>
       </View>
-      <Pressable onPress={props.onLaunch} style={[styles.launchPill, {backgroundColor: props.palette.accentSoft}]}>
-        <Text style={[styles.launchPillText, {color: props.palette.accent}]}>Open</Text>
-      </Pressable>
-    </Pressable>
+      <View style={styles.appActions}>
+        <Pressable onPress={props.onPress} style={[styles.launchPill, {backgroundColor: props.palette.accentSoft}]}>
+          <Text style={[styles.launchPillText, {color: props.palette.accent}]}>Edit</Text>
+        </Pressable>
+        <Pressable onPress={props.onLaunch} style={[styles.launchPill, {backgroundColor: props.palette.accentSoft}]}>
+          <Text style={[styles.launchPillText, {color: props.palette.accent}]}>Open</Text>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
@@ -620,6 +623,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  appActions: {
+    gap: 8,
   },
   appAvatar: {
     width: 52,
