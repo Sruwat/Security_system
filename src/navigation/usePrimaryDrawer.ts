@@ -26,7 +26,7 @@ export function usePrimaryDrawer() {
         onPress: () => navigation.navigate('AddApps', {preset: 'HIDE'}),
       },
       {
-        label: 'Lock Apps',
+        label: 'App Lock',
         description: 'Choose apps that stay visible but require unlock.',
         onPress: () => navigation.navigate('AddApps', {preset: 'LOCK'}),
       },
@@ -41,8 +41,8 @@ export function usePrimaryDrawer() {
         onPress: () => navigation.navigate('Vault'),
       },
       {
-        label: 'Secret Access',
-        description: 'Configure calculator, gesture, gallery, or disguise entry.',
+        label: 'Smart Hide',
+        description: 'Choose the secret trigger and disguise experience for Hidden Apps.',
         onPress: () => navigation.navigate('SecretEntry'),
       },
       {

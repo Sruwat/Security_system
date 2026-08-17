@@ -14,8 +14,24 @@ class BootCompletedReceiver : BroadcastReceiver() {
     }
 
     val appContext = context.applicationContext
-    TransientAccessRepository(appContext).clear()
-    NativeSessionRepository(appContext).clear()
-    ProtectionMetadataRepository(appContext).clearPendingAuthRequest()
+    val now = System.currentTimeMillis()
+    val transientAccessRepository = TransientAccessRepository(appContext)
+    val nativeSessionRepository = NativeSessionRepository(appContext)
+    val protectionMetadataRepository = ProtectionMetadataRepository(appContext)
+
+    val transientAccess = transientAccessRepository.read()
+    if (transientAccess != null && transientAccess.expiresAt <= now) {
+      transientAccessRepository.clear()
+    }
+
+    val nativeSession = nativeSessionRepository.read()
+    if (nativeSession != null && !nativeSession.immediateRelock && nativeSession.expiresAt <= now) {
+      nativeSessionRepository.clear()
+    }
+
+    val pendingPackage = protectionMetadataRepository.getPendingAuthRequest()?.packageName
+    if (pendingPackage != null && protectionMetadataRepository.readProtection(pendingPackage) == null) {
+      protectionMetadataRepository.clearPendingAuthRequest()
+    }
   }
 }

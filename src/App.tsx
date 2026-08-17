@@ -11,24 +11,7 @@ import {secretAccessRouter} from './services/secret/SecretAccessRouter';
 import {sessionManager} from './services/session/SessionManager';
 import {useAppSecurityLifecycle} from './hooks/useAppSecurityLifecycle';
 import type {RootStackParamList} from './navigation/routes';
-import type {DisguiseType} from './types/domain';
-
 const navigationRef = createNavigationContainerRef<RootStackParamList>();
-
-function disguiseRoute(disguiseType: DisguiseType): keyof RootStackParamList {
-  switch (disguiseType) {
-    case 'calculator':
-      return 'Calculator';
-    case 'clock':
-      return 'Clock';
-    case 'calendar':
-      return 'Calendar';
-    case 'gallery':
-      return 'Gallery';
-    default:
-      return 'PrivateHome';
-  }
-}
 
 export default function App() {
   useAppSecurityLifecycle();
@@ -88,11 +71,11 @@ export default function App() {
           setInitialRouteName('RebootRestored');
         } else {
           launchCoordinator.restorePendingLaunch(null);
-          setInitialRouteName(disguiseRoute(settings.disguiseType));
+          setInitialRouteName('PrivateHome');
         }
       } else {
         launchCoordinator.restorePendingLaunch(null);
-        setInitialRouteName(disguiseRoute(settings.disguiseType));
+        setInitialRouteName('PrivateHome');
       }
 
       setReady(true);

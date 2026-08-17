@@ -27,6 +27,7 @@ export interface AppProtection {
   appName?: string;
   iconUri?: string;
   icon?: string;
+  triggerType?: SecretAccessType;
   isHidden: boolean;
   isLocked: boolean;
   enabled: boolean;

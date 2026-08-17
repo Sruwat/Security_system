@@ -23,6 +23,7 @@ export function UnlockSuccessScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const palette = figmaPalette.dark;
   const pendingPackageName = launchCoordinator.getPendingLaunchPackageName();
+  const activeSession = sessionManager.getState();
 
   React.useEffect(() => {
     adsManager.showInterstitialIfReady('unlock-success');
@@ -33,11 +34,16 @@ export function UnlockSuccessScreen() {
         return;
       }
 
+      if (activeSession?.vaultUnlocked) {
+        navigation.reset({index: 0, routes: [{name: 'Vault'}]});
+        return;
+      }
+
       navigation.reset({index: 0, routes: [{name: 'PrivateHome'}]});
     }, 700);
 
     return () => clearTimeout(timer);
-  }, [navigation, pendingPackageName]);
+  }, [activeSession?.vaultUnlocked, navigation, pendingPackageName]);
 
   return (
     <FigmaPage variant="dark">
@@ -61,7 +67,7 @@ export function UnlockSuccessScreen() {
               Private space
             </Text>
             <Text style={[styles.contextHint, {color: palette.textSecondary}]}>
-              Returning to the private launcher
+              {activeSession?.vaultUnlocked ? 'Returning to Hidden Apps' : 'Returning to the private launcher'}
             </Text>
           </View>
         </View>
@@ -76,12 +82,18 @@ export function UnlockSuccessScreen() {
         <View style={[styles.statusCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
           <Text style={[styles.statusTitle, {color: palette.textPrimary}]}>What happens next</Text>
           <Text style={[styles.statusBody, {color: palette.textSecondary}]}>
-            The app returns to the private screen after the secure handoff is complete.
+            {activeSession?.vaultUnlocked
+              ? 'The app returns to Hidden Apps after the secure handoff is complete.'
+              : 'The app returns to the private screen after the secure handoff is complete.'}
           </Text>
         </View>
 
         <View style={styles.footerRow}>
-          <Pressable onPress={() => navigation.reset({index: 0, routes: [{name: 'PrivateHome'}]})} style={[styles.footerPill, styles.primaryPill, {backgroundColor: palette.accent}]}>
+          <Pressable
+            onPress={() =>
+              navigation.reset({index: 0, routes: [{name: activeSession?.vaultUnlocked ? 'Vault' : 'PrivateHome'}]})
+            }
+            style={[styles.footerPill, styles.primaryPill, {backgroundColor: palette.accent}]}>
             <Text style={[styles.footerText, {color: '#FFFFFF'}]}>Continue</Text>
           </Pressable>
         </View>
@@ -111,6 +123,11 @@ export function RebootRestoredScreen() {
       }
 
       navigation.reset({index: 0, routes: [{name: 'AuthGate'}]});
+      return;
+    }
+
+    if (activeSession?.vaultUnlocked) {
+      navigation.reset({index: 0, routes: [{name: 'Vault'}]});
       return;
     }
 

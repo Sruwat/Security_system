@@ -9,13 +9,6 @@ import {protectionManager} from '../../services/protection/ProtectionManager';
 import type {AppProtection, ProtectionMode} from '../../types/domain';
 import {describeProtection, normalizeProtection, protectionFlagsFromMode, protectionModeFromFlags} from '../../services/protection/protectionState';
 
-const protectionModes: ProtectionMode[] = ['LOCK_HIDE', 'HIDE', 'LOCK', 'NONE'];
-
-function cycleMode(mode: ProtectionMode): ProtectionMode {
-  const index = protectionModes.indexOf(mode);
-  return protectionModes[(index + 1) % protectionModes.length];
-}
-
 function describeMode(mode: ProtectionMode): string {
   return mode === 'LOCK_HIDE' ? 'Lock + Hide' : mode === 'LOCK' ? 'Lock' : mode === 'HIDE' ? 'Hide' : 'Open';
 }
@@ -32,7 +25,7 @@ export function ManageAppsScreen() {
   const loadApps = React.useCallback(async () => {
     setLoading(true);
     try {
-      setApps(await localDataRepository.getProtectedApps());
+      setApps((await localDataRepository.getProtectedApps()).map(normalizeProtection).filter(app => app.enabled));
     } finally {
       setLoading(false);
     }
@@ -44,21 +37,24 @@ export function ManageAppsScreen() {
     }, [loadApps]),
   );
 
-  const updateMode = React.useCallback(
-    async (app: AppProtection) => {
+  const saveFlags = React.useCallback(
+    async (app: AppProtection, nextMode: ProtectionMode) => {
       setBusyPackage(app.packageName);
       try {
-        const nextMode = cycleMode(app.mode ?? protectionModeFromFlags(app));
         const nextFlags = protectionFlagsFromMode(nextMode);
-        await protectionManager.upsertProtection(
-          normalizeProtection({
-            ...app,
-            ...nextFlags,
-            enabled: nextMode !== 'NONE',
-            mode: nextMode,
-            updatedAt: Date.now(),
-          }),
-        );
+        if (nextMode === 'NONE') {
+          await protectionManager.removeProtection(app.packageName);
+        } else {
+          await protectionManager.upsertProtection(
+            normalizeProtection({
+              ...app,
+              ...nextFlags,
+              enabled: true,
+              mode: nextMode,
+              updatedAt: Date.now(),
+            }),
+          );
+        }
         await loadApps();
       } catch (error) {
         Alert.alert('Update failed', error instanceof Error ? error.message : 'Unable to change protection mode.');
@@ -67,6 +63,47 @@ export function ManageAppsScreen() {
       }
     },
     [loadApps],
+  );
+
+  const toggleHide = React.useCallback(
+    async (app: AppProtection) => {
+      const currentMode = app.mode ?? protectionModeFromFlags(app);
+      const nextMode: ProtectionMode =
+        currentMode === 'LOCK_HIDE' ? 'LOCK' : currentMode === 'HIDE' ? 'NONE' : currentMode === 'LOCK' ? 'LOCK_HIDE' : 'HIDE';
+      await saveFlags(app, nextMode);
+    },
+    [saveFlags],
+  );
+
+  const toggleLock = React.useCallback(
+    async (app: AppProtection) => {
+      const currentMode = app.mode ?? protectionModeFromFlags(app);
+      const nextMode: ProtectionMode =
+        currentMode === 'LOCK_HIDE' ? 'HIDE' : currentMode === 'LOCK' ? 'NONE' : currentMode === 'HIDE' ? 'LOCK_HIDE' : 'LOCK';
+      await saveFlags(app, nextMode);
+    },
+    [saveFlags],
+  );
+
+  const openChangeLock = React.useCallback(
+    (app: AppProtection) => {
+      navigation.navigate('ProtectionMode', {
+        draft: {
+          app: {
+            packageName: app.packageName,
+            label: app.label,
+            iconUri: app.iconUri,
+            systemApp: false,
+          },
+          mode: app.mode ?? protectionModeFromFlags(app),
+          authMethod: app.lockType ?? app.authMethod ?? 'PIN',
+          autoLockSeconds: app.autoLockSeconds ?? 30,
+          triggerType: app.triggerType,
+        },
+        onboarding: false,
+      });
+    },
+    [navigation],
   );
 
   const removeProtection = React.useCallback(
@@ -85,7 +122,7 @@ export function ManageAppsScreen() {
   return (
     <FigmaInnerLayout variant="dark" title="Manage Apps" onBackPress={() => navigation.goBack()}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Change, add or remove apps.</Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Turn Hide and Lock on or off for each protected app.</Text>
 
         <FigmaBanner screen="manage-apps" variant="dark" title="Banner ad" tone="surfaceElevated" />
 
@@ -128,19 +165,30 @@ export function ManageAppsScreen() {
                     <Text style={[styles.rowPackage, {color: palette.textSecondary}]} numberOfLines={1}>
                       {app.packageName}
                     </Text>
-                    <View style={[styles.modePill, {backgroundColor: palette.accentSoft}]}>
-                      <Text style={[styles.modeText, {color: palette.accent}]}>
-                        {describeProtection(normalizeProtection(app))} {'|'} {describeMode(app.mode ?? protectionModeFromFlags(app))}
-                      </Text>
+                    <View style={styles.modeRow}>
+                      <View style={[styles.modePill, {backgroundColor: palette.accentSoft}]}>
+                        <Text style={[styles.modeText, {color: palette.accent}]}>{describeProtection(normalizeProtection(app))}</Text>
+                      </View>
+                      <View style={[styles.modePill, {backgroundColor: palette.surfaceElevated}]}>
+                        <Text style={[styles.modeText, {color: palette.textPrimary}]}>{describeMode(app.mode ?? protectionModeFromFlags(app))}</Text>
+                      </View>
                     </View>
                   </View>
                 </View>
 
                 <View style={[styles.actions, compactRow && styles.actionsCompact]}>
-                  <Pressable onPress={() => void updateMode(app)} style={[styles.actionPill, {backgroundColor: palette.accentSoft}]}>
+                  <Pressable onPress={() => void toggleHide(app)} style={[styles.actionPill, {backgroundColor: app.isHidden ? palette.accentSoft : palette.surfaceElevated}]}>
                     <Text style={[styles.actionText, {color: palette.accent}]}>
-                      {busyPackage === app.packageName ? 'Updating...' : 'Change'}
+                      {busyPackage === app.packageName ? 'Saving...' : app.isHidden ? 'Unhide' : 'Hide'}
                     </Text>
+                  </Pressable>
+                  <Pressable onPress={() => void toggleLock(app)} style={[styles.actionPill, {backgroundColor: app.isLocked ? palette.accentSoft : palette.surfaceElevated}]}>
+                    <Text style={[styles.actionText, {color: palette.accent}]}>
+                      {busyPackage === app.packageName ? 'Saving...' : app.isLocked ? 'Unlock app' : 'Lock app'}
+                    </Text>
+                  </Pressable>
+                  <Pressable onPress={() => openChangeLock(app)} style={[styles.actionPill, {backgroundColor: palette.accentSoft}]}>
+                    <Text style={[styles.actionText, {color: palette.accent}]}>Change lock</Text>
                   </Pressable>
                   <Pressable onPress={() => void removeProtection(app)} style={[styles.actionPill, {backgroundColor: palette.accentSoft}]}>
                     <Text style={[styles.actionText, {color: palette.accent}]}>
@@ -267,10 +315,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 14,
   },
+  modeRow: {
+    marginTop: 12,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
   actions: {
     flexDirection: 'row',
     gap: 8,
     justifyContent: 'flex-end',
+    flexWrap: 'wrap',
   },
   actionsCompact: {
     flexDirection: 'column',

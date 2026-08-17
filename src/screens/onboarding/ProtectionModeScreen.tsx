@@ -66,6 +66,7 @@ export function ProtectionModeScreen() {
     setSaving(true);
     try {
       const protection = normalizeProtection(draft);
+      const settings = await localDataRepository.getSettings();
       await Promise.all(
         selectedApps.map(app =>
           protectionManager.upsertProtection({
@@ -75,6 +76,7 @@ export function ProtectionModeScreen() {
             appName: app.label,
             iconUri: app.iconUri,
             icon: app.iconUri,
+            triggerType: settings.secretAccessType,
             updatedAt: Date.now(),
           }),
         ),
@@ -145,9 +147,9 @@ export function ProtectionModeScreen() {
         <View style={[styles.notice, {backgroundColor: palette.accentSoft, borderColor: palette.border}]}>
           <Text style={[styles.noticeText, {color: palette.accent}]}>
             {draft.isHidden && draft.isLocked
-              ? 'Hide + Lock: Secret Access opens the lock screen first, then Hidden Apps.'
+              ? 'Hide + Lock: Secret Trigger opens the lock screen first, then Hidden Apps.'
               : draft.isHidden
-                ? 'Hide only: Secret Access opens Hidden Apps directly.'
+                ? 'Hide only: Secret Trigger opens Hidden Apps directly.'
                 : draft.isLocked
                   ? 'Lock only: the app stays visible and opens through the lock screen.'
                   : 'This app is currently visible and unlocked.'}
@@ -198,11 +200,11 @@ export function ProtectionModeScreen() {
           <Text style={[styles.summaryTitle, {color: palette.textPrimary}]}>Resulting flow</Text>
           <Text style={[styles.summaryBody, {color: palette.textSecondary}]}>
             {protectionModeFromFlags(draft) === 'HIDE'
-              ? 'Secret Access → Hidden Apps'
+              ? 'Secret Trigger → Hidden Apps'
               : protectionModeFromFlags(draft) === 'LOCK'
                 ? 'Open App → Lock Screen → App'
                 : protectionModeFromFlags(draft) === 'LOCK_HIDE'
-                  ? 'Secret Access → Lock Screen → Hidden Apps'
+                  ? 'Secret Trigger → Lock Screen → Hidden Apps'
                   : 'Open App normally'}
           </Text>
         </View>

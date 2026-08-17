@@ -111,26 +111,26 @@ export function SettingsScreen() {
               onPress: () => navigation.navigate('PrimaryLock'),
             },
             {
-              title: 'Per-App Lock',
-              subtitle: sampleProtectedApp ? `${sampleProtectedApp.label}: ${describeProtection(sampleProtectedApp)}` : 'No protected apps yet',
-              onPress: () => navigation.navigate('ManageApps'),
+              title: 'Auto-lock',
+              subtitle: backgroundStatus ? backgroundStatus.status.replace(/_/g, ' ') : `Current timeout: ${settings.autoLockSecondsDefault}s`,
+              onPress: () => navigation.navigate('AutoLockSettings'),
             },
           ]}
         />
 
         <GroupCard
-          title="Secret Access"
+          title="Smart Access"
           palette={palette}
           rows={[
             {
-              title: 'Access Method',
-              subtitle: settings.secretAccessType.replace('_', ' '),
+              title: 'Secret Trigger',
+              subtitle: settings.secretAccessType.replace(/_/g, ' '),
               onPress: () => navigation.navigate('SecretEntry'),
             },
             {
-              title: 'Calculator Secret',
-              subtitle: settings.calculatorSecret ? 'Configured' : 'Not set',
-              onPress: () => navigation.navigate('SecretEntry'),
+              title: 'Hidden Apps',
+              subtitle: `${hiddenApps.length} app${hiddenApps.length === 1 ? '' : 's'} in Vault`,
+              onPress: () => navigation.navigate('Vault'),
             },
           ]}
         />
@@ -144,6 +144,11 @@ export function SettingsScreen() {
               subtitle: settings.disguiseType,
               onPress: () => navigation.navigate('SecretEntry'),
             },
+            {
+              title: 'Appearance',
+              subtitle: settings.theme.toLowerCase(),
+              onPress: () => navigation.navigate('AppearanceSettings'),
+            },
           ]}
         />
 
@@ -152,9 +157,9 @@ export function SettingsScreen() {
           palette={palette}
           rows={[
             {
-              title: 'Hidden Apps',
-              subtitle: `${hiddenApps.length} app${hiddenApps.length === 1 ? '' : 's'}`,
-              onPress: () => navigation.navigate('Vault'),
+              title: 'Manage Protected Apps',
+              subtitle: sampleProtectedApp ? `${sampleProtectedApp.label}: ${describeProtection(sampleProtectedApp)}` : 'No protected apps yet',
+              onPress: () => navigation.navigate('ManageApps'),
             },
             {
               title: 'Locked Apps',
@@ -174,31 +179,14 @@ export function SettingsScreen() {
           palette={palette}
           rows={[
             {
-              title: 'Forgot PIN',
-              subtitle: 'Reset local credentials without any cloud bypass',
+              title: 'Privacy Center',
+              subtitle: launcherStatus ? `Launcher: ${launcherStatus.status.replace(/_/g, ' ')}` : 'Check launcher and accessibility readiness',
               onPress: () => navigation.navigate('PrivacyCenter'),
             },
             {
-              title: 'Reset Security',
-              subtitle: 'Reconfigure credentials and secret access',
-              onPress: () => navigation.navigate('PrivacyCenter'),
-            },
-          ]}
-        />
-
-        <GroupCard
-          title="Permissions"
-          palette={palette}
-          rows={[
-            {
-              title: 'Launcher Status',
-              subtitle: launcherStatus ? launcherStatus.status.replace(/_/g, ' ') : 'Check launcher role and setup',
-              onPress: () => navigation.navigate('PrivacyCenter'),
-            },
-            {
-              title: 'Background Protection',
-              subtitle: backgroundStatus ? backgroundStatus.status.replace(/_/g, ' ') : `Auto-lock ${settings.autoLockSecondsDefault}s`,
-              onPress: () => navigation.navigate('AutoLockSettings'),
+              title: 'AdManager Rules',
+              subtitle: 'Review local ad surfaces and placement rules',
+              onPress: () => navigation.navigate('AdManagerRules'),
             },
           ]}
         />

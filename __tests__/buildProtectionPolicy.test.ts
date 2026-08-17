@@ -26,6 +26,7 @@ describe('buildProtectionPolicy', () => {
       enabled: true,
       lockType: 'PIN',
       credentialRef: 'lock.primary',
+      triggerType: 'triple_tap',
       mode: 'LOCK_HIDE',
       authMethod: 'PIN',
       autoLockSeconds: 120,

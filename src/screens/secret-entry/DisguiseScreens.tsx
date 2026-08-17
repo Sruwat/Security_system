@@ -39,7 +39,7 @@ function useSecretSettings() {
     clockSecretValue: string;
     calendarSecretDate: string;
   }>({
-    secretAccessType: 'calculator',
+    secretAccessType: 'triple_tap',
     clockSecretValue: '5',
     calendarSecretDate: '18',
   });

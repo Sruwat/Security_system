@@ -44,9 +44,9 @@ export function LauncherSetupScreen() {
   }, [refreshLauncherState]);
 
   return (
-    <FigmaInnerLayout variant="light" title="Launcher Setup" onBackPress={() => navigation.goBack()}>
+    <FigmaInnerLayout variant="light" title="Required Permissions" onBackPress={() => navigation.goBack()}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>One-time Android setup.</Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Give Hide and Lock the Android access they need.</Text>
 
         <View style={styles.rows}>
           <LauncherRow

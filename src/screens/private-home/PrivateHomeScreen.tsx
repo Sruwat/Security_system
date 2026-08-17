@@ -10,7 +10,7 @@ import {launchCoordinator} from '../../services/launch/LaunchCoordinator';
 import {describeProtection, lockTypeLabel, normalizeProtection, protectionModeFromFlags} from '../../services/protection/protectionState';
 import {secretAccessRouter} from '../../services/secret/SecretAccessRouter';
 import {localDataRepository} from '../../storage/LocalDataRepository';
-import type {AppProtection, LaunchableApp, PermissionStatus} from '../../types/domain';
+import type {AppProtection, AppSettings, LaunchableApp, PermissionStatus} from '../../types/domain';
 
 function countLabel(value: number, singular: string, plural = singular) {
   return `${value} ${value === 1 ? singular : plural}`;
@@ -56,6 +56,7 @@ function StatCard(props: {
 function QuickAction(props: {
   title: string;
   subtitle: string;
+  eyebrow?: string;
   onPress: () => void;
   palette: typeof figmaPalette.light;
 }) {
@@ -70,6 +71,7 @@ function QuickAction(props: {
           opacity: pressed ? 0.94 : 1,
         },
       ]}>
+      {props.eyebrow ? <Text style={[styles.quickActionEyebrow, {color: props.palette.accent}]}>{props.eyebrow}</Text> : null}
       <Text style={[styles.quickActionTitle, {color: props.palette.textPrimary}]}>{props.title}</Text>
       <Text style={[styles.quickActionSubtitle, {color: props.palette.textSecondary}]}>{props.subtitle}</Text>
     </Pressable>
@@ -140,7 +142,7 @@ function AppRow(props: {
       </View>
       <View style={styles.appActions}>
         <Pressable onPress={props.onPress} style={[styles.launchPill, {backgroundColor: props.palette.accentSoft}]}>
-          <Text style={[styles.launchPillText, {color: props.palette.accent}]}>Edit</Text>
+          <Text style={[styles.launchPillText, {color: props.palette.accent}]}>Manage</Text>
         </Pressable>
         <Pressable onPress={props.onLaunch} style={[styles.launchPill, {backgroundColor: props.palette.accentSoft}]}>
           <Text style={[styles.launchPillText, {color: props.palette.accent}]}>Open</Text>
@@ -157,6 +159,7 @@ export function PrivateHomeScreen() {
   const [apps, setApps] = React.useState<AppProtection[]>([]);
   const [launcherApps, setLauncherApps] = React.useState<LaunchableApp[]>([]);
   const [permissionStatuses, setPermissionStatuses] = React.useState<PermissionStatus[]>([]);
+  const [settings, setSettings] = React.useState<AppSettings | null>(null);
   const [loading, setLoading] = React.useState(true);
 
   const loadApps = React.useCallback(async () => {
@@ -164,12 +167,14 @@ export function PrivateHomeScreen() {
     try {
       const stored = await localDataRepository.getProtectedApps();
       setApps(stored.map(normalizeProtection));
-      const [discoveredApps, statuses] = await Promise.all([
+      const [discoveredApps, statuses, nextSettings] = await Promise.all([
         nativeBridge.getLaunchableApps().catch(() => []),
         nativeBridge.getPermissionStatuses().catch(() => []),
+        localDataRepository.getSettings().catch(() => null),
       ]);
       setLauncherApps(discoveredApps);
       setPermissionStatuses(statuses);
+      setSettings(nextSettings);
     } finally {
       setLoading(false);
     }
@@ -205,6 +210,14 @@ export function PrivateHomeScreen() {
     const hiddenPackages = new Set(counts.hiddenApps.map(app => app.packageName));
     return launcherApps.filter(app => !hiddenPackages.has(app.packageName));
   }, [counts.hiddenApps, launcherApps]);
+  const readiness = React.useMemo(
+    () => ({
+      launcherReady: launcherStatus?.status === 'enabled',
+      accessibilityReady: accessibilityStatus?.status === 'enabled',
+      credentialReady: Boolean(settings?.onboardingComplete && settings?.primaryAuthMethod),
+    }),
+    [accessibilityStatus?.status, launcherStatus?.status, settings?.onboardingComplete, settings?.primaryAuthMethod],
+  );
 
   const openApp = React.useCallback(
     async (app: AppProtection) => {
@@ -306,7 +319,7 @@ export function PrivateHomeScreen() {
       }>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
-          Hide apps, lock apps, or combine both protections from one simple control center.
+          Hide apps, choose a secret trigger, lock apps, or combine both protections from one simple control center.
         </Text>
 
         {launcherStatus?.status !== 'enabled' ? (
@@ -334,6 +347,37 @@ export function PrivateHomeScreen() {
             bodyColor="#991B1B"
           />
         ) : null}
+
+        <View style={styles.quickActions}>
+          <QuickAction
+            title="Hide Apps"
+            subtitle="Select apps that should live only in the hidden area."
+            eyebrow={`${counts.hiddenApps.length} hidden`}
+            onPress={() => navigation.navigate('AddApps', {preset: 'HIDE'})}
+            palette={palette}
+          />
+          <QuickAction
+            title="Smart Hide"
+            subtitle="Choose the secret trigger that opens Hidden Apps."
+            eyebrow={settings?.secretAccessType ? settings.secretAccessType.replace(/_/g, ' ') : 'secret trigger'}
+            onPress={() => navigation.navigate('SecretEntry')}
+            palette={palette}
+          />
+          <QuickAction
+            title="App Lock"
+            subtitle="Add a PIN, password, pattern, or biometric gate."
+            eyebrow={`${counts.lockedApps.length} locked`}
+            onPress={() => navigation.navigate('AddApps', {preset: 'LOCK'})}
+            palette={palette}
+          />
+          <QuickAction
+            title="Hide + Lock"
+            subtitle="Keep apps private and require authentication before access."
+            eyebrow={`${counts.hiddenApps.filter(app => app.isLocked).length} combined`}
+            onPress={() => navigation.navigate('AddApps', {preset: 'LOCK_HIDE'})}
+            palette={palette}
+          />
+        </View>
 
         <View style={styles.statsRow}>
           <StatCard
@@ -366,47 +410,57 @@ export function PrivateHomeScreen() {
           />
         </View>
 
-        <View style={styles.quickActions}>
-          {launcherStatus?.status === 'enabled' ? (
+        <View style={[styles.sectionCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Readiness</Text>
+            <Pressable onPress={() => navigation.navigate('PrivacyCenter')}>
+              <Text style={[styles.sectionLink, {color: palette.accent}]}>Review all</Text>
+            </Pressable>
+          </View>
+          <View style={styles.readinessGrid}>
+            <View style={[styles.readinessCard, {backgroundColor: readiness.launcherReady ? palette.accentSoft : '#FEF3C7'}]}>
+              <Text style={[styles.readinessTitle, {color: readiness.launcherReady ? palette.accent : '#92400E'}]}>Launcher Ready</Text>
+              <Text style={[styles.readinessBody, {color: palette.textSecondary}]}>
+                {readiness.launcherReady ? 'Hide works in your managed launcher.' : 'Set Smart App Lock as Home launcher for Hide mode.'}
+              </Text>
+            </View>
+            <View style={[styles.readinessCard, {backgroundColor: readiness.accessibilityReady ? '#FEE4E2' : '#FEE2E2'}]}>
+              <Text style={[styles.readinessTitle, {color: '#991B1B'}]}>Accessibility Ready</Text>
+              <Text style={[styles.readinessBody, {color: palette.textSecondary}]}>
+                {readiness.accessibilityReady ? 'External app lock interception is active.' : 'Enable Accessibility before locked apps can be enforced.'}
+              </Text>
+            </View>
+            <View style={[styles.readinessCard, {backgroundColor: palette.surfaceElevated}]}>
+              <Text style={[styles.readinessTitle, {color: palette.textPrimary}]}>Credential Ready</Text>
+              <Text style={[styles.readinessBody, {color: palette.textSecondary}]}>
+                {readiness.credentialReady ? `${settings?.primaryAuthMethod ?? 'PIN'} is configured for protected access.` : 'Finish security setup to protect apps.'}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.supportActions}>
             <QuickAction
-              title="Use Phone Launcher"
-              subtitle="Open Android Home settings and switch back to your OEM launcher any time."
-              onPress={() => void openPermissionSetting('home')}
+              title="Open Hidden Apps"
+              subtitle="Use your current secret access rules right now."
+              onPress={openSecretAccess}
               palette={palette}
             />
-          ) : null}
-          <QuickAction
-            title="Hide Apps"
-            subtitle="Select apps that should live only in the hidden area."
-            onPress={() => navigation.navigate('AddApps', {preset: 'HIDE'})}
-            palette={palette}
-          />
-          <QuickAction
-            title="Lock Apps"
-            subtitle="Add a PIN, password, pattern, or biometric gate."
-            onPress={() => navigation.navigate('AddApps', {preset: 'LOCK'})}
-            palette={palette}
-          />
-          <QuickAction
-            title="Hide + Lock"
-            subtitle="Keep apps private and require authentication before access."
-            onPress={() => navigation.navigate('AddApps', {preset: 'LOCK_HIDE'})}
-            palette={palette}
-          />
-          <QuickAction
-            title="Secret Access"
-            subtitle="Open the hidden area through your configured secret method."
-            onPress={openSecretAccess}
-            palette={palette}
-          />
-          {hasPermissionIssue ? (
-            <QuickAction
-              title="Fix Permissions"
-              subtitle="Open Android settings for Accessibility, Home launcher, and protection requirements."
-              onPress={() => navigation.navigate('PrivacyCenter')}
-              palette={palette}
-            />
-          ) : null}
+            {launcherStatus?.status === 'enabled' ? (
+              <QuickAction
+                title="Use Phone Launcher"
+                subtitle="Open Home settings and switch back to your OEM launcher any time."
+                onPress={() => void openPermissionSetting('home')}
+                palette={palette}
+              />
+            ) : null}
+            {hasPermissionIssue ? (
+              <QuickAction
+                title="Fix Permissions"
+                subtitle="Open Android settings for launcher, accessibility, and protection requirements."
+                onPress={() => navigation.navigate('PrivacyCenter')}
+                palette={palette}
+              />
+            ) : null}
+          </View>
         </View>
 
         <View style={[styles.sectionCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
@@ -471,7 +525,7 @@ export function PrivateHomeScreen() {
             <Text style={[styles.stateText, {color: palette.textSecondary}]}>Loading protected apps...</Text>
           ) : counts.protectedApps.length === 0 ? (
             <Text style={[styles.stateText, {color: palette.textSecondary}]}>
-              No protected apps yet. Start with Hide Apps, Lock Apps, or Hide + Lock.
+              No protected apps yet. Start with Hide Apps, App Lock, or Hide + Lock.
             </Text>
           ) : (
             <View style={styles.appList}>
@@ -490,9 +544,9 @@ export function PrivateHomeScreen() {
 
         <View style={[styles.sectionCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
           <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Current user flow</Text>
-          <Text style={[styles.flowLine, {color: palette.textSecondary}]}>Hide only: Secret Access {'>'} Hidden Apps</Text>
+          <Text style={[styles.flowLine, {color: palette.textSecondary}]}>Hide only: Secret Trigger {'>'} Hidden Apps</Text>
           <Text style={[styles.flowLine, {color: palette.textSecondary}]}>Lock only: Open App {'>'} Lock Screen {'>'} App</Text>
-          <Text style={[styles.flowLine, {color: palette.textSecondary}]}>Hide + Lock: Secret Access {'>'} Lock Screen {'>'} Hidden Apps</Text>
+          <Text style={[styles.flowLine, {color: palette.textSecondary}]}>Hide + Lock: Secret Trigger {'>'} Lock Screen {'>'} Hidden Apps</Text>
         </View>
       </ScrollView>
     </FigmaRootLayout>
@@ -578,6 +632,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
     lineHeight: 22,
+  },
+  quickActionEyebrow: {
+    fontSize: 11,
+    fontWeight: '800',
+    lineHeight: 14,
+    textTransform: 'uppercase',
   },
   quickActionSubtitle: {
     marginTop: 8,
@@ -682,5 +742,28 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 12,
     lineHeight: 17,
+  },
+  readinessGrid: {
+    marginTop: 14,
+    gap: 12,
+  },
+  readinessCard: {
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  readinessTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    lineHeight: 18,
+  },
+  readinessBody: {
+    marginTop: 6,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  supportActions: {
+    marginTop: 14,
+    gap: 12,
   },
 });

@@ -15,12 +15,12 @@ const secretAccessOptions: Array<{
   value: SecretAccessType;
   subtitle: string;
 }> = [
-  {title: 'Calculator', value: 'calculator', subtitle: 'Use a 4-digit secret code and ='},
-  {title: 'Triple Tap', value: 'triple_tap', subtitle: 'Open the private area from a discreet triple tap'},
-  {title: 'Clock', value: 'clock', subtitle: 'Tap the configured clock value three times'},
-  {title: 'Calendar', value: 'calendar', subtitle: 'Use your configured secret date interaction'},
-  {title: 'Gallery', value: 'gallery', subtitle: 'Use your gallery secret interaction'},
-  {title: 'Shake', value: 'shake', subtitle: 'Reserved for sensor-based secret access'},
+  {title: 'Triple Tap', value: 'triple_tap', subtitle: 'Recommended: open Hidden Apps from a discreet triple tap'},
+  {title: 'Shake', value: 'shake', subtitle: 'Recommended: open Hidden Apps from a quick shake gesture'},
+  {title: 'Calculator', value: 'calculator', subtitle: 'Optional: use a 4-6 digit calculator secret code'},
+  {title: 'Clock', value: 'clock', subtitle: 'Optional: tap the configured clock value three times'},
+  {title: 'Calendar', value: 'calendar', subtitle: 'Optional: use your configured secret date interaction'},
+  {title: 'Gallery', value: 'gallery', subtitle: 'Optional: use your gallery secret interaction'},
 ];
 
 const disguiseOptions: Array<{title: string; value: DisguiseType}> = [
@@ -65,7 +65,7 @@ function OptionCard(props: {
 export function SecretEntryScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const palette = figmaPalette.light;
-  const [secretAccessType, setSecretAccessType] = React.useState<SecretAccessType>('calculator');
+  const [secretAccessType, setSecretAccessType] = React.useState<SecretAccessType>('triple_tap');
   const [disguiseType, setDisguiseType] = React.useState<DisguiseType>('default');
   const [calculatorCode, setCalculatorCode] = React.useState('2468');
   const [confirmCalculatorCode, setConfirmCalculatorCode] = React.useState('2468');
@@ -75,10 +75,12 @@ export function SecretEntryScreen() {
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [onboardingComplete, setOnboardingComplete] = React.useState(false);
 
   React.useEffect(() => {
     void localDataRepository.setOnboardingResumeRoute('SecretEntry');
     void localDataRepository.getSettings().then(settings => {
+      setOnboardingComplete(settings.onboardingComplete);
       setSecretAccessType(settings.secretAccessType);
       setDisguiseType(settings.disguiseType);
       setCalculatorCode(settings.calculatorSecret ?? '2468');
@@ -135,28 +137,23 @@ export function SecretEntryScreen() {
     await nativeBridge.setLauncherDisguise(disguiseType);
     setStatusMessage(`App disguise changed to ${disguiseOptions.find(option => option.value === disguiseType)?.title ?? 'Default'}`);
 
-    const routeName =
-      disguiseType === 'calculator'
-        ? 'Calculator'
-        : disguiseType === 'clock'
-          ? 'Clock'
-          : disguiseType === 'calendar'
-            ? 'Calendar'
-            : disguiseType === 'gallery'
-              ? 'Gallery'
-              : 'PrivateHome';
-    navigation.reset({index: 0, routes: [{name: routeName}]});
+    navigation.reset({index: 0, routes: [{name: 'PrivateHome'}]});
   }, [calculatorCode, calendarSecretDate, clockSecretValue, confirmCalculatorCode, disguiseType, gallerySecretConfig, navigation, secretAccessType]);
 
   return (
-    <FigmaInnerLayout variant="light" title="Secret Access" onBackPress={() => navigation.goBack()}>
+    <FigmaInnerLayout
+      variant="light"
+      title={onboardingComplete ? 'Smart Hide' : 'Secret Trigger Setup'}
+      onBackPress={() => navigation.goBack()}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
-          Choose how hidden apps open and which disguise the privacy app should show after setup.
+          {onboardingComplete
+            ? 'Choose the secret trigger for Hidden Apps and update the optional disguise style.'
+            : 'Choose the secret trigger that opens Hidden Apps, then optionally pick a disguise style.'}
         </Text>
 
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Access method</Text>
+          <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Smart Hide trigger</Text>
           <View style={styles.cards}>
             {secretAccessOptions.map(option => (
               <OptionCard

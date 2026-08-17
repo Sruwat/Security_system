@@ -3,18 +3,19 @@ import {nativeBridge} from '../native';
 import {storageKeys} from './keys';
 import type {AppProtection, AppSettings, OnboardingResumeRoute} from '../types/domain';
 import {normalizeProtection, normalizeSettings} from '../services/protection/protectionState';
+import {APP_UNLOCK_CREDENTIAL_REF} from '../services/security/credentialTypes';
 
 const defaultSettings: AppSettings = {
   onboardingComplete: false,
   disguiseType: 'default',
-  secretAccessType: 'calculator',
+  secretAccessType: 'triple_tap',
   calculatorSecret: '2468',
   clockSecretValue: '5',
   calendarSecretDate: '18',
   gallerySecretConfig: 'triple_tap_cover',
   defaultLockType: 'PIN',
   theme: 'SYSTEM',
-  secretEntryMethod: 'CALCULATOR_CODE',
+  secretEntryMethod: 'TRIPLE_TAP',
   primaryAuthMethod: 'PIN',
   bannerEnabled: true,
   nativeAdEnabled: true,
@@ -103,6 +104,7 @@ export class LocalDataRepository {
     const normalized = apps.map(app => normalizeProtection(app));
     await AsyncStorage.setItem(storageKeys.protections, JSON.stringify(normalized));
     await this.syncNativeProtectionMetadata(normalized);
+    await this.verifyNativeProtectionMetadata(normalized);
     this.emitProtectedApps(normalized);
   }
 
@@ -140,13 +142,33 @@ export class LocalDataRepository {
         packageName: app.packageName,
         isHidden: app.isHidden,
         isLocked: app.isLocked,
-        credentialRef: app.credentialRef ?? app.packageName,
+        credentialRef: app.credentialRef ?? APP_UNLOCK_CREDENTIAL_REF,
         lockType: app.lockType ?? app.authMethod ?? 'PIN',
         autoLockSeconds: app.autoLockSeconds ?? 30,
         enabled: app.enabled,
         updatedAt: app.updatedAt ?? 0,
       })),
     ).catch(() => undefined);
+  }
+
+  private async verifyNativeProtectionMetadata(apps: AppProtection[]): Promise<void> {
+    if (!__DEV__ || apps.length === 0) {
+      return;
+    }
+
+    const sample = apps.find(app => app.enabled) ?? apps[0];
+    const debugState = await nativeBridge.getProtectionDebugState(sample.packageName).catch(() => null);
+    if (!debugState) {
+      return;
+    }
+
+    if (debugState.isLocked !== sample.isLocked || debugState.isHidden !== sample.isHidden) {
+      console.warn('Protection metadata verification mismatch', {
+        packageName: sample.packageName,
+        expected: {isHidden: sample.isHidden, isLocked: sample.isLocked},
+        actual: {isHidden: debugState.isHidden, isLocked: debugState.isLocked},
+      });
+    }
   }
 }
 

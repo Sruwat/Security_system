@@ -113,7 +113,7 @@ export function AddAppsScreen() {
     }
   }, [apps, navigation, presetMode, selectedPackageNames]);
 
-  const headline = presetMode === 'HIDE' ? 'Hide apps' : presetMode === 'LOCK' ? 'Lock apps' : 'Hide + Lock apps';
+  const headline = presetMode === 'HIDE' ? 'Hide Apps' : presetMode === 'LOCK' ? 'App Lock' : 'Hide + Lock';
   const helperCopy =
     presetMode === 'HIDE'
       ? 'Choose apps that should disappear from your managed launcher and stay in Hidden Apps.'

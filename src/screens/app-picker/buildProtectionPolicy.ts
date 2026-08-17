@@ -8,6 +8,7 @@ export interface ProtectionDraft {
   mode: ProtectionMode;
   authMethod: AuthMethod;
   autoLockSeconds: number;
+  triggerType?: AppProtection['triggerType'];
 }
 
 export function buildProtectionPolicy(draft: ProtectionDraft): AppProtection {
@@ -23,6 +24,7 @@ export function buildProtectionPolicy(draft: ProtectionDraft): AppProtection {
     enabled: draft.mode !== 'NONE',
     lockType: draft.authMethod,
     credentialRef: APP_UNLOCK_CREDENTIAL_REF,
+    triggerType: draft.triggerType ?? 'triple_tap',
     mode: draft.mode,
     authMethod: draft.authMethod,
     autoLockSeconds: draft.autoLockSeconds,

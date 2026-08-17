@@ -41,9 +41,9 @@ export function PrimaryLockScreen() {
   }, [navigation]);
 
   return (
-    <FigmaInnerLayout variant="dark" title="Primary Lock" onBackPress={() => navigation.goBack()}>
+    <FigmaInnerLayout variant="dark" title="Security Setup" onBackPress={() => navigation.goBack()}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Create once; reuse for protected access.</Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Create once; reuse for protected app access.</Text>
 
         <View style={styles.choices}>
           <LockChoice palette={palette} title="PIN" subtitle="4-6 digits" onPress={() => goTo('PinSetup')} />

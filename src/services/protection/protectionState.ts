@@ -38,6 +38,7 @@ export function normalizeProtection(protection: AppProtection): AppProtection {
     ...protection,
     appName: protection.appName ?? protection.label,
     icon: protection.icon ?? protection.iconUri,
+    triggerType: protection.triggerType ?? 'triple_tap',
     isHidden: flags.isHidden,
     isLocked: flags.isLocked,
     enabled: typeof protection.enabled === 'boolean' ? protection.enabled : flags.isHidden || flags.isLocked,
@@ -83,8 +84,11 @@ export function mapSecretEntryMethodToAccessType(method: SecretEntryMethod): Sec
       return 'triple_tap';
     case 'CALCULATOR_CODE':
       return 'calculator';
+    case 'DOUBLE_TAP':
+    case 'LONG_PRESS':
+    case 'PINCH':
     default:
-      return 'calculator';
+      return 'triple_tap';
   }
 }
 

@@ -175,7 +175,7 @@ export function VaultScreen() {
             <Text style={[styles.pendingApp, {color: palette.textPrimary}]}>{pendingLabel}</Text>
             <Text style={[styles.pendingText, {color: palette.textSecondary}]}>
               {pendingMode === 'LOCK_HIDE'
-                ? 'A protected app is waiting for biometric confirmation.'
+                ? 'A protected hidden app is waiting for authentication.'
                 : pendingMode
                   ? `The app is waiting in ${pendingMode} mode.`
                   : 'The app is waiting for vault access.'}

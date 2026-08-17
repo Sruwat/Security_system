@@ -175,7 +175,8 @@ export function PrivacyCenterScreen() {
         ...current,
         onboardingComplete: false,
         onboardingResumeRoute: 'Welcome',
-        secretAccessType: 'calculator',
+        secretAccessType: 'triple_tap',
+        secretEntryMethod: 'TRIPLE_TAP',
         disguiseType: 'default',
       });
       navigation.reset({index: 0, routes: [{name: 'Welcome'}]});
