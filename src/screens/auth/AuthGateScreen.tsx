@@ -11,7 +11,7 @@ import type {RootStackParamList} from '../../navigation/routes';
 import {APP_UNLOCK_CREDENTIAL_REF} from '../../services/security/credentialTypes';
 import {protectionManager} from '../../services/protection/ProtectionManager';
 import {localDataRepository} from '../../storage/LocalDataRepository';
-import type {AppProtection, PrimaryAuthMethod} from '../../types/domain';
+import type {AppProtection, AuthMethod, PrimaryAuthMethod} from '../../types/domain';
 
 const keypadRows = [
   ['1', '2', '3'],
@@ -19,6 +19,20 @@ const keypadRows = [
   ['7', '8', '9'],
   ['Clear', '0', 'Continue'],
 ] as const;
+
+function resolveAuthMethod(lockType: AuthMethod | undefined, fallback: PrimaryAuthMethod): PrimaryAuthMethod {
+  switch (lockType) {
+    case 'PASSWORD':
+      return 'PASSWORD';
+    case 'PATTERN':
+      return 'PATTERN';
+    case 'BIOMETRIC':
+    case 'BIOMETRIC_FALLBACK':
+    case 'PIN':
+    default:
+      return 'PIN';
+  }
+}
 
 function UnlockGlyph() {
   return (
@@ -45,7 +59,7 @@ export function AuthGateScreen() {
   const [attempts, setAttempts] = React.useState(0);
   const [cooldownUntil, setCooldownUntil] = React.useState<number | null>(null);
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
-  const [primaryAuthMethod, setPrimaryAuthMethod] = React.useState<PrimaryAuthMethod>('PIN');
+  const [settingsAuthMethod, setSettingsAuthMethod] = React.useState<PrimaryAuthMethod>('PIN');
   const [pendingLabel, setPendingLabel] = React.useState<string>('Private space');
   const [pendingLaunchPackageName, setPendingLaunchPackageName] = React.useState<string | null>(() =>
     launchCoordinator.getPendingLaunchPackageName(),
@@ -53,21 +67,26 @@ export function AuthGateScreen() {
   const activeSession = sessionManager.getState();
   const sessionExpired = Boolean(activeSession && activeSession.expiresAt <= Date.now());
   const cooldownRemaining = cooldownUntil ? Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000)) : 0;
-  const credentialLabel = primaryAuthMethod === 'PASSWORD' ? 'password' : primaryAuthMethod === 'PATTERN' ? 'pattern' : '4-6 digit PIN';
   const compactLayout = height < 1200;
   const ultraCompactLayout = height < 900;
   const keypadGap = ultraCompactLayout ? 8 : compactLayout ? 10 : 14;
   const keypadHorizontalInset = ultraCompactLayout ? 24 : compactLayout ? 30 : 42;
   const keySize = Math.max(54, Math.min(76, (width - keypadHorizontalInset * 2 - keypadGap * 2) / 3));
   const [pendingProtection, setPendingProtection] = React.useState<AppProtection | null>(null);
+  const activeAuthMethod = resolveAuthMethod(
+    pendingProtection?.lockType ?? pendingProtection?.authMethod,
+    settingsAuthMethod,
+  );
+  const credentialLabel =
+    activeAuthMethod === 'PASSWORD' ? 'password' : activeAuthMethod === 'PATTERN' ? 'pattern' : '4-6 digit PIN';
 
   const verifyPin = React.useCallback(async (pinValue: string) => {
     const credentialRef = pendingProtection?.credentialRef ?? APP_UNLOCK_CREDENTIAL_REF;
     const verified = await nativeBridge.verifyCredential(credentialRef, pinValue.trim());
     if (!verified) {
-      throw new Error(primaryAuthMethod === 'PASSWORD' ? 'The password did not match the stored credential.' : primaryAuthMethod === 'PATTERN' ? 'The pattern did not match the stored credential.' : 'The PIN did not match the stored credential.');
+      throw new Error(activeAuthMethod === 'PASSWORD' ? 'The password did not match the stored credential.' : activeAuthMethod === 'PATTERN' ? 'The pattern did not match the stored credential.' : 'The PIN did not match the stored credential.');
     }
-  }, [pendingProtection?.credentialRef, primaryAuthMethod]);
+  }, [activeAuthMethod, pendingProtection?.credentialRef]);
 
   const finishAuthentication = React.useCallback(
     async (pinValue?: string) => {
@@ -158,7 +177,7 @@ export function AuthGateScreen() {
 
   React.useEffect(() => {
     void localDataRepository.getSettings().then(settings => {
-      setPrimaryAuthMethod(settings.primaryAuthMethod);
+      setSettingsAuthMethod(settings.primaryAuthMethod);
     });
   }, []);
 
@@ -220,7 +239,7 @@ export function AuthGateScreen() {
       .catch(error => {
         const nextAttempts = attempts + 1;
         setAttempts(nextAttempts);
-        setStatusMessage(primaryAuthMethod === 'PASSWORD' ? 'Wrong password. Try again.' : primaryAuthMethod === 'PATTERN' ? 'Wrong pattern. Try again.' : 'Wrong PIN. Try again.');
+        setStatusMessage(activeAuthMethod === 'PASSWORD' ? 'Wrong password. Try again.' : activeAuthMethod === 'PATTERN' ? 'Wrong pattern. Try again.' : 'Wrong PIN. Try again.');
         if (nextAttempts >= 3) {
           setCooldownUntil(Date.now() + 30000);
           setStatusMessage('Recovery required. Cooldown started for 30 seconds.');
@@ -232,7 +251,7 @@ export function AuthGateScreen() {
       .finally(() => {
         setLoading(false);
       });
-  }, [attempts, cooldownRemaining, finishAuthentication, manualValue, primaryAuthMethod]);
+  }, [activeAuthMethod, attempts, cooldownRemaining, finishAuthentication, manualValue]);
 
   return (
     <FigmaPage variant="dark">
@@ -284,7 +303,7 @@ export function AuthGateScreen() {
           {cooldownRemaining > 0 ? <Text style={[styles.errorLine, {color: '#FECACA'}]}>Cooldown {cooldownRemaining}s remaining</Text> : null}
         </View>
 
-        {primaryAuthMethod === 'PIN' ? (
+        {activeAuthMethod === 'PIN' ? (
           <>
             <View style={[styles.dotsRow, compactLayout && styles.dotsRowCompact]}>
               {[0, 1, 2, 3, 4, 5].map(index => (
@@ -364,15 +383,15 @@ export function AuthGateScreen() {
           </>
         ) : (
           <View style={[styles.manualCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-            <Text style={[styles.manualLabel, {color: palette.textSecondary}]}>
-              {primaryAuthMethod === 'PASSWORD' ? 'Password' : 'Pattern'}
-            </Text>
+              <Text style={[styles.manualLabel, {color: palette.textSecondary}]}>
+              {activeAuthMethod === 'PASSWORD' ? 'Password' : 'Pattern'}
+              </Text>
             <TextInput
               value={manualValue}
               onChangeText={setManualValue}
               editable={cooldownRemaining === 0}
-              secureTextEntry={primaryAuthMethod === 'PASSWORD'}
-              placeholder={primaryAuthMethod === 'PASSWORD' ? 'Enter password' : 'Example: 1-2-3-4'}
+              secureTextEntry={activeAuthMethod === 'PASSWORD'}
+              placeholder={activeAuthMethod === 'PASSWORD' ? 'Enter password' : 'Example: 1-2-3-4'}
               placeholderTextColor={palette.textSecondary}
               style={[styles.manualInput, {color: palette.textPrimary}]}
             />
