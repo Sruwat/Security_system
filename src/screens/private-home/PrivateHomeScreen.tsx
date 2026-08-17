@@ -22,13 +22,32 @@ function StatCard(props: {
   accentSoft: string;
   textPrimary: string;
   textSecondary: string;
+  onPress?: () => void;
 }) {
-  return (
-    <View style={[styles.statCard, {backgroundColor: props.accentSoft}]}>
+  const content = (
+    <>
       <Text style={[styles.statValue, {color: props.accent}]}>{props.value}</Text>
       <Text style={[styles.statLabel, {color: props.textPrimary}]}>{props.label}</Text>
       <Text style={[styles.statSubtitle, {color: props.textSecondary}]}>{props.subtitle}</Text>
-    </View>
+    </>
+  );
+
+  if (!props.onPress) {
+    return <View style={[styles.statCard, {backgroundColor: props.accentSoft}]}>{content}</View>;
+  }
+
+  return (
+    <Pressable
+      onPress={props.onPress}
+      style={({pressed}) => [
+        styles.statCard,
+        {
+          backgroundColor: props.accentSoft,
+          opacity: pressed ? 0.94 : 1,
+        },
+      ]}>
+      {content}
+    </Pressable>
   );
 }
 
@@ -210,6 +229,7 @@ export function PrivateHomeScreen() {
             accentSoft="#DBEAFE"
             textPrimary={palette.textPrimary}
             textSecondary={palette.textSecondary}
+            onPress={() => navigation.navigate('Vault')}
           />
           <StatCard
             label="Locked Apps"
