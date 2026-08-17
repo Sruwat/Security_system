@@ -54,6 +54,26 @@ export class LaunchCoordinator {
     return 'launched';
   }
 
+  async launchFromVault(packageName: string): Promise<'launched' | 'auth_required'> {
+    const protection = await protectionManager.getProtection(packageName);
+    if (!protection) {
+      await nativeBridge.launchApp(packageName);
+      return 'launched';
+    }
+
+    const mode = protection.mode ?? protectionModeFromFlags(protection);
+
+    if (mode === 'LOCK_HIDE') {
+      this.pendingLaunchPackageName = packageName;
+      this.pendingLaunchMode = mode;
+      this.syncPendingAuthRequest(packageName);
+      return 'auth_required';
+    }
+
+    await nativeBridge.launchApp(packageName);
+    return 'launched';
+  }
+
   private async syncTransientAccess(): Promise<void> {
     const state = sessionManager.getState();
     if (!state) {

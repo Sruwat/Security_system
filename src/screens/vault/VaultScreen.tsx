@@ -212,7 +212,7 @@ export function VaultScreen() {
                   label={app.label}
                   onPress={() => {
                     void launchCoordinator
-                      .launch(app.packageName)
+                      .launchFromVault(app.packageName)
                       .then(outcome => {
                         if (outcome === 'launched') {
                           navigation.reset({index: 0, routes: [{name: 'PrivateHome'}]});
@@ -223,8 +223,6 @@ export function VaultScreen() {
                           navigation.navigate('AuthGate');
                           return;
                         }
-
-                        navigation.navigate('Calculator');
                       })
                       .catch(error => {
                         Alert.alert('Launch failed', error instanceof Error ? error.message : 'Unable to launch hidden app.');
