@@ -1,15 +1,15 @@
 import React from 'react';
-import {ScrollView, StyleSheet, Text, View} from 'react-native';
+import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
+import {FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import type {RootStackParamList} from '../../navigation/routes';
 import {localDataRepository} from '../../storage/LocalDataRepository';
 
-function DiamondMark() {
+function FeatureChip(props: {label: string; accent: string}) {
   return (
-    <View style={styles.diamondOuter}>
-      <View style={styles.diamondInner} />
+    <View style={[styles.featureChip, {borderColor: `${props.accent}44`, backgroundColor: `${props.accent}14`}]}>
+      <Text style={[styles.featureChipText, {color: props.accent}]}>{props.label}</Text>
     </View>
   );
 }
@@ -21,32 +21,45 @@ export function WelcomeScreen() {
   return (
     <FigmaPage variant="dark" style={styles.page}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.time, {color: palette.textPrimary}]}>9:41</Text>
-        <Text style={[styles.title, {color: palette.textPrimary}]}>Welcome</Text>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Private apps stay on this device.</Text>
+        <View style={styles.heroWrap}>
+          <View style={styles.heroOrb}>
+            <View style={styles.heroRingOuter} />
+            <View style={styles.heroRingMid} />
+            <View style={styles.heroCenter}>
+              <Text style={styles.heroIcon}>􀎡</Text>
+            </View>
+          </View>
 
-        <View style={[styles.heroShell, {backgroundColor: palette.accent}]}>
-          <View style={styles.heroCard}>
-            <DiamondMark />
+          <Text style={[styles.brand, {color: palette.accent}]}>VaultX</Text>
+          <Text style={[styles.tagline, {color: '#D6BBFB'}]}>HIDE. LOCK. DISAPPEAR.</Text>
+          <Text style={[styles.copy, {color: '#98A2B3'}]}>
+            Military-grade privacy for your apps.{'\n'}No traces. Zero compromise.
+          </Text>
+
+          <View style={styles.featureWrap}>
+            <FeatureChip label="App Hide" accent="#60A5FA" />
+            <FeatureChip label="Smart Hide" accent="#F9A8D4" />
+            <FeatureChip label="App Lock" accent="#FBBF24" />
+            <FeatureChip label="Lock+Hide" accent="#FB923C" />
           </View>
         </View>
 
-        <Text style={[styles.heroTitle, {color: palette.textPrimary}]}>Lock. Hide. Keep private.</Text>
-        <Text style={[styles.heroMeta, {color: palette.textSecondary}]}>No account • No cloud • Local protection</Text>
-
-        <View style={styles.spacer} />
-
-        {/* Security flow wiring remains native-backed:
-            createCredential(APP_UNLOCK_CREDENTIAL_REF, ...)
-            createCredential(VAULT_SECRET_CREDENTIAL_REF, ...) */}
-        <FigmaActionButton
-          variant="dark"
-          label="Start setup"
+        <Pressable
           onPress={() => {
             void localDataRepository.setOnboardingResumeRoute('LauncherSetup');
             navigation.navigate('LauncherSetup');
           }}
-        />
+          style={({pressed}) => [
+            styles.primaryButton,
+            {
+              opacity: pressed ? 0.95 : 1,
+            },
+          ]}>
+          <Text style={styles.primaryButtonText}>Let&apos;s Go</Text>
+          <Text style={styles.primaryButtonArrow}>→</Text>
+        </Pressable>
+
+        <Text style={[styles.footerText, {color: '#98A2B3'}]}>By continuing you agree to our Privacy Policy</Text>
       </ScrollView>
     </FigmaPage>
   );
@@ -54,73 +67,130 @@ export function WelcomeScreen() {
 
 const styles = StyleSheet.create({
   page: {
-    backgroundColor: '#090D16',
+    backgroundColor: '#090617',
   },
   scrollContent: {
-    paddingBottom: 24,
+    flexGrow: 1,
+    justifyContent: 'space-between',
+    paddingTop: 42,
+    paddingBottom: 28,
   },
-  time: {
-    fontSize: 10,
-    fontWeight: '700',
-    lineHeight: 12,
+  heroWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 38,
   },
-  title: {
-    marginTop: 28,
-    fontSize: 40,
-    fontWeight: '800',
-    lineHeight: 48,
-    letterSpacing: -0.8,
-  },
-  subtitle: {
-    marginTop: 10,
-    fontSize: 14,
-    lineHeight: 18,
-  },
-  heroShell: {
-    marginTop: 56,
-    minHeight: 438,
-    borderRadius: 56,
+  heroOrb: {
+    width: 178,
+    height: 178,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  heroCard: {
-    width: 302,
-    height: 270,
-    borderRadius: 42,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
+  heroRingOuter: {
+    position: 'absolute',
+    width: 132,
+    height: 132,
+    borderRadius: 66,
+    borderWidth: 1,
+    borderColor: '#312E81',
   },
-  diamondOuter: {
-    width: 68,
-    height: 68,
-    borderWidth: 6,
+  heroRingMid: {
+    position: 'absolute',
+    width: 106,
+    height: 106,
+    borderRadius: 53,
+    borderWidth: 1,
+    borderColor: '#4338CA',
+  },
+  heroCenter: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: '#1C1634',
+    borderWidth: 1,
     borderColor: '#6D5BD0',
-    transform: [{rotate: '45deg'}],
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#8B5CF6',
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
+    shadowOffset: {width: 0, height: 12},
+  },
+  heroIcon: {
+    fontSize: 26,
+    color: '#A78BFA',
+    fontWeight: '700',
+  },
+  brand: {
+    marginTop: 16,
+    fontSize: 42,
+    fontWeight: '900',
+    lineHeight: 50,
+    letterSpacing: -1,
+  },
+  tagline: {
+    marginTop: 10,
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: 2.4,
+  },
+  copy: {
+    marginTop: 18,
+    fontSize: 14,
+    lineHeight: 22,
+    textAlign: 'center',
+  },
+  featureWrap: {
+    marginTop: 24,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  featureChip: {
+    minHeight: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    paddingHorizontal: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  diamondInner: {
-    width: 28,
-    height: 28,
-    backgroundColor: '#6D5BD0',
+  featureChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 15,
   },
-  heroTitle: {
-    marginTop: 94,
-    marginLeft: 20,
-    fontSize: 32,
+  primaryButton: {
+    minHeight: 56,
+    borderRadius: 28,
+    marginTop: 34,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#7C3AED',
+    shadowColor: '#A855F7',
+    shadowOpacity: 0.32,
+    shadowRadius: 24,
+    shadowOffset: {width: 0, height: 10},
+  },
+  primaryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '800',
-    lineHeight: 38,
-    letterSpacing: -0.6,
+    lineHeight: 20,
   },
-  heroMeta: {
-    marginTop: 18,
-    marginLeft: 20,
+  primaryButtonArrow: {
+    marginLeft: 10,
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '800',
+    lineHeight: 22,
+  },
+  footerText: {
+    marginTop: 14,
+    textAlign: 'center',
     fontSize: 12,
     lineHeight: 16,
-  },
-  spacer: {
-    flex: 1,
-    minHeight: 356,
   },
 });

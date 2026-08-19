@@ -2,7 +2,7 @@ import React from 'react';
 import {Pressable, ScrollView, StyleSheet, Text, TextInput, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {FigmaActionButton, FigmaInnerLayout, figmaPalette} from '../../components/FigmaKit';
+import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import type {RootStackParamList} from '../../navigation/routes';
 import {nativeBridge} from '../../native';
 import {mapSecretAccessTypeToEntryMethod} from '../../services/protection/protectionState';
@@ -36,7 +36,7 @@ function OptionCard(props: {
   subtitle: string;
   selected: boolean;
   onPress: () => void;
-  palette: typeof figmaPalette.light;
+  palette: typeof figmaPalette.dark;
 }) {
   return (
     <Pressable
@@ -44,8 +44,8 @@ function OptionCard(props: {
       style={({pressed}) => [
         styles.optionCard,
         {
-          backgroundColor: props.selected ? props.palette.accentSoft : props.palette.surface,
-          borderColor: props.selected ? props.palette.accent : props.palette.border,
+          backgroundColor: props.palette.surface,
+          borderColor: props.selected ? '#22C55E' : props.palette.border,
           opacity: pressed ? 0.94 : 1,
         },
       ]}>
@@ -53,18 +53,16 @@ function OptionCard(props: {
         <Text style={[styles.optionTitle, {color: props.palette.textPrimary}]}>{props.title}</Text>
         <Text style={[styles.optionSubtitle, {color: props.palette.textSecondary}]}>{props.subtitle}</Text>
       </View>
-      <View style={[styles.pill, {backgroundColor: props.selected ? props.palette.accent : props.palette.accentSoft}]}>
-        <Text style={[styles.pillText, {color: props.selected ? '#FFFFFF' : props.palette.accent}]}>
-          {props.selected ? 'Selected' : 'Choose'}
-        </Text>
+      <View style={[styles.radioOuter, {borderColor: props.selected ? '#22C55E' : '#475467'}]}>
+        {props.selected ? <View style={styles.radioInner} /> : null}
       </View>
-    </Pressable>
+      </Pressable>
   );
 }
 
 export function SecretEntryScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const palette = figmaPalette.light;
+  const palette = figmaPalette.dark;
   const [secretAccessType, setSecretAccessType] = React.useState<SecretAccessType>('triple_tap');
   const [disguiseType, setDisguiseType] = React.useState<DisguiseType>('default');
   const [calculatorCode, setCalculatorCode] = React.useState('2468');
@@ -141,19 +139,36 @@ export function SecretEntryScreen() {
   }, [calculatorCode, calendarSecretDate, clockSecretValue, confirmCalculatorCode, disguiseType, gallerySecretConfig, navigation, secretAccessType]);
 
   return (
-    <FigmaInnerLayout
-      variant="light"
-      title={onboardingComplete ? 'Smart Hide' : 'Secret Trigger Setup'}
-      onBackPress={() => navigation.goBack()}>
+    <FigmaPage variant="dark" style={styles.page}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.progressRow}>
+          <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Text style={styles.backButtonText}>←</Text>
+          </Pressable>
+          <View style={styles.progressTrack}>
+            <View style={styles.progressFill} />
+          </View>
+          <Text style={styles.progressLabel}>{onboardingComplete ? 'Smart Hide' : 'Step 1 of 4'}</Text>
+        </View>
+
+        <View style={styles.hero}>
+          <View style={styles.heroIconShell}>
+            <Text style={styles.heroIcon}>👻</Text>
+          </View>
+          <Text style={styles.heroTitleMain}>Smart Hide</Text>
+          <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
+            {onboardingComplete ? 'Update your secret trigger and disguise style.' : 'Choose your trigger gesture'}
+          </Text>
+        </View>
+
         <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
           {onboardingComplete
-            ? 'Choose the secret trigger for Hidden Apps and update the optional disguise style.'
-            : 'Choose the secret trigger that opens Hidden Apps, then optionally pick a disguise style.'}
+            ? 'Secret access remains local and opens Hidden Apps using your saved protection rules.'
+            : 'Pick how Hidden Apps should open, then optionally configure a disguise style.'}
         </Text>
 
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Smart Hide trigger</Text>
+          <Text style={[styles.sectionTitle, {color: '#86EFAC'}]}>Trigger options</Text>
           <View style={styles.cards}>
             {secretAccessOptions.map(option => (
               <OptionCard
@@ -259,10 +274,21 @@ export function SecretEntryScreen() {
         ) : null}
 
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>App disguise</Text>
-          <View style={styles.disguiseWrap}>
+          <Text style={[styles.sectionTitle, {color: '#93C5FD'}]}>Select Disguise</Text>
+          <Text style={[styles.disguiseSubtitle, {color: palette.textSecondary}]}>Choose a fake icon to replace your app</Text>
+          <View style={styles.disguiseGrid}>
             {disguiseOptions.map(option => {
               const selected = disguiseType === option.value;
+              const icon =
+                option.value === 'calculator'
+                  ? '🧮'
+                  : option.value === 'clock'
+                    ? '🕘'
+                    : option.value === 'calendar'
+                      ? '🗓️'
+                      : option.value === 'gallery'
+                        ? '🖼️'
+                        : '✨';
               return (
                 <Pressable
                   key={option.value}
@@ -271,12 +297,14 @@ export function SecretEntryScreen() {
                     setStatusMessage(`App disguise changed to ${option.title}`);
                   }}
                   style={[
-                    styles.disguiseChip,
-                    {backgroundColor: selected ? palette.accent : palette.accentSoft},
+                    styles.disguiseTile,
+                    {
+                      borderColor: selected ? '#2563EB' : palette.border,
+                      backgroundColor: palette.surface,
+                    },
                   ]}>
-                  <Text style={[styles.disguiseChipText, {color: selected ? '#FFFFFF' : palette.accent}]}>
-                    {option.title}
-                  </Text>
+                  <Text style={styles.disguiseTileIcon}>{icon}</Text>
+                  <Text style={[styles.disguiseTileText, {color: palette.textPrimary}]}>{option.title}</Text>
                 </Pressable>
               );
             })}
@@ -297,15 +325,80 @@ export function SecretEntryScreen() {
 
         <View style={styles.spacer} />
 
-        <FigmaActionButton variant="light" label={loading ? 'Loading...' : 'Finish setup'} onPress={() => void saveAndFinish()} />
+        <FigmaActionButton variant="dark" label={loading ? 'Loading...' : onboardingComplete ? 'Save Smart Hide' : 'Continue to Confirm'} onPress={() => void saveAndFinish()} />
       </ScrollView>
-    </FigmaInnerLayout>
+    </FigmaPage>
   );
 }
 
 const styles = StyleSheet.create({
+  page: {
+    backgroundColor: '#04150D',
+  },
   scrollContent: {
     paddingBottom: 24,
+  },
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: '#174B33',
+    backgroundColor: '#0B2218',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backButtonText: {
+    color: '#F8FAFC',
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  progressTrack: {
+    flex: 1,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: '#173828',
+    overflow: 'hidden',
+  },
+  progressFill: {
+    width: '48%',
+    height: '100%',
+    backgroundColor: '#22C55E',
+  },
+  progressLabel: {
+    color: '#A7F3D0',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  hero: {
+    alignItems: 'center',
+    marginTop: 24,
+    marginBottom: 10,
+  },
+  heroIconShell: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 1,
+    borderColor: '#166534',
+    backgroundColor: '#072315',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroIcon: {
+    fontSize: 32,
+  },
+  heroTitleMain: {
+    marginTop: 22,
+    color: '#86EFAC',
+    fontSize: 28,
+    fontWeight: '900',
+    lineHeight: 34,
   },
   subtitle: {
     marginTop: 6,
@@ -325,8 +418,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   optionCard: {
-    minHeight: 92,
-    borderRadius: 28,
+    minHeight: 96,
+    borderRadius: 24,
     borderWidth: 1,
     paddingHorizontal: 18,
     paddingVertical: 18,
@@ -344,20 +437,22 @@ const styles = StyleSheet.create({
   },
   optionSubtitle: {
     marginTop: 6,
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 12,
+    lineHeight: 17,
   },
-  pill: {
-    minHeight: 34,
-    borderRadius: 17,
-    paddingHorizontal: 12,
+  radioOuter: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pillText: {
-    fontSize: 10,
-    fontWeight: '700',
-    lineHeight: 12,
+  radioInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#22C55E',
   },
   field: {
     marginTop: 12,
@@ -378,23 +473,33 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1.5,
   },
-  disguiseWrap: {
+  disguiseSubtitle: {
+    marginTop: 8,
+    fontSize: 14,
+    lineHeight: 19,
+  },
+  disguiseGrid: {
     marginTop: 12,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 12,
   },
-  disguiseChip: {
-    minHeight: 38,
-    borderRadius: 19,
-    paddingHorizontal: 14,
+  disguiseTile: {
+    width: '30.5%',
+    minHeight: 124,
+    borderRadius: 22,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  disguiseChipText: {
-    fontSize: 11,
-    fontWeight: '700',
-    lineHeight: 14,
+  disguiseTileIcon: {
+    fontSize: 28,
+  },
+  disguiseTileText: {
+    marginTop: 14,
+    fontSize: 14,
+    fontWeight: '800',
+    lineHeight: 18,
   },
   statusCard: {
     marginTop: 16,
@@ -421,5 +526,6 @@ const styles = StyleSheet.create({
   },
   spacer: {
     flex: 1,
+    minHeight: 24,
   },
 });

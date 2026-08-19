@@ -58,7 +58,9 @@ function QuickAction(props: {
   subtitle: string;
   eyebrow?: string;
   onPress: () => void;
-  palette: typeof figmaPalette.light;
+  palette: typeof figmaPalette.dark;
+  accent?: string;
+  number?: string;
 }) {
   return (
     <Pressable
@@ -67,11 +69,19 @@ function QuickAction(props: {
         styles.quickAction,
         {
           backgroundColor: props.palette.surface,
-          borderColor: props.palette.border,
+          borderColor: props.accent ?? props.palette.border,
           opacity: pressed ? 0.94 : 1,
         },
       ]}>
-      {props.eyebrow ? <Text style={[styles.quickActionEyebrow, {color: props.palette.accent}]}>{props.eyebrow}</Text> : null}
+      <View style={styles.quickActionRow}>
+        <View style={styles.quickActionLead}>
+          {props.number ? <Text style={[styles.quickActionNumber, {color: '#667085'}]}>{props.number}</Text> : null}
+          {props.eyebrow ? <Text style={[styles.quickActionEyebrow, {color: props.accent ?? props.palette.accent}]}>{props.eyebrow}</Text> : null}
+        </View>
+        <View style={[styles.quickActionArrow, {backgroundColor: props.palette.surfaceElevated}]}>
+          <Text style={[styles.quickActionArrowText, {color: props.palette.textSecondary}]}>→</Text>
+        </View>
+      </View>
       <Text style={[styles.quickActionTitle, {color: props.palette.textPrimary}]}>{props.title}</Text>
       <Text style={[styles.quickActionSubtitle, {color: props.palette.textSecondary}]}>{props.subtitle}</Text>
     </Pressable>
@@ -110,7 +120,7 @@ function PermissionBanner(props: {
 
 function AppRow(props: {
   app: AppProtection;
-  palette: typeof figmaPalette.light;
+  palette: typeof figmaPalette.dark;
   onPress: () => void;
   onLaunch: () => void;
 }) {
@@ -154,7 +164,7 @@ function AppRow(props: {
 
 export function PrivateHomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const palette = figmaPalette.light;
+  const palette = figmaPalette.dark;
   const {drawerOpen, openDrawer, closeDrawer, drawerDestinations} = usePrimaryDrawer();
   const [apps, setApps] = React.useState<AppProtection[]>([]);
   const [launcherApps, setLauncherApps] = React.useState<LaunchableApp[]>([]);
@@ -301,9 +311,9 @@ export function PrivateHomeScreen() {
 
   return (
     <FigmaRootLayout
-      variant="light"
-      title="Protection Dashboard"
-      drawerTitle="Smart App Lock"
+      variant="dark"
+      title="VaultX"
+      drawerTitle="VaultX"
       drawerOpen={drawerOpen}
       onDrawerOpen={openDrawer}
       onDrawerClose={closeDrawer}
@@ -318,9 +328,49 @@ export function PrivateHomeScreen() {
         />
       }>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <Text style={[styles.pageTitle, {color: palette.textPrimary}]}>Select a Feature</Text>
         <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
-          Hide apps, choose a secret trigger, lock apps, or combine both protections from one simple control center.
+          Choose how you want to protect your apps and privacy.
         </Text>
+
+        <View style={styles.quickActions}>
+          <QuickAction
+            title="Hide Apps"
+            subtitle="Disguise & conceal apps with a fake icon"
+            eyebrow="Inside App Hide"
+            onPress={() => navigation.navigate('AddApps', {preset: 'HIDE'})}
+            palette={palette}
+            accent="#3B82F6"
+            number="01"
+          />
+          <QuickAction
+            title="Smart Hide"
+            subtitle="Gesture-triggered instant disappear"
+            eyebrow={settings?.secretAccessType ? settings.secretAccessType.replace(/_/g, ' / ') : 'Triple Tap / Shake'}
+            onPress={() => navigation.navigate('SecretEntry')}
+            palette={palette}
+            accent="#22C55E"
+            number="02"
+          />
+          <QuickAction
+            title="App Lock"
+            subtitle="Lock apps with PIN, password or pattern"
+            eyebrow="PIN / Pattern / Pass"
+            onPress={() => navigation.navigate('AddApps', {preset: 'LOCK'})}
+            palette={palette}
+            accent="#EF4444"
+            number="03"
+          />
+          <QuickAction
+            title="Hide + Lock"
+            subtitle="Ultimate protection — lock and hide combined"
+            eyebrow="Step 1→2 Combined"
+            onPress={() => navigation.navigate('AddApps', {preset: 'LOCK_HIDE'})}
+            palette={palette}
+            accent="#8B5CF6"
+            number="04"
+          />
+        </View>
 
         {launcherStatus?.status !== 'enabled' ? (
           <PermissionBanner
@@ -328,10 +378,10 @@ export function PrivateHomeScreen() {
             body="Hidden apps stay out of this launcher only after Smart App Lock is selected as the default Home app."
             actionLabel="Open Home settings"
             onPress={() => void openPermissionSetting('home')}
-            backgroundColor="#FEF3C7"
-            borderColor="#F59E0B"
-            titleColor="#92400E"
-            bodyColor="#92400E"
+            backgroundColor="#241739"
+            borderColor="#3B82F6"
+            titleColor="#93C5FD"
+            bodyColor="#CBD5E1"
           />
         ) : null}
 
@@ -341,51 +391,20 @@ export function PrivateHomeScreen() {
             body="Locked apps are saved, but Android launch interception will not enforce them until Accessibility is enabled."
             actionLabel="Open Accessibility"
             onPress={() => void openPermissionSetting('accessibility')}
-            backgroundColor="#FEE2E2"
+            backgroundColor="#2B1320"
             borderColor="#EF4444"
-            titleColor="#991B1B"
-            bodyColor="#991B1B"
+            titleColor="#FCA5A5"
+            bodyColor="#CBD5E1"
           />
         ) : null}
-
-        <View style={styles.quickActions}>
-          <QuickAction
-            title="Hide Apps"
-            subtitle="Select apps that should live only in the hidden area."
-            eyebrow={`${counts.hiddenApps.length} hidden`}
-            onPress={() => navigation.navigate('AddApps', {preset: 'HIDE'})}
-            palette={palette}
-          />
-          <QuickAction
-            title="Smart Hide"
-            subtitle="Choose the secret trigger that opens Hidden Apps."
-            eyebrow={settings?.secretAccessType ? settings.secretAccessType.replace(/_/g, ' ') : 'secret trigger'}
-            onPress={() => navigation.navigate('SecretEntry')}
-            palette={palette}
-          />
-          <QuickAction
-            title="App Lock"
-            subtitle="Add a PIN, password, pattern, or biometric gate."
-            eyebrow={`${counts.lockedApps.length} locked`}
-            onPress={() => navigation.navigate('AddApps', {preset: 'LOCK'})}
-            palette={palette}
-          />
-          <QuickAction
-            title="Hide + Lock"
-            subtitle="Keep apps private and require authentication before access."
-            eyebrow={`${counts.hiddenApps.filter(app => app.isLocked).length} combined`}
-            onPress={() => navigation.navigate('AddApps', {preset: 'LOCK_HIDE'})}
-            palette={palette}
-          />
-        </View>
 
         <View style={styles.statsRow}>
           <StatCard
             label="Protected Apps"
             value={String(counts.protectedApps.length)}
             subtitle={countLabel(counts.protectedApps.length, 'app')}
-            accent={palette.accent}
-            accentSoft={palette.accentSoft}
+            accent="#8B5CF6"
+            accentSoft="#1C1634"
             textPrimary={palette.textPrimary}
             textSecondary={palette.textSecondary}
           />
@@ -393,8 +412,8 @@ export function PrivateHomeScreen() {
             label="Hidden Apps"
             value={String(counts.hiddenApps.length)}
             subtitle={countLabel(counts.hiddenApps.length, 'hidden app', 'hidden apps')}
-            accent="#1D4ED8"
-            accentSoft="#DBEAFE"
+            accent="#60A5FA"
+            accentSoft="#172554"
             textPrimary={palette.textPrimary}
             textSecondary={palette.textSecondary}
             onPress={() => navigation.navigate('Vault')}
@@ -403,8 +422,8 @@ export function PrivateHomeScreen() {
             label="Locked Apps"
             value={String(counts.lockedApps.length)}
             subtitle={countLabel(counts.lockedApps.length, 'locked app', 'locked apps')}
-            accent="#D92D20"
-            accentSoft="#FEE4E2"
+            accent="#F87171"
+            accentSoft="#331313"
             textPrimary={palette.textPrimary}
             textSecondary={palette.textSecondary}
           />
@@ -439,10 +458,10 @@ export function PrivateHomeScreen() {
           </View>
           <View style={styles.supportActions}>
             <QuickAction
-              title="Open Hidden Apps"
-              subtitle="Use your current secret access rules right now."
-              onPress={openSecretAccess}
-              palette={palette}
+            title="Open Hidden Apps"
+            subtitle="Use your current secret access rules right now."
+            onPress={openSecretAccess}
+            palette={palette}
             />
             {launcherStatus?.status === 'enabled' ? (
               <QuickAction
@@ -557,10 +576,17 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 18,
   },
+  pageTitle: {
+    marginTop: 6,
+    fontSize: 36,
+    fontWeight: '900',
+    lineHeight: 42,
+    letterSpacing: -0.8,
+  },
   subtitle: {
     marginTop: 6,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 16,
+    lineHeight: 22,
   },
   warningCard: {
     marginTop: 16,
@@ -619,16 +645,27 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
   quickActions: {
-    marginTop: 20,
+    marginTop: 24,
     gap: 12,
   },
   quickAction: {
-    borderRadius: 28,
+    borderRadius: 26,
     borderWidth: 1,
     paddingHorizontal: 18,
     paddingVertical: 18,
   },
+  quickActionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  quickActionLead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
   quickActionTitle: {
+    marginTop: 12,
     fontSize: 18,
     fontWeight: '800',
     lineHeight: 22,
@@ -637,12 +674,27 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     lineHeight: 14,
-    textTransform: 'uppercase',
+  },
+  quickActionNumber: {
+    fontSize: 14,
+    fontWeight: '800',
+    lineHeight: 18,
   },
   quickActionSubtitle: {
     marginTop: 8,
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 14,
+    lineHeight: 19,
+  },
+  quickActionArrow: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickActionArrowText: {
+    fontSize: 18,
+    fontWeight: '800',
   },
   sectionCard: {
     marginTop: 20,

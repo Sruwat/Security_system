@@ -17,6 +17,7 @@ function ToggleCard(props: {
   enabled: boolean;
   onPress: () => void;
   palette: typeof figmaPalette.dark;
+  accent?: string;
 }) {
   return (
     <Pressable
@@ -25,7 +26,7 @@ function ToggleCard(props: {
         styles.toggleCard,
         {
           backgroundColor: props.enabled ? props.palette.accentSoft : props.palette.surface,
-          borderColor: props.enabled ? props.palette.accent : props.palette.border,
+          borderColor: props.enabled ? props.accent ?? props.palette.accent : props.palette.border,
           opacity: pressed ? 0.94 : 1,
         },
       ]}>
@@ -97,21 +98,33 @@ export function ProtectionModeScreen() {
   const summary = describeProtection(draft);
 
   return (
-    <FigmaPage variant="dark">
+    <FigmaPage variant="dark" style={styles.page}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.topRow}>
-          <Text style={[styles.time, {color: palette.textPrimary}]}>9:41</Text>
-          <View style={[styles.stepPill, {backgroundColor: palette.accentSoft}]}>
-            <Text style={[styles.stepText, {color: palette.accent}]}>
-              {route.params.onboarding ? 'Setup' : 'Edit'}
-            </Text>
+        <View style={styles.progressRow}>
+          <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Text style={styles.backButtonText}>←</Text>
+          </Pressable>
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, draft.isHidden && draft.isLocked ? styles.progressFillCombined : draft.isHidden ? styles.progressFillHide : styles.progressFillLock]} />
           </View>
+          <Text style={styles.progressLabel}>{route.params.onboarding ? 'Step 4 of 5' : 'Edit Flow'}</Text>
         </View>
 
-        <Text style={[styles.title, {color: palette.textPrimary}]}>App protection</Text>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
-          Turn Hide and Lock on or off independently, then adjust the lock type if this app needs authentication.
-        </Text>
+        <View style={styles.hero}>
+          <View style={[styles.heroIconShell, draft.isHidden && draft.isLocked ? styles.heroCombined : draft.isHidden ? styles.heroHide : styles.heroLock]}>
+            <Text style={styles.heroIcon}>{draft.isHidden && draft.isLocked ? '🛡️' : draft.isHidden ? '🙈' : '🔒'}</Text>
+          </View>
+          <Text style={[styles.title, {color: palette.textPrimary}]}>
+            {draft.isHidden && draft.isLocked ? 'Lock + Hide' : draft.isHidden ? 'App Hide' : 'App Lock'}
+          </Text>
+          <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
+            {draft.isHidden && draft.isLocked
+              ? 'Enable both layers of protection for the selected apps.'
+              : draft.isHidden
+                ? 'Choose whether this app should stay hidden in your private launcher.'
+                : 'Choose how this app should stay locked before opening.'}
+          </Text>
+        </View>
 
         <View style={[styles.appCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
           {draft.iconUri ? (
@@ -134,6 +147,7 @@ export function ProtectionModeScreen() {
             enabled={draft.isHidden}
             onPress={() => updateDraft({isHidden: !draft.isHidden, enabled: !draft.isHidden || draft.isLocked})}
             palette={palette}
+            accent="#2563EB"
           />
           <ToggleCard
             title="Lock"
@@ -141,6 +155,7 @@ export function ProtectionModeScreen() {
             enabled={draft.isLocked}
             onPress={() => updateDraft({isLocked: !draft.isLocked, enabled: draft.isHidden || !draft.isLocked})}
             palette={palette}
+            accent="#EF4444"
           />
         </View>
 
@@ -222,42 +237,99 @@ export function ProtectionModeScreen() {
 }
 
 const styles = StyleSheet.create({
+  page: {
+    backgroundColor: '#090617',
+  },
   scrollContent: {
     paddingBottom: 24,
   },
-  topRow: {
+  progressRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    gap: 14,
   },
-  time: {
-    fontSize: 10,
-    fontWeight: '700',
-    lineHeight: 12,
-  },
-  stepPill: {
-    minHeight: 30,
-    borderRadius: 15,
-    paddingHorizontal: 12,
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: '#233876',
+    backgroundColor: '#101C35',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepText: {
-    fontSize: 8,
+  backButtonText: {
+    color: '#F8FAFC',
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  progressTrack: {
+    flex: 1,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: '#1E2B4B',
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 999,
+  },
+  progressFillHide: {
+    width: '24%',
+    backgroundColor: '#2563EB',
+  },
+  progressFillLock: {
+    width: '24%',
+    backgroundColor: '#EF4444',
+  },
+  progressFillCombined: {
+    width: '48%',
+    backgroundColor: '#8B5CF6',
+  },
+  progressLabel: {
+    color: '#A5B4FC',
+    fontSize: 12,
     fontWeight: '700',
-    lineHeight: 10,
+  },
+  hero: {
+    alignItems: 'center',
+    marginTop: 28,
+  },
+  heroIconShell: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroHide: {
+    borderColor: '#2563EB',
+    backgroundColor: '#0F1E3C',
+  },
+  heroLock: {
+    borderColor: '#7F1D1D',
+    backgroundColor: '#2A0E0E',
+  },
+  heroCombined: {
+    borderColor: '#7C3AED',
+    backgroundColor: '#1C1634',
+  },
+  heroIcon: {
+    fontSize: 30,
   },
   title: {
-    marginTop: 28,
+    marginTop: 18,
     fontSize: 34,
-    fontWeight: '800',
+    fontWeight: '900',
     lineHeight: 40,
-    letterSpacing: -0.5,
+    letterSpacing: -0.8,
   },
   subtitle: {
     marginTop: 10,
-    fontSize: 14,
-    lineHeight: 19,
+    fontSize: 15,
+    lineHeight: 21,
+    textAlign: 'center',
   },
   appCard: {
     marginTop: 24,

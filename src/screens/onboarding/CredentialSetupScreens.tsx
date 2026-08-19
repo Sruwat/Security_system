@@ -23,6 +23,15 @@ function normalizeCredential(kind: CredentialKind, text: string): string {
   return text.trim();
 }
 
+function PinKey(props: {label: string; sublabel?: string; onPress: () => void; accent?: boolean}) {
+  return (
+    <Pressable onPress={props.onPress} style={({pressed}) => [styles.pinKey, props.accent ? styles.pinKeyAccent : null, {opacity: pressed ? 0.95 : 1}]}>
+      <Text style={styles.pinKeyLabel}>{props.label}</Text>
+      {props.sublabel ? <Text style={styles.pinKeySublabel}>{props.sublabel}</Text> : null}
+    </Pressable>
+  );
+}
+
 function CredentialSetupBase(props: {
   kind: CredentialKind;
   title: string;
@@ -158,15 +167,121 @@ function CredentialSetupBase(props: {
 }
 
 export function PinSetupScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const [value, setValue] = React.useState('');
+  const [confirmValue, setConfirmValue] = React.useState('');
+  const [phase, setPhase] = React.useState<'create' | 'confirm'>('create');
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    void localDataRepository.setOnboardingResumeRoute('PinSetup');
+  }, []);
+
+  const activeValue = phase === 'create' ? value : confirmValue;
+
+  const appendDigit = React.useCallback((digit: string) => {
+    if (phase === 'create') {
+      setValue(current => (current.length >= 6 ? current : `${current}${digit}`));
+    } else {
+      setConfirmValue(current => (current.length >= 6 ? current : `${current}${digit}`));
+    }
+    if (error) {
+      setError(null);
+    }
+  }, [error, phase]);
+
+  const removeDigit = React.useCallback(() => {
+    if (phase === 'create') {
+      setValue(current => current.slice(0, -1));
+    } else {
+      setConfirmValue(current => current.slice(0, -1));
+    }
+  }, [phase]);
+
+  const continueNext = React.useCallback(async () => {
+    if (phase === 'create') {
+      if (!/^\d{4,6}$/.test(value)) {
+        setError('Enter a 4 to 6 digit PIN.');
+        return;
+      }
+      setPhase('confirm');
+      return;
+    }
+
+    if (confirmValue !== value) {
+      setError('PIN confirmation did not match.');
+      setConfirmValue('');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    try {
+      await nativeBridge.createCredential(APP_UNLOCK_CREDENTIAL_REF, 'PIN', value);
+      const settings = await localDataRepository.getSettings();
+      await localDataRepository.saveSettings({...settings, primaryAuthMethod: 'PIN', onboardingResumeRoute: 'BiometricSetup'});
+      navigation.navigate('BiometricSetup');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unable to save the PIN.');
+      Alert.alert('Setup failed', e instanceof Error ? e.message : 'Unable to save the PIN.');
+    } finally {
+      setSaving(false);
+    }
+  }, [confirmValue, navigation, phase, value]);
+
+  const digits = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
   return (
-    <CredentialSetupBase
-      kind="PIN"
-      title="Create your PIN"
-      subtitle="Set a 4 to 6 digit PIN for quick fallback access."
-      hint="PIN is the default option for protected launches and vault recovery."
-      icon="1234"
-      nextRoute="BiometricSetup"
-    />
+    <FigmaPage variant="dark" style={styles.pinPage}>
+      <ScrollView contentContainerStyle={styles.pinScroll} showsVerticalScrollIndicator={false}>
+        <View style={styles.pinProgressRow}>
+          <Pressable onPress={() => (phase === 'confirm' ? setPhase('create') : navigation.goBack())} style={styles.pinBackButton}>
+            <Text style={styles.pinBackButtonText}>←</Text>
+          </Pressable>
+          <View style={styles.pinProgressTrack}>
+            <View style={[styles.pinProgressFill, {width: phase === 'create' ? '52%' : '74%'}]} />
+          </View>
+          <Text style={styles.pinProgressLabel}>Step 3 of 5</Text>
+        </View>
+
+        <View style={styles.pinHero}>
+          <View style={styles.pinHeroShell}>
+            <Text style={styles.pinHeroIcon}>🔢</Text>
+          </View>
+          <Text style={styles.pinHeroTitle}>{phase === 'create' ? 'Set PIN' : 'Confirm PIN'}</Text>
+          <Text style={styles.pinHeroSubtitle}>
+            {phase === 'create' ? 'Create a 4-6 digit PIN to unlock your hidden app' : 'Enter the same PIN again to continue'}
+          </Text>
+        </View>
+
+        <View style={styles.pinDotsRow}>
+          {Array.from({length: 6}).map((_, index) => (
+            <View key={index} style={[styles.pinDot, index < activeValue.length ? styles.pinDotFilled : null, index >= 4 ? styles.pinDotOptional : null]} />
+          ))}
+        </View>
+
+        {error ? (
+          <View style={styles.pinErrorCard}>
+            <Text style={styles.pinErrorText}>{error}</Text>
+          </View>
+        ) : null}
+
+        <View style={styles.pinGrid}>
+          {digits.map(digit => (
+            <PinKey key={digit} label={digit} onPress={() => appendDigit(digit)} accent={digit === '8'} />
+          ))}
+          <View style={styles.pinGridSpacer} />
+          <PinKey label="0" onPress={() => appendDigit('0')} />
+          <PinKey label="⌫" onPress={removeDigit} />
+        </View>
+
+        <Pressable onPress={() => void continueNext()} style={({pressed}) => [styles.pinContinueButton, {opacity: pressed ? 0.95 : 1}]}>
+          <Text style={styles.pinContinueText}>{saving ? 'Saving...' : phase === 'create' ? 'Continue' : 'Save and Continue'}</Text>
+          <Text style={styles.pinContinueArrow}>→</Text>
+        </Pressable>
+      </ScrollView>
+    </FigmaPage>
   );
 }
 
@@ -474,5 +589,171 @@ const styles = StyleSheet.create({
   spacer: {
     flex: 1,
     minHeight: 22,
+  },
+  pinPage: {
+    backgroundColor: '#091124',
+  },
+  pinScroll: {
+    paddingBottom: 24,
+  },
+  pinProgressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  pinBackButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: '#233876',
+    backgroundColor: '#101C35',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pinBackButtonText: {
+    color: '#F8FAFC',
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  pinProgressTrack: {
+    flex: 1,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: '#1E2B4B',
+    overflow: 'hidden',
+  },
+  pinProgressFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: '#2563EB',
+  },
+  pinProgressLabel: {
+    color: '#A5B4FC',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  pinHero: {
+    alignItems: 'center',
+    marginTop: 28,
+  },
+  pinHeroShell: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 1,
+    borderColor: '#1D4ED8',
+    backgroundColor: '#0F1E3C',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pinHeroIcon: {
+    fontSize: 32,
+  },
+  pinHeroTitle: {
+    marginTop: 22,
+    color: '#F8FAFC',
+    fontSize: 28,
+    fontWeight: '900',
+    lineHeight: 34,
+  },
+  pinHeroSubtitle: {
+    marginTop: 12,
+    color: '#A5B4FC',
+    fontSize: 16,
+    lineHeight: 22,
+    textAlign: 'center',
+  },
+  pinDotsRow: {
+    marginTop: 26,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  pinDot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#2563EB',
+    backgroundColor: 'transparent',
+  },
+  pinDotFilled: {
+    backgroundColor: '#2563EB',
+  },
+  pinDotOptional: {
+    opacity: 0.45,
+  },
+  pinErrorCard: {
+    marginTop: 16,
+    borderRadius: 20,
+    backgroundColor: '#2A1320',
+    borderWidth: 1,
+    borderColor: '#F04438',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  pinErrorText: {
+    color: '#FDA29B',
+    fontSize: 12,
+    lineHeight: 16,
+    textAlign: 'center',
+  },
+  pinGrid: {
+    marginTop: 26,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: 14,
+  },
+  pinKey: {
+    width: '30.5%',
+    minHeight: 92,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: '#2F3B56',
+    backgroundColor: '#151636',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pinKeyAccent: {
+    borderColor: '#2563EB',
+    backgroundColor: '#19264A',
+  },
+  pinKeyLabel: {
+    color: '#F8FAFC',
+    fontSize: 22,
+    fontWeight: '800',
+    lineHeight: 28,
+  },
+  pinKeySublabel: {
+    marginTop: 4,
+    color: '#A5B4FC',
+    fontSize: 10,
+    fontWeight: '700',
+    lineHeight: 12,
+  },
+  pinGridSpacer: {
+    width: '30.5%',
+  },
+  pinContinueButton: {
+    minHeight: 56,
+    borderRadius: 28,
+    marginTop: 22,
+    backgroundColor: '#1D4ED8',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pinContinueText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  pinContinueArrow: {
+    marginLeft: 10,
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '800',
   },
 });

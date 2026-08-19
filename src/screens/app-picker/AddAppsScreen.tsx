@@ -3,7 +3,7 @@ import {Alert, FlatList, Image, Pressable, StyleSheet, Text, TextInput, View} fr
 import {useNavigation, useRoute} from '@react-navigation/native';
 import type {RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {FigmaActionButton, FigmaInnerLayout, figmaPalette} from '../../components/FigmaKit';
+import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import type {RootStackParamList} from '../../navigation/routes';
 import {nativeBridge} from '../../native';
 import {localDataRepository} from '../../storage/LocalDataRepository';
@@ -22,7 +22,7 @@ function appInitials(label: string) {
 export function AddAppsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'AddApps'>>();
-  const palette = figmaPalette.light;
+  const palette = figmaPalette.dark;
   const [apps, setApps] = React.useState<LaunchableApp[]>([]);
   const [selectedPackageNames, setSelectedPackageNames] = React.useState<string[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -124,6 +124,25 @@ export function AddAppsScreen() {
   const renderHeader = React.useCallback(
     () => (
       <View>
+        <View style={styles.progressRow}>
+          <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Text style={styles.backButtonText}>←</Text>
+          </Pressable>
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, presetMode === 'HIDE' ? styles.progressFillHide : presetMode === 'LOCK' ? styles.progressFillLock : styles.progressFillCombined]} />
+          </View>
+          <Text style={styles.progressLabel}>{presetMode === 'HIDE' ? 'Step 4 of 5' : 'Step 2 of 4'}</Text>
+        </View>
+
+        <View style={styles.hero}>
+          <View style={[styles.heroIconShell, presetMode === 'HIDE' ? styles.heroHide : presetMode === 'LOCK' ? styles.heroLock : styles.heroCombined]}>
+            <Text style={styles.heroIcon}>{presetMode === 'HIDE' ? '🙈' : presetMode === 'LOCK' ? '🔒' : '🛡️'}</Text>
+          </View>
+          <Text style={[styles.pageTitle, {color: palette.textPrimary}]}>
+            {presetMode === 'HIDE' ? 'Select Apps to Hide' : presetMode === 'LOCK' ? 'Select Apps to Lock' : 'Select Apps to Hide + Lock'}
+          </Text>
+        </View>
+
         <Text style={[styles.subtitle, {color: palette.textSecondary}]}>{helperCopy}</Text>
 
         <View style={[styles.searchBar, {backgroundColor: palette.surface, borderColor: palette.border}]}>
@@ -166,7 +185,9 @@ export function AddAppsScreen() {
         ) : null}
 
         <View style={[styles.helpCard, {backgroundColor: palette.accentSoft, borderColor: palette.border}]}>
-          <Text style={[styles.helpTitle, {color: palette.accent}]}>Easy to understand</Text>
+          <Text style={[styles.helpTitle, {color: palette.accent}]}>
+            {presetMode === 'HIDE' ? 'Hidden apps stay in Vault' : presetMode === 'LOCK' ? 'Lock uses your saved credential' : 'Both protections are applied together'}
+          </Text>
           <Text style={[styles.helpText, {color: palette.textSecondary}]}>
             Hide works inside this managed launcher experience. Lock protection continues through the app-auth flow after you save protection.
           </Text>
@@ -234,7 +255,7 @@ export function AddAppsScreen() {
   );
 
   return (
-    <FigmaInnerLayout variant="light" title={headline} onBackPress={() => navigation.goBack()}>
+    <FigmaPage variant="dark" style={styles.page}>
       <View style={styles.fill}>
         {loading ? (
           <View style={[styles.stateBox, {backgroundColor: palette.surface, borderColor: palette.border}]}>
@@ -267,23 +288,110 @@ export function AddAppsScreen() {
         {!loading && !error ? <View style={styles.footerGap} /> : <View style={styles.spacer} />}
 
         <FigmaActionButton
-          variant="light"
+          variant="dark"
           label={saving ? 'Saving...' : `Continue with ${selectedPackageNames.length} app${selectedPackageNames.length === 1 ? '' : 's'}`}
           onPress={() => void continueNext()}
         />
       </View>
-    </FigmaInnerLayout>
+    </FigmaPage>
   );
 }
 
 const styles = StyleSheet.create({
+  page: {
+    backgroundColor: '#091124',
+  },
   fill: {
     flex: 1,
   },
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginBottom: 24,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: '#233876',
+    backgroundColor: '#101C35',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backButtonText: {
+    color: '#F8FAFC',
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  progressTrack: {
+    flex: 1,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: '#1E2B4B',
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 999,
+  },
+  progressFillHide: {
+    width: '24%',
+    backgroundColor: '#2563EB',
+  },
+  progressFillLock: {
+    width: '28%',
+    backgroundColor: '#EF4444',
+  },
+  progressFillCombined: {
+    width: '36%',
+    backgroundColor: '#8B5CF6',
+  },
+  progressLabel: {
+    color: '#A5B4FC',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  hero: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  heroIconShell: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroHide: {
+    borderColor: '#2563EB',
+    backgroundColor: '#0F1E3C',
+  },
+  heroLock: {
+    borderColor: '#7F1D1D',
+    backgroundColor: '#2A0E0E',
+  },
+  heroCombined: {
+    borderColor: '#7C3AED',
+    backgroundColor: '#1C1634',
+  },
+  heroIcon: {
+    fontSize: 30,
+  },
+  pageTitle: {
+    marginTop: 18,
+    fontSize: 30,
+    fontWeight: '900',
+    lineHeight: 36,
+    textAlign: 'center',
+  },
   subtitle: {
     marginTop: 6,
-    fontSize: 14,
-    lineHeight: 18,
+    fontSize: 15,
+    lineHeight: 21,
+    textAlign: 'center',
   },
   listView: {
     flex: 1,
@@ -292,8 +400,8 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   searchBar: {
-    minHeight: 88,
-    borderRadius: 30,
+    minHeight: 72,
+    borderRadius: 24,
     borderWidth: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
@@ -384,7 +492,7 @@ const styles = StyleSheet.create({
   appRow: {
     minHeight: 98,
     borderWidth: 1,
-    borderRadius: 30,
+    borderRadius: 24,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
