@@ -156,9 +156,10 @@ export function VaultScreen() {
       bottomNav={
         <FigmaBottomNav
           variant={variant}
-          active="home"
-          onHomePress={() => navigation.navigate('PrivateHome')}
-          onGalleryPress={() => navigation.navigate('Gallery')}
+          active="access"
+          onLauncherPress={() => navigation.navigate('PrivateHome')}
+          onDashboardPress={() => navigation.navigate('ManageApps')}
+          onAccessPress={() => navigation.navigate('Gallery')}
           onSettingsPress={() => navigation.navigate('Settings')}
         />
       }>

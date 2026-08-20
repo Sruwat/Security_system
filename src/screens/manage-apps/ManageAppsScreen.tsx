@@ -2,8 +2,9 @@ import React from 'react';
 import {Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {FigmaBanner, FigmaInnerLayout, figmaPalette} from '../../components/FigmaKit';
+import {FigmaBanner, FigmaBottomNav, FigmaRootLayout, figmaPalette} from '../../components/FigmaKit';
 import type {RootStackParamList} from '../../navigation/routes';
+import {usePrimaryDrawer} from '../../navigation/usePrimaryDrawer';
 import {localDataRepository} from '../../storage/LocalDataRepository';
 import {protectionManager} from '../../services/protection/ProtectionManager';
 import type {AppProtection, ProtectionMode} from '../../types/domain';
@@ -16,6 +17,7 @@ function describeMode(mode: ProtectionMode): string {
 export function ManageAppsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const palette = figmaPalette.dark;
+  const {drawerOpen, openDrawer, closeDrawer, drawerDestinations} = usePrimaryDrawer();
   const [apps, setApps] = React.useState<AppProtection[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [busyPackage, setBusyPackage] = React.useState<string | null>(null);
@@ -122,9 +124,27 @@ export function ManageAppsScreen() {
   );
 
   return (
-    <FigmaInnerLayout variant="dark" title="Manage Apps" onBackPress={() => navigation.goBack()}>
+    <FigmaRootLayout
+      variant="dark"
+      title="VaultX"
+      drawerTitle="VaultX"
+      drawerOpen={drawerOpen}
+      onDrawerOpen={openDrawer}
+      onDrawerClose={closeDrawer}
+      drawerDestinations={drawerDestinations}
+      bottomNav={
+        <FigmaBottomNav
+          variant="dark"
+          active="dashboard"
+          onLauncherPress={() => navigation.navigate('PrivateHome')}
+          onDashboardPress={() => navigation.navigate('ManageApps')}
+          onAccessPress={() => navigation.navigate('Gallery')}
+          onSettingsPress={() => navigation.navigate('Settings')}
+        />
+      }>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Review every protected app in one place and keep the same Hide, Lock, or Lock + Hide flow consistent.</Text>
+        <Text style={[styles.heading, {color: palette.textPrimary}]}>Dashboard</Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Protected apps and controls.</Text>
 
         <FigmaBanner screen="manage-apps" variant="dark" title="Banner ad" tone="surfaceElevated" />
 
@@ -249,13 +269,19 @@ export function ManageAppsScreen() {
           ) : null}
         </View>
       </Modal>
-    </FigmaInnerLayout>
+    </FigmaRootLayout>
   );
 }
 
 const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 8,
+  },
+  heading: {
+    marginTop: 6,
+    fontSize: 30,
+    fontWeight: '900',
+    lineHeight: 36,
   },
   subtitle: {
     marginTop: 6,

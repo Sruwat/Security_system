@@ -40,8 +40,8 @@ export function LauncherSetupScreen() {
         title={featureFlow === 'APP_HIDE' ? 'Inside App Hide' : 'Required Permissions'}
         subtitle={
           featureFlow === 'APP_HIDE'
-            ? 'Set the managed launcher access first, then continue into disguise and hidden-app setup.'
-            : 'Give Hide and Lock the Android access they need before you start protecting apps.'
+            ? 'Enable launcher access, then continue.'
+            : 'Enable access before you protect apps.'
         }
       />
 
@@ -84,9 +84,9 @@ export function LauncherSetupScreen() {
         ) : null}
 
         <BluePanel tone="soft" style={styles.noteCard}>
-          <Text style={styles.noteTitle}>Managed launcher model</Text>
+          <Text style={styles.noteTitle}>How Hide works</Text>
           <Text style={styles.noteBody}>
-            Hidden apps stay private inside this launcher. Your OEM launcher always remains accessible through Home settings, because standard Android does not let third-party apps remove apps from every launcher.
+            Hidden apps stay private inside this launcher. Your phone launcher can still be opened any time from Home settings.
           </Text>
         </BluePanel>
 

@@ -66,14 +66,16 @@ export function GalleryScreen() {
       bottomNav={
         <FigmaBottomNav
           variant="dark"
-          active="gallery"
-          onHomePress={() => navigation.navigate('PrivateHome')}
-          onGalleryPress={() => navigation.navigate('Gallery')}
+          active="access"
+          onLauncherPress={() => navigation.navigate('PrivateHome')}
+          onDashboardPress={() => navigation.navigate('ManageApps')}
+          onAccessPress={() => navigation.navigate('Gallery')}
           onSettingsPress={() => navigation.navigate('Settings')}
         />
       }>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Private gallery and protected media access.</Text>
+        <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Secret Access</Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Calculator, gallery, and hidden space.</Text>
 
         <FigmaBanner screen="gallery" variant="dark" title="Banner ad" tone="surfaceElevated" />
 
@@ -82,18 +84,18 @@ export function GalleryScreen() {
             <View style={[styles.heroGlyphInner, {backgroundColor: palette.accent}]} />
           </View>
           <View style={styles.heroCopy}>
-            <Text style={[styles.heroTitle, {color: palette.textPrimary}]}>Private Gallery</Text>
-            <Text style={[styles.heroBody, {color: palette.textSecondary}]}>Protected media on this device</Text>
+            <Text style={[styles.heroTitle, {color: palette.textPrimary}]}>Hidden Apps</Text>
+            <Text style={[styles.heroBody, {color: palette.textSecondary}]}>Open your private area</Text>
           </View>
         </Pressable>
 
         <Pressable
           onPress={secretAccessType === 'gallery' ? triggerSecret : undefined}
           style={({pressed}) => [styles.openButton, {backgroundColor: '#A78BFA', opacity: pressed ? 0.92 : 1}]}>
-          <Text style={styles.openButtonText}>Open Gallery</Text>
+          <Text style={styles.openButtonText}>Open Vault</Text>
         </Pressable>
 
-        <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Recent</Text>
+        <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Shortcuts</Text>
 
         <View style={styles.grid}>
           {recentTiles.map(index => (

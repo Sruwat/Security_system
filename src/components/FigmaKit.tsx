@@ -74,9 +74,9 @@ export function FigmaTopBar(props: {
       <Pressable
         onPress={props.mode === 'root' ? props.onMenuPress : props.onBackPress}
         hitSlop={10}
-        style={({pressed}) => [styles.leadingAction, {backgroundColor: palette.accentSoft, opacity: pressed ? 0.92 : 1}]}>
-        <Text style={[styles.leadingActionText, {color: palette.accent}]}>
-          {props.mode === 'root' ? '=' : '<'}
+        style={({pressed}) => [styles.leadingAction, {backgroundColor: palette.surfaceElevated, opacity: pressed ? 0.92 : 1}]}>
+        <Text style={[styles.leadingActionText, {color: palette.textPrimary}]}>
+          {props.mode === 'root' ? '☰' : '←'}
         </Text>
       </Pressable>
       <Text style={[styles.topBarTitle, {color: palette.textPrimary}]} numberOfLines={1}>
@@ -108,15 +108,11 @@ export function FigmaDrawer(props: {
   return (
     <Modal visible={props.open} transparent animationType="fade" onRequestClose={props.onClose}>
       <View style={styles.drawerOverlay}>
-        <Pressable style={styles.drawerScrim} onPress={props.onClose} />
         <View style={[styles.drawerSheet, {backgroundColor: palette.surface, borderColor: palette.border}]}>
           <View style={styles.drawerHeader}>
-            <View>
-              <Text style={[styles.drawerKicker, {color: palette.textSecondary}]}>Quick Access</Text>
-              <Text style={[styles.drawerTitle, {color: palette.textPrimary}]}>{props.title}</Text>
-            </View>
-            <Pressable onPress={props.onClose} style={[styles.drawerClose, {backgroundColor: palette.accentSoft}]}>
-              <Text style={[styles.drawerCloseText, {color: palette.accent}]}>x</Text>
+            <Text style={[styles.drawerTitle, {color: palette.textPrimary}]}>{props.title}</Text>
+            <Pressable onPress={props.onClose} style={[styles.drawerClose, {backgroundColor: palette.surfaceElevated}]}>
+              <Text style={[styles.drawerCloseText, {color: palette.textPrimary}]}>×</Text>
             </Pressable>
           </View>
 
@@ -136,6 +132,7 @@ export function FigmaDrawer(props: {
             ))}
           </View>
         </View>
+        <Pressable style={styles.drawerScrim} onPress={props.onClose} />
       </View>
     </Modal>
   );
@@ -276,41 +273,37 @@ export function FigmaActionButton(props: {variant: FigmaVariant; label: string; 
 
 export function FigmaBottomNav(props: {
   variant: FigmaVariant;
-  active: 'home' | 'gallery' | 'settings';
-  onHomePress?: () => void;
-  onGalleryPress?: () => void;
+  active: 'launcher' | 'dashboard' | 'access' | 'settings';
+  onLauncherPress?: () => void;
+  onDashboardPress?: () => void;
+  onAccessPress?: () => void;
   onSettingsPress?: () => void;
 }) {
   const palette = useFigmaPalette(props.variant);
+  const pillOffsets = {
+    launcher: 10,
+    dashboard: 94,
+    access: 178,
+    settings: 262,
+  } as const;
+
+  function NavButton(buttonProps: {label: string; active: boolean; onPress?: () => void}) {
+    return (
+      <Pressable onPress={buttonProps.onPress} style={({pressed}) => [styles.navSlot, {opacity: pressed ? 0.92 : 1}]}>
+        <Text style={[styles.navLabel, {color: buttonProps.active ? palette.accent : palette.textSecondary}]}>
+          {buttonProps.label}
+        </Text>
+      </Pressable>
+    );
+  }
+
   return (
     <View style={[styles.bottomNav, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-      <View style={[styles.navPill, {backgroundColor: palette.accentSoft, left: props.active === 'home' ? 16 : props.active === 'gallery' ? 121 : 226}]} />
-
-      <Pressable
-        onPress={props.onHomePress}
-        style={({pressed}) => [styles.navSlot, {left: 55, opacity: pressed ? 0.92 : 1}]}>
-        <View style={styles.gridIcon}>
-          {Array.from({length: 9}).map((_, index) => (
-            <View key={index} style={[styles.gridDot, {backgroundColor: props.active === 'home' ? palette.accent : palette.textSecondary}]} />
-          ))}
-        </View>
-      </Pressable>
-
-      <Pressable
-        onPress={props.onGalleryPress}
-        style={({pressed}) => [styles.navSlot, {left: 160, opacity: pressed ? 0.92 : 1}]}>
-        <View style={[styles.diamondIcon, {borderColor: props.active === 'gallery' ? palette.accent : palette.textSecondary}]}>
-          <View style={[styles.diamondIconInner, {backgroundColor: props.active === 'gallery' ? palette.accent : palette.textSecondary}]} />
-        </View>
-      </Pressable>
-
-      <Pressable
-        onPress={props.onSettingsPress}
-        style={({pressed}) => [styles.navSlot, {left: 266, opacity: pressed ? 0.92 : 1}]}>
-        <View style={[styles.settingsIcon, {borderColor: props.active === 'settings' ? palette.accent : palette.textSecondary}]}>
-          <View style={[styles.settingsIconInner, {backgroundColor: props.active === 'settings' ? palette.accent : palette.textSecondary}]} />
-        </View>
-      </Pressable>
+      <View style={[styles.navPill, {backgroundColor: palette.accentSoft, left: pillOffsets[props.active]}]} />
+      <NavButton label="Apps" active={props.active === 'launcher'} onPress={props.onLauncherPress} />
+      <NavButton label="Board" active={props.active === 'dashboard'} onPress={props.onDashboardPress} />
+      <NavButton label="Access" active={props.active === 'access'} onPress={props.onAccessPress} />
+      <NavButton label="Settings" active={props.active === 'settings'} onPress={props.onSettingsPress} />
     </View>
   );
 }
@@ -447,12 +440,16 @@ const styles = StyleSheet.create({
     lineHeight: 14,
   },
   bottomNav: {
-    height: 60,
+    height: 64,
     borderRadius: 24,
     borderWidth: 1,
     marginTop: 18,
     position: 'relative',
     overflow: 'hidden',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
   },
   topBar: {
     minHeight: 60,
@@ -507,9 +504,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   drawerSheet: {
-    width: '82%',
+    width: '80%',
     maxWidth: 340,
-    borderLeftWidth: 1,
+    borderRightWidth: 1,
     paddingHorizontal: 18,
     paddingTop: 18,
     paddingBottom: 24,
@@ -520,13 +517,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 12,
   },
-  drawerKicker: {
-    fontSize: 10,
-    fontWeight: '700',
-    lineHeight: 12,
-  },
   drawerTitle: {
-    marginTop: 6,
     fontSize: 20,
     fontWeight: '800',
     lineHeight: 24,
@@ -565,55 +556,21 @@ const styles = StyleSheet.create({
   },
   navPill: {
     position: 'absolute',
-    width: 90,
-    height: 38,
+    width: 76,
+    height: 42,
     top: 11,
     borderRadius: 19,
   },
   navSlot: {
-    position: 'absolute',
-    top: 18,
-    width: 28,
-    height: 24,
+    width: 76,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  gridIcon: {
-    width: 18,
-    height: 18,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 2,
-  },
-  gridDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 1,
-  },
-  diamondIcon: {
-    width: 16,
-    height: 16,
-    borderWidth: 2,
-    transform: [{rotate: '45deg'}],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  diamondIconInner: {
-    width: 6,
-    height: 6,
-  },
-  settingsIcon: {
-    width: 18,
-    height: 18,
-    borderWidth: 2,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  settingsIconInner: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+  navLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    lineHeight: 14,
   },
   banner: {
     minHeight: 56,

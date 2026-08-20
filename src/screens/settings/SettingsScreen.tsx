@@ -91,15 +91,14 @@ export function SettingsScreen() {
         <FigmaBottomNav
           variant="dark"
           active="settings"
-          onHomePress={() => navigation.navigate('PrivateHome')}
-          onGalleryPress={() => navigation.navigate('Gallery')}
+          onLauncherPress={() => navigation.navigate('PrivateHome')}
+          onDashboardPress={() => navigation.navigate('ManageApps')}
+          onAccessPress={() => navigation.navigate('Gallery')}
           onSettingsPress={() => navigation.navigate('Settings')}
         />
       }>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
-          Keep security, secret access, disguise, and recovery controls in one clean private space.
-        </Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Security, access, and recovery.</Text>
 
         <GroupCard
           title="Security"

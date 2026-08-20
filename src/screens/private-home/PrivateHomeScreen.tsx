@@ -386,29 +386,20 @@ export function PrivateHomeScreen() {
       drawerDestinations={drawerDestinations}
       bottomNav={
         <FigmaBottomNav
-          variant="light"
-          active="home"
-          onHomePress={() => navigation.navigate('PrivateHome')}
-          onGalleryPress={() => navigation.navigate('Gallery')}
+          variant="dark"
+          active="launcher"
+          onLauncherPress={() => navigation.navigate('PrivateHome')}
+          onDashboardPress={() => navigation.navigate('ManageApps')}
+          onAccessPress={() => navigation.navigate('Gallery')}
           onSettingsPress={() => navigation.navigate('Settings')}
         />
       }>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.pageTitle, {color: palette.textPrimary}]}>Private Launcher</Text>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
-          Use this as your smooth default launcher, then manage Hide, Smart Hide, App Lock, and Lock + Hide below.
-        </Text>
-
         <View style={[styles.launcherShell, {backgroundColor: palette.surface, borderColor: palette.border}]}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Apps on this launcher</Text>
-            <Text style={[styles.sectionLink, {color: palette.accent}]}>
-              {managedLauncherApps.length} visible
-            </Text>
+            <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Apps</Text>
+            <Text style={[styles.sectionLink, {color: palette.accent}]}>{managedLauncherApps.length}</Text>
           </View>
-          <Text style={[styles.launcherIntro, {color: palette.textSecondary}]}>
-            Swipe left or right like a phone launcher. Hidden apps are removed from this grid and stay inside Vault.
-          </Text>
 
           {loading ? (
             <Text style={[styles.stateText, {color: palette.textSecondary}]}>Loading launcher apps...</Text>
@@ -462,50 +453,65 @@ export function PrivateHomeScreen() {
           )}
         </View>
 
-        <View style={styles.quickActions}>
+        <View style={styles.quickStrip}>
           <QuickAction
             title="Hide Apps"
-            subtitle="Pick apps that should disappear from your managed launcher and stay inside Vault."
-            eyebrow="Inside App Hide"
+            subtitle="Private apps"
             onPress={() => startFeatureFlow('APP_HIDE')}
             palette={palette}
             accent="#3B82F6"
-            number="01"
           />
           <QuickAction
             title="Smart Hide"
-            subtitle="Choose the secret trigger that opens your hidden space."
-            eyebrow={settings?.secretAccessType ? settings.secretAccessType.replace(/_/g, ' / ') : 'Triple Tap / Shake'}
+            subtitle={settings?.secretAccessType ? settings.secretAccessType.replace(/_/g, ' ') : 'Secret trigger'}
             onPress={() => startFeatureFlow('SMART_HIDE')}
             palette={palette}
             accent="#22C55E"
-            number="02"
           />
           <QuickAction
             title="App Lock"
-            subtitle="Keep apps visible but require authentication before they open."
-            eyebrow="PIN / Pattern / Pass"
+            subtitle="Secure apps"
             onPress={() => startFeatureFlow('APP_LOCK')}
             palette={palette}
             accent="#EF4444"
-            number="03"
           />
           <QuickAction
             title="Hide + Lock"
-            subtitle="Hide apps from the launcher and require authentication before access."
-            eyebrow="Step 1→2 Combined"
+            subtitle="Both"
             onPress={() => startFeatureFlow('LOCK_HIDE')}
             palette={palette}
             accent="#8B5CF6"
-            number="04"
+          />
+        </View>
+
+        <View style={styles.statsCompactRow}>
+          <StatCard
+            label="Protected"
+            value={String(counts.protectedApps.length)}
+            subtitle={countLabel(counts.protectedApps.length, 'app')}
+            accent="#8B5CF6"
+            accentSoft="#1C1634"
+            textPrimary={palette.textPrimary}
+            textSecondary={palette.textSecondary}
+            onPress={() => navigation.navigate('ManageApps')}
+          />
+          <StatCard
+            label="Hidden"
+            value={String(counts.hiddenApps.length)}
+            subtitle={countLabel(counts.hiddenApps.length, 'app')}
+            accent="#60A5FA"
+            accentSoft="#172554"
+            textPrimary={palette.textPrimary}
+            textSecondary={palette.textSecondary}
+            onPress={() => navigation.navigate('Vault')}
           />
         </View>
 
         {launcherStatus?.status !== 'enabled' ? (
           <PermissionBanner
-            title="Managed launcher not active"
-            body="Hidden apps stay out of this launcher only after Smart App Lock is selected as the default Home app."
-            actionLabel="Open Home settings"
+            title="Launcher needed"
+            body="Hide works inside this launcher after Home access is enabled."
+            actionLabel="Home settings"
             onPress={() => void openPermissionSetting('home')}
             backgroundColor="#241739"
             borderColor="#3B82F6"
@@ -516,9 +522,9 @@ export function PrivateHomeScreen() {
 
         {accessibilityStatus?.status !== 'enabled' ? (
           <PermissionBanner
-            title="Lock protection needs Accessibility"
-            body="Locked apps are saved, but Android launch interception will not enforce them until Accessibility is enabled."
-            actionLabel="Open Accessibility"
+            title="Lock needs Accessibility"
+            body="App Lock stays saved but won't enforce until Accessibility is on."
+            actionLabel="Accessibility"
             onPress={() => void openPermissionSetting('accessibility')}
             backgroundColor="#2B1320"
             borderColor="#EF4444"
@@ -527,130 +533,35 @@ export function PrivateHomeScreen() {
           />
         ) : null}
 
-        <View style={styles.statsRow}>
-          <StatCard
-            label="Protected Apps"
-            value={String(counts.protectedApps.length)}
-            subtitle={countLabel(counts.protectedApps.length, 'app')}
-            accent="#8B5CF6"
-            accentSoft="#1C1634"
-            textPrimary={palette.textPrimary}
-            textSecondary={palette.textSecondary}
-          />
-          <StatCard
-            label="Hidden Apps"
-            value={String(counts.hiddenApps.length)}
-            subtitle={countLabel(counts.hiddenApps.length, 'hidden app', 'hidden apps')}
-            accent="#60A5FA"
-            accentSoft="#172554"
-            textPrimary={palette.textPrimary}
-            textSecondary={palette.textSecondary}
-            onPress={() => navigation.navigate('Vault')}
-          />
-          <StatCard
-            label="Locked Apps"
-            value={String(counts.lockedApps.length)}
-            subtitle={countLabel(counts.lockedApps.length, 'locked app', 'locked apps')}
-            accent="#F87171"
-            accentSoft="#331313"
-            textPrimary={palette.textPrimary}
-            textSecondary={palette.textSecondary}
-          />
-        </View>
-
         <View style={[styles.sectionCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Readiness</Text>
-            <Pressable onPress={() => navigation.navigate('PrivacyCenter')}>
-              <Text style={[styles.sectionLink, {color: palette.accent}]}>Review all</Text>
-            </Pressable>
-          </View>
-          <View style={styles.readinessGrid}>
-            <View style={[styles.readinessCard, {backgroundColor: readiness.launcherReady ? palette.accentSoft : '#FEF3C7'}]}>
-              <Text style={[styles.readinessTitle, {color: readiness.launcherReady ? palette.accent : '#92400E'}]}>Launcher Ready</Text>
-              <Text style={[styles.readinessBody, {color: palette.textSecondary}]}>
-                {readiness.launcherReady ? 'Hide works in your managed launcher.' : 'Set Smart App Lock as Home launcher for Hide mode.'}
-              </Text>
-            </View>
-            <View style={[styles.readinessCard, {backgroundColor: readiness.accessibilityReady ? '#FEE4E2' : '#FEE2E2'}]}>
-              <Text style={[styles.readinessTitle, {color: '#991B1B'}]}>Accessibility Ready</Text>
-              <Text style={[styles.readinessBody, {color: palette.textSecondary}]}>
-                {readiness.accessibilityReady ? 'External app lock interception is active.' : 'Enable Accessibility before locked apps can be enforced.'}
-              </Text>
-            </View>
-            <View style={[styles.readinessCard, {backgroundColor: palette.surfaceElevated}]}>
-              <Text style={[styles.readinessTitle, {color: palette.textPrimary}]}>Credential Ready</Text>
-              <Text style={[styles.readinessBody, {color: palette.textSecondary}]}>
-                {readiness.credentialReady ? `${settings?.primaryAuthMethod ?? 'PIN'} is configured for protected access.` : 'Finish security setup to protect apps.'}
-              </Text>
-            </View>
-          </View>
           <View style={styles.supportActions}>
             <QuickAction
-            title="Open Hidden Apps"
-            subtitle="Use your current secret access rules right now."
-            onPress={openSecretAccess}
-            palette={palette}
-            />
-            <QuickAction
-              title="Manage Protected Apps"
-              subtitle="Hide ON/OFF, Lock ON/OFF, Change Lock, or Remove Protection."
+              title="Dashboard"
+              subtitle="Protected apps"
               onPress={() => navigation.navigate('ManageApps')}
               palette={palette}
             />
-            {launcherStatus?.status === 'enabled' ? (
-              <QuickAction
-                title="Use Phone Launcher"
-                subtitle="Open Home settings and switch back to your OEM launcher any time."
-                onPress={() => void openPermissionSetting('home')}
-                palette={palette}
-              />
-            ) : null}
+            <QuickAction
+              title="Secret Access"
+              subtitle="Vault and disguise"
+              onPress={openSecretAccess}
+              palette={palette}
+            />
+            <QuickAction
+              title="Settings"
+              subtitle="Security"
+              onPress={() => navigation.navigate('Settings')}
+              palette={palette}
+            />
             {hasPermissionIssue ? (
               <QuickAction
                 title="Fix Permissions"
-                subtitle="Open Android settings for launcher, accessibility, and protection requirements."
+                subtitle="Launcher and lock access"
                 onPress={() => navigation.navigate('PrivacyCenter')}
                 palette={palette}
               />
             ) : null}
           </View>
-        </View>
-
-        <View style={[styles.sectionCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Protected Apps</Text>
-            <Pressable onPress={() => navigation.navigate('ManageApps')}>
-              <Text style={[styles.sectionLink, {color: palette.accent}]}>Manage all</Text>
-            </Pressable>
-          </View>
-
-          {loading ? (
-            <Text style={[styles.stateText, {color: palette.textSecondary}]}>Loading protected apps...</Text>
-          ) : counts.protectedApps.length === 0 ? (
-            <Text style={[styles.stateText, {color: palette.textSecondary}]}>
-              No protected apps yet. Start with Hide Apps, App Lock, or Hide + Lock.
-            </Text>
-          ) : (
-            <View style={styles.appList}>
-              {counts.protectedApps.map(app => (
-                <AppRow
-                  key={app.packageName}
-                  app={app}
-                  palette={palette}
-                  onPress={() => editApp(app)}
-                  onLaunch={() => void openApp(app)}
-                />
-              ))}
-            </View>
-          )}
-        </View>
-
-        <View style={[styles.sectionCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-          <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Current user flow</Text>
-          <Text style={[styles.flowLine, {color: palette.textSecondary}]}>Hide only: Secret Trigger {'>'} Hidden Apps</Text>
-          <Text style={[styles.flowLine, {color: palette.textSecondary}]}>Lock only: Open App {'>'} Lock Screen {'>'} App</Text>
-          <Text style={[styles.flowLine, {color: palette.textSecondary}]}>Hide + Lock: Secret Trigger {'>'} Lock Screen {'>'} Hidden Apps {'>'} App</Text>
         </View>
       </ScrollView>
     </FigmaRootLayout>
@@ -704,24 +615,15 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 15,
   },
-  statsRow: {
-    marginTop: 24,
-    gap: 12,
-  },
   launcherShell: {
-    marginTop: 22,
+    marginTop: 6,
     borderRadius: 30,
     borderWidth: 1,
     paddingHorizontal: 18,
     paddingVertical: 18,
   },
-  launcherIntro: {
-    marginTop: 8,
-    fontSize: 13,
-    lineHeight: 18,
-  },
   launcherPager: {
-    paddingTop: 18,
+    paddingTop: 12,
   },
   launcherPage: {
     flexDirection: 'row',
@@ -788,9 +690,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
   },
-  quickActions: {
-    marginTop: 24,
-    gap: 12,
+  quickStrip: {
+    marginTop: 16,
+    gap: 10,
   },
   quickAction: {
     borderRadius: 26,
@@ -841,7 +743,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   sectionCard: {
-    marginTop: 20,
+    marginTop: 16,
     borderRadius: 30,
     borderWidth: 1,
     paddingHorizontal: 18,
@@ -926,32 +828,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 15,
   },
-  flowLine: {
-    marginTop: 10,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  readinessGrid: {
-    marginTop: 14,
+  supportActions: {
     gap: 12,
   },
-  readinessCard: {
-    borderRadius: 24,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-  },
-  readinessTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    lineHeight: 18,
-  },
-  readinessBody: {
-    marginTop: 6,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  supportActions: {
-    marginTop: 14,
+  statsCompactRow: {
+    marginTop: 16,
     gap: 12,
   },
 });

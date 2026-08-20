@@ -62,8 +62,8 @@ export function WelcomeScreen() {
   return (
     <BlueFlowPage contentContainerStyle={styles.scrollContent}>
       <View style={styles.heroWrap}>
-        <BlueHero icon="🔐" title="VaultX" subtitle="Hide apps, lock apps, and manage everything from one clean private launcher." />
-        <Text style={styles.tagline}>PRIVATE. SECURE. SIMPLE.</Text>
+        <BlueHero icon="🔐" title="VaultX" subtitle="Hide, lock, and open your private apps." />
+        <Text style={styles.tagline}>PRIVATE. SIMPLE.</Text>
         <View style={styles.featureWrap}>
           <FeatureChip label="Hide Apps" accent="#7CC2FF" />
           <FeatureChip label="Smart Hide" accent="#93C5FD" />
@@ -73,8 +73,8 @@ export function WelcomeScreen() {
       </View>
 
       <BluePanel tone="soft" style={styles.notePanel}>
-        <Text style={styles.noteTitle}>Select Feature</Text>
-        <Text style={styles.noteCopy}>Choose one starting flow. The next screens now stay aligned to that exact feature path.</Text>
+        <Text style={styles.noteTitle}>Choose a start</Text>
+        <Text style={styles.noteCopy}>You can change everything later from the app.</Text>
       </BluePanel>
 
       <View style={styles.optionList}>
@@ -105,7 +105,16 @@ export function WelcomeScreen() {
         }}
       />
 
-      <Text style={styles.footerText}>By continuing you agree to our Privacy Policy</Text>
+      <Pressable
+        onPress={() => {
+          setSelectedFlow('APP_HIDE');
+          void continueFlow();
+        }}
+        style={styles.skipWrap}>
+        <Text style={styles.skipText}>Skip intro</Text>
+      </Pressable>
+
+      <Text style={styles.footerText}>Your setup stays local on this device.</Text>
     </BlueFlowPage>
   );
 }
@@ -187,5 +196,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 12,
     lineHeight: 16,
+  },
+  skipWrap: {
+    alignItems: 'center',
+  },
+  skipText: {
+    color: '#9FB4D2',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 18,
   },
 });

@@ -16,39 +16,49 @@ export function usePrimaryDrawer() {
   const drawerDestinations = React.useMemo<DrawerDestination[]>(
     () => [
       {
-        label: 'Protection Dashboard',
-        description: 'Review protected apps, summaries, and shortcuts.',
+        label: 'Home',
+        description: 'Launcher',
         onPress: () => navigation.navigate('PrivateHome'),
       },
       {
         label: 'Hide Apps',
-        description: 'Choose apps that should live only in the hidden area.',
+        description: 'Private apps',
         onPress: () => navigation.navigate('AddApps', {preset: 'HIDE', flow: 'APP_HIDE'}),
       },
       {
         label: 'App Lock',
-        description: 'Choose apps that stay visible but require unlock.',
+        description: 'Secure apps',
         onPress: () => navigation.navigate('AddApps', {preset: 'LOCK', flow: 'APP_LOCK'}),
       },
       {
         label: 'Hide + Lock',
-        description: 'Choose apps that need both privacy protections.',
+        description: 'Both',
         onPress: () => navigation.navigate('AddApps', {preset: 'LOCK_HIDE', flow: 'LOCK_HIDE'}),
       },
       {
-        label: 'Hidden Apps',
-        description: 'Open the private vault and review hidden apps.',
+        label: 'Vault',
+        description: 'Hidden apps',
         onPress: () => navigation.navigate('Vault'),
       },
       {
         label: 'Smart Hide',
-        description: 'Choose the secret trigger and disguise experience for Hidden Apps.',
+        description: 'Secret access',
         onPress: () => navigation.navigate('SecretEntry', {flow: 'SMART_HIDE'}),
       },
       {
+        label: 'Dashboard',
+        description: 'Protected apps',
+        onPress: () => navigation.navigate('ManageApps'),
+      },
+      {
         label: 'Settings',
-        description: 'Update security, permissions, recovery, and appearance.',
+        description: 'Preferences',
         onPress: () => navigation.navigate('Settings'),
+      },
+      {
+        label: 'Support',
+        description: 'Privacy help',
+        onPress: () => navigation.navigate('PrivacyCenter'),
       },
     ],
     [navigation],
