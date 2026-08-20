@@ -155,12 +155,7 @@ class SmartAppLockHideBridgeModule(private val context: ReactApplicationContext)
     try {
       val activity = context.currentActivity
       if (activity != null) {
-        val window = activity.window
-        if (enabled) {
-          window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
-        } else {
-          window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
-        }
+        activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
       }
       promise.resolve(null)
     } catch (error: Throwable) {
