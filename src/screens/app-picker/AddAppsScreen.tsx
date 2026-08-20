@@ -8,7 +8,7 @@ import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/Figma
 import type {RootStackParamList} from '../../navigation/routes';
 import {nativeBridge} from '../../native';
 import {localDataRepository} from '../../storage/LocalDataRepository';
-import type {LaunchableApp, ProtectionMode} from '../../types/domain';
+import type {FeatureFlow, LaunchableApp, ProtectionMode} from '../../types/domain';
 
 function appInitials(label: string) {
   return label
@@ -32,6 +32,7 @@ export function AddAppsScreen() {
   const [error, setError] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState('');
   const presetMode: ProtectionMode = route.params?.preset ?? 'LOCK_HIDE';
+  const [featureFlow, setFeatureFlow] = React.useState<FeatureFlow>(route.params?.flow ?? (presetMode === 'HIDE' ? 'APP_HIDE' : presetMode === 'LOCK' ? 'APP_LOCK' : 'LOCK_HIDE'));
 
   const loadApps = React.useCallback(async () => {
     setLoading(true);
@@ -51,9 +52,14 @@ export function AddAppsScreen() {
   }, []);
 
   React.useEffect(() => {
-    void localDataRepository.setOnboardingResumeRoute('AddApps');
-    void loadApps();
-  }, [loadApps]);
+    void (async () => {
+      const settings = await localDataRepository.getSettings();
+      const activeFlow = route.params?.flow ?? settings.onboardingFeatureFlow ?? (presetMode === 'HIDE' ? 'APP_HIDE' : presetMode === 'LOCK' ? 'APP_LOCK' : 'LOCK_HIDE');
+      setFeatureFlow(activeFlow);
+      await localDataRepository.saveSettings({...settings, onboardingResumeRoute: 'AddApps', onboardingFeatureFlow: activeFlow});
+      await loadApps();
+    })();
+  }, [loadApps, presetMode, route.params?.flow]);
 
   const toggleSelection = React.useCallback((packageName: string) => {
     setSelectedPackageNames(current =>
@@ -96,7 +102,7 @@ export function AddAppsScreen() {
     try {
       const settings = await localDataRepository.getSettings();
       if (!settings.onboardingComplete) {
-        await localDataRepository.setOnboardingResumeRoute('ProtectionMode');
+        await localDataRepository.saveSettings({...settings, onboardingResumeRoute: 'ProtectionMode', onboardingFeatureFlow: featureFlow});
       }
       navigation.navigate('ProtectionMode', {
         draft: {
@@ -107,21 +113,21 @@ export function AddAppsScreen() {
           autoLockSeconds: settings.autoLockSecondsDefault,
         },
         onboarding: !settings.onboardingComplete,
+        flow: featureFlow,
       });
     } catch (err) {
       Alert.alert('Save failed', err instanceof Error ? err.message : 'Unable to save protection.');
     } finally {
       setSaving(false);
     }
-  }, [apps, navigation, presetMode, selectedPackageNames]);
+  }, [apps, featureFlow, navigation, presetMode, selectedPackageNames]);
 
-  const headline = presetMode === 'HIDE' ? 'Hide Apps' : presetMode === 'LOCK' ? 'App Lock' : 'Hide + Lock';
   const helperCopy =
     presetMode === 'HIDE'
-      ? 'Step 1: choose apps that should disappear from your managed launcher and move into Vault.'
+      ? 'Choose the apps you want to keep private in Hidden Apps.'
       : presetMode === 'LOCK'
-        ? 'Step 1: choose apps that should stay visible but open only after authentication.'
-        : 'Step 1: choose apps that should be hidden from the launcher and locked before access.';
+        ? 'Choose the apps that should stay visible but always open behind a lock.'
+        : 'Choose the apps that should be hidden from the launcher and locked before access.';
 
   const renderHeader = React.useCallback(
     () => (
@@ -133,7 +139,7 @@ export function AddAppsScreen() {
           <View style={styles.progressTrack}>
             <View style={[styles.progressFill, presetMode === 'HIDE' ? styles.progressFillHide : presetMode === 'LOCK' ? styles.progressFillLock : styles.progressFillCombined]} />
           </View>
-          <Text style={styles.progressLabel}>{presetMode === 'HIDE' ? 'Step 1 of 3' : presetMode === 'LOCK' ? 'Step 1 of 3' : 'Step 1 of 4'}</Text>
+          <Text style={styles.progressLabel}>{presetMode === 'HIDE' ? 'Select Apps' : presetMode === 'LOCK' ? 'Select Apps' : 'Select Apps'}</Text>
         </View>
 
         <View style={styles.hero}>
@@ -141,7 +147,7 @@ export function AddAppsScreen() {
             <Text style={styles.heroIcon}>{presetMode === 'HIDE' ? '🙈' : presetMode === 'LOCK' ? '🔒' : '🛡️'}</Text>
           </View>
           <Text style={[styles.pageTitle, {color: palette.textPrimary}]}>
-            {presetMode === 'HIDE' ? 'Choose Apps for Hide' : presetMode === 'LOCK' ? 'Choose Apps for Lock' : 'Choose Apps for Lock + Hide'}
+            {presetMode === 'HIDE' ? 'Hide Apps' : presetMode === 'LOCK' ? 'App Lock' : 'Lock + Hide'}
           </Text>
         </View>
 
@@ -188,10 +194,10 @@ export function AddAppsScreen() {
 
           <View style={[styles.helpCard, {backgroundColor: palette.accentSoft, borderColor: palette.border}]}>
             <Text style={[styles.helpTitle, {color: palette.accent}]}>
-            {presetMode === 'HIDE' ? 'Next: choose disguise and hidden access' : presetMode === 'LOCK' ? 'Next: choose lock behavior' : 'Next: confirm both protections'}
+            {presetMode === 'HIDE' ? 'Next: choose hidden access' : presetMode === 'LOCK' ? 'Next: confirm your lock setup' : 'Next: confirm both protections'}
             </Text>
             <Text style={[styles.helpText, {color: palette.textSecondary}]}>
-            This screen only selects apps. The next step defines whether they become hidden, locked, or both inside the same private flow.
+            This screen only selects apps. The next screen finalizes how they should behave.
             </Text>
           </View>
 

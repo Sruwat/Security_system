@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {nativeBridge} from '../native';
 import {storageKeys} from './keys';
-import type {AppProtection, AppSettings, OnboardingResumeRoute} from '../types/domain';
+import type {AppProtection, AppSettings, FeatureFlow, OnboardingResumeRoute} from '../types/domain';
 import {normalizeProtection, normalizeSettings} from '../services/protection/protectionState';
 import {APP_UNLOCK_CREDENTIAL_REF} from '../services/security/credentialTypes';
 
@@ -134,6 +134,11 @@ export class LocalDataRepository {
   async setOnboardingResumeRoute(onboardingResumeRoute?: OnboardingResumeRoute): Promise<void> {
     const settings = await this.getSettings();
     await this.saveSettings({...settings, onboardingResumeRoute});
+  }
+
+  async setOnboardingFeatureFlow(onboardingFeatureFlow?: FeatureFlow): Promise<void> {
+    const settings = await this.getSettings();
+    await this.saveSettings({...settings, onboardingFeatureFlow});
   }
 
   private async syncNativeProtectionMetadata(apps: AppProtection[]): Promise<void> {

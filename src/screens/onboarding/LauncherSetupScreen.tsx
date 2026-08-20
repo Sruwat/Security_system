@@ -1,30 +1,49 @@
 import React from 'react';
-import {Alert, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {Alert, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {useNavigation, useRoute} from '@react-navigation/native';
+import type {RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {BlueChoiceCard, BlueFlowPage, BluePanel, BluePrimaryButton, BlueProgressHeader, BlueSectionTitle, blueFlowPalette} from '../../components/BlueFlow';
 import {nativeBridge} from '../../native';
 import type {RootStackParamList} from '../../navigation/routes';
 import {localDataRepository} from '../../storage/LocalDataRepository';
-import type {LauncherState} from '../../types/domain';
+import type {FeatureFlow, LauncherState} from '../../types/domain';
 
 export function LauncherSetupScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const route = useRoute<RouteProp<RootStackParamList, 'LauncherSetup'>>();
   const [launcherState, setLauncherState] = React.useState<LauncherState>({isDefaultLauncher: false, activeDisguise: 'default'});
+  const [featureFlow, setFeatureFlow] = React.useState<FeatureFlow>('APP_HIDE');
 
   const refreshLauncherState = React.useCallback(async () => {
     setLauncherState(await nativeBridge.getLauncherState());
   }, []);
 
   React.useEffect(() => {
-    void localDataRepository.setOnboardingResumeRoute('LauncherSetup');
-    void refreshLauncherState();
-  }, [refreshLauncherState]);
+    void (async () => {
+      const settings = await localDataRepository.getSettings();
+      const activeFlow = route.params?.flow ?? settings.onboardingFeatureFlow ?? 'APP_HIDE';
+      setFeatureFlow(activeFlow);
+      await localDataRepository.saveSettings({
+        ...settings,
+        onboardingResumeRoute: 'LauncherSetup',
+        onboardingFeatureFlow: activeFlow,
+      });
+      await refreshLauncherState();
+    })();
+  }, [refreshLauncherState, route.params?.flow]);
 
   return (
     <BlueFlowPage contentContainerStyle={styles.scrollContent}>
-      <BlueProgressHeader stepLabel="Step 1 of 4" progress={0.25} onBackPress={() => navigation.goBack()} />
-      <BlueSectionTitle title="Required Permissions" subtitle="Give Hide and Lock the Android access they need before you start protecting apps." />
+      <BlueProgressHeader stepLabel={featureFlow === 'APP_HIDE' ? 'Step 1 of 4' : 'Launcher Setup'} progress={0.25} onBackPress={() => navigation.goBack()} />
+      <BlueSectionTitle
+        title={featureFlow === 'APP_HIDE' ? 'Inside App Hide' : 'Required Permissions'}
+        subtitle={
+          featureFlow === 'APP_HIDE'
+            ? 'Set the managed launcher access first, then continue into disguise and hidden-app setup.'
+            : 'Give Hide and Lock the Android access they need before you start protecting apps.'
+        }
+      />
 
       <ScrollView contentContainerStyle={styles.rows} showsVerticalScrollIndicator={false}>
         <BlueChoiceCard
@@ -74,10 +93,22 @@ export function LauncherSetupScreen() {
         <View style={styles.spacer} />
 
         <BluePrimaryButton
-          label="Continue"
+          label={featureFlow === 'APP_HIDE' ? 'Continue to Smart Hide' : 'Continue'}
           onPress={() => {
-            void localDataRepository.setOnboardingResumeRoute('PrimaryLock');
-            navigation.navigate('PrimaryLock');
+            void (async () => {
+              const settings = await localDataRepository.getSettings();
+              const nextRoute = featureFlow === 'APP_HIDE' ? 'SecretEntry' : 'PrimaryLock';
+              await localDataRepository.saveSettings({
+                ...settings,
+                onboardingResumeRoute: nextRoute,
+                onboardingFeatureFlow: featureFlow,
+              });
+              if (featureFlow === 'APP_HIDE') {
+                navigation.navigate('SecretEntry', {flow: featureFlow});
+                return;
+              }
+              navigation.navigate('PrimaryLock', {flow: featureFlow});
+            })();
           }}
         />
       </ScrollView>

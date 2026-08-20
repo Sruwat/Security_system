@@ -1,6 +1,7 @@
 import React from 'react';
 import {Pressable, ScrollView, StyleSheet, Text, TextInput, View} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useRoute} from '@react-navigation/native';
+import type {RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import type {RootStackParamList} from '../../navigation/routes';
@@ -8,7 +9,7 @@ import {nativeBridge} from '../../native';
 import {mapSecretAccessTypeToEntryMethod} from '../../services/protection/protectionState';
 import {VAULT_SECRET_CREDENTIAL_REF} from '../../services/security/credentialTypes';
 import {localDataRepository} from '../../storage/LocalDataRepository';
-import type {DisguiseType, SecretAccessType} from '../../types/domain';
+import type {DisguiseType, FeatureFlow, SecretAccessType} from '../../types/domain';
 
 const secretAccessOptions: Array<{
   title: string;
@@ -62,6 +63,7 @@ function OptionCard(props: {
 
 export function SecretEntryScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const route = useRoute<RouteProp<RootStackParamList, 'SecretEntry'>>();
   const palette = figmaPalette.dark;
   const [secretAccessType, setSecretAccessType] = React.useState<SecretAccessType>('triple_tap');
   const [disguiseType, setDisguiseType] = React.useState<DisguiseType>('default');
@@ -74,10 +76,12 @@ export function SecretEntryScreen() {
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [onboardingComplete, setOnboardingComplete] = React.useState(false);
+  const [featureFlow, setFeatureFlow] = React.useState<FeatureFlow | undefined>(undefined);
 
   React.useEffect(() => {
-    void localDataRepository.setOnboardingResumeRoute('SecretEntry');
-    void localDataRepository.getSettings().then(settings => {
+    void localDataRepository.getSettings().then(async settings => {
+      const activeFlow = route.params?.flow ?? settings.onboardingFeatureFlow;
+      setFeatureFlow(activeFlow);
       setOnboardingComplete(settings.onboardingComplete);
       setSecretAccessType(settings.secretAccessType);
       setDisguiseType(settings.disguiseType);
@@ -86,9 +90,10 @@ export function SecretEntryScreen() {
       setClockSecretValue(settings.clockSecretValue ?? '5');
       setCalendarSecretDate(settings.calendarSecretDate ?? '18');
       setGallerySecretConfig(settings.gallerySecretConfig ?? 'cover_tile');
+      await localDataRepository.saveSettings({...settings, onboardingResumeRoute: 'SecretEntry', onboardingFeatureFlow: activeFlow});
       setLoading(false);
     });
-  }, []);
+  }, [route.params?.flow]);
 
   const saveAndFinish = React.useCallback(async () => {
     const normalizedCode = calculatorCode.trim();
@@ -119,10 +124,8 @@ export function SecretEntryScreen() {
     }
 
     const settings = await localDataRepository.getSettings();
-    await localDataRepository.saveSettings({
+    const nextSettings = {
       ...settings,
-      onboardingComplete: true,
-      onboardingResumeRoute: undefined,
       secretAccessType,
       secretEntryMethod: mapSecretAccessTypeToEntryMethod(secretAccessType),
       disguiseType,
@@ -130,13 +133,56 @@ export function SecretEntryScreen() {
       clockSecretValue: clockSecretValue.trim(),
       calendarSecretDate: calendarSecretDate.trim(),
       gallerySecretConfig,
+    };
+
+    if (featureFlow === 'SMART_HIDE') {
+      await localDataRepository.saveSettings({
+        ...nextSettings,
+        onboardingComplete: false,
+        onboardingResumeRoute: 'AddApps',
+        onboardingFeatureFlow: 'APP_HIDE',
+      });
+      await nativeBridge.setLauncherDisguise(disguiseType);
+      navigation.navigate('AddApps', {preset: 'HIDE', flow: 'APP_HIDE'});
+      return;
+    }
+
+    if (featureFlow === 'APP_HIDE') {
+      await localDataRepository.saveSettings({
+        ...nextSettings,
+        onboardingComplete: false,
+        onboardingResumeRoute: 'AddApps',
+        onboardingFeatureFlow: featureFlow,
+      });
+      await nativeBridge.setLauncherDisguise(disguiseType);
+      navigation.navigate('AddApps', {preset: 'HIDE', flow: featureFlow});
+      return;
+    }
+
+    if (featureFlow === 'LOCK_HIDE') {
+      await localDataRepository.saveSettings({
+        ...nextSettings,
+        onboardingComplete: false,
+        onboardingResumeRoute: 'PrimaryLock',
+        onboardingFeatureFlow: featureFlow,
+      });
+      await nativeBridge.setLauncherDisguise(disguiseType);
+      navigation.navigate('PrimaryLock', {flow: featureFlow});
+      return;
+    }
+
+    await localDataRepository.saveSettings({
+      ...nextSettings,
+      onboardingComplete: true,
+      onboardingResumeRoute: undefined,
+      onboardingFeatureFlow: undefined,
     });
 
     await nativeBridge.setLauncherDisguise(disguiseType);
     setStatusMessage(`App disguise changed to ${disguiseOptions.find(option => option.value === disguiseType)?.title ?? 'Default'}`);
 
     navigation.reset({index: 0, routes: [{name: 'PrivateHome'}]});
-  }, [calculatorCode, calendarSecretDate, clockSecretValue, confirmCalculatorCode, disguiseType, gallerySecretConfig, navigation, secretAccessType]);
+  }, [calculatorCode, calendarSecretDate, clockSecretValue, confirmCalculatorCode, disguiseType, featureFlow, gallerySecretConfig, navigation, secretAccessType]);
 
   return (
     <FigmaPage variant="dark" style={styles.page}>
@@ -148,16 +194,20 @@ export function SecretEntryScreen() {
           <View style={styles.progressTrack}>
             <View style={styles.progressFill} />
           </View>
-          <Text style={styles.progressLabel}>{onboardingComplete ? 'Smart Hide' : 'Step 1 of 4'}</Text>
+          <Text style={styles.progressLabel}>{onboardingComplete ? 'Smart Hide' : featureFlow === 'LOCK_HIDE' ? 'Step 1 of 4' : featureFlow === 'APP_HIDE' ? 'Step 2 of 4' : 'Step 1 of 3'}</Text>
         </View>
 
         <View style={styles.hero}>
           <View style={styles.heroIconShell}>
           <Text style={styles.heroIcon}>👻</Text>
           </View>
-          <Text style={styles.heroTitleMain}>Smart Hide</Text>
+          <Text style={styles.heroTitleMain}>{featureFlow === 'APP_HIDE' ? 'App Hide' : 'Smart Hide'}</Text>
           <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
-            {onboardingComplete ? 'Update your secret trigger and disguise style.' : 'Choose your trigger gesture'}
+            {onboardingComplete
+              ? 'Update your secret trigger and disguise style.'
+              : featureFlow === 'APP_HIDE'
+                ? 'Choose hidden access and disguise before app selection'
+                : 'Choose your trigger gesture'}
           </Text>
         </View>
 

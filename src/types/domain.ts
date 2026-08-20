@@ -1,4 +1,5 @@
 export type ProtectionMode = 'NONE' | 'LOCK' | 'HIDE' | 'LOCK_HIDE';
+export type FeatureFlow = 'APP_HIDE' | 'SMART_HIDE' | 'APP_LOCK' | 'LOCK_HIDE';
 
 export type AuthMethod = 'PIN' | 'PASSWORD' | 'PATTERN' | 'BIOMETRIC' | 'BIOMETRIC_FALLBACK';
 export type PrimaryAuthMethod = 'PIN' | 'PASSWORD' | 'PATTERN';
@@ -42,6 +43,7 @@ export interface AppProtection {
 export interface AppSettings {
   onboardingComplete: boolean;
   onboardingResumeRoute?: OnboardingResumeRoute;
+  onboardingFeatureFlow?: FeatureFlow;
   theme: ThemeMode;
   disguiseType: DisguiseType;
   secretAccessType: SecretAccessType;

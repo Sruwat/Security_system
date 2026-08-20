@@ -27,19 +27,19 @@ export function RemoveAppScreen() {
   }, [app.label, app.packageName, navigation]);
 
   return (
-    <FigmaInnerLayout variant="dark" title="Remove App" onBackPress={() => navigation.goBack()}>
+    <FigmaInnerLayout variant="dark" title="Remove Protection" onBackPress={() => navigation.goBack()}>
       <View style={styles.fill}>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Remove {app.label} from the private list?</Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Remove {app.label} from your protected apps list?</Text>
 
         <View style={[styles.card, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-          <Text style={[styles.cardTitle, {color: palette.textPrimary}]}>Remove protection?</Text>
+          <Text style={[styles.cardTitle, {color: palette.textPrimary}]}>Remove Protection</Text>
           <Text style={[styles.cardBody, {color: palette.textSecondary}]}>
-            {app.label} returns to normal launcher visibility according to the selected removal behavior.
+            Hide and lock rules for {app.label} will be cleared from this device.
           </Text>
         </View>
 
         <View style={styles.actions}>
-          <FigmaActionButton variant="dark" label={removing ? 'Removing...' : 'Remove'} onPress={() => void confirmRemove()} />
+          <FigmaActionButton variant="dark" label={removing ? 'Removing...' : 'Remove Protection'} onPress={() => void confirmRemove()} />
           <FigmaActionButton variant="dark" label="Cancel" tone="secondary" onPress={() => navigation.goBack()} />
         </View>
 

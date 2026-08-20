@@ -1,15 +1,15 @@
 import type {ProtectionDraft} from '../screens/app-picker/buildProtectionPolicy';
-import type {ProtectionMode} from '../types/domain';
+import type {FeatureFlow, ProtectionMode} from '../types/domain';
 
 export type RootStackParamList = {
   Welcome: undefined;
-  LauncherSetup: undefined;
-  PrimaryLock: undefined;
-  PinSetup: undefined;
-  PasswordSetup: undefined;
-  PatternSetup: undefined;
-  BiometricSetup: undefined;
-  ProtectionSaved: undefined;
+  LauncherSetup: {flow?: FeatureFlow} | undefined;
+  PrimaryLock: {flow?: FeatureFlow} | undefined;
+  PinSetup: {flow?: FeatureFlow} | undefined;
+  PasswordSetup: {flow?: FeatureFlow} | undefined;
+  PatternSetup: {flow?: FeatureFlow} | undefined;
+  BiometricSetup: {flow?: FeatureFlow} | undefined;
+  ProtectionSaved: {flow?: FeatureFlow} | undefined;
   AutoLockSettings: undefined;
   RebootRestored: undefined;
   UnlockSuccess: undefined;
@@ -18,12 +18,12 @@ export type RootStackParamList = {
   Calendar: undefined;
   AuthGate: undefined;
   PrivateHome: undefined;
-  AddApps: {preset?: ProtectionMode} | undefined;
-  ProtectionMode: {draft: ProtectionDraft; onboarding: boolean};
+  AddApps: {preset?: ProtectionMode; flow?: FeatureFlow} | undefined;
+  ProtectionMode: {draft: ProtectionDraft; onboarding: boolean; flow?: FeatureFlow};
   ManageApps: undefined;
   RemoveApp: {app: {packageName: string; label: string; mode: 'NONE' | 'LOCK' | 'HIDE' | 'LOCK_HIDE'}};
   Gallery: undefined;
-  SecretEntry: undefined;
+  SecretEntry: {flow?: FeatureFlow} | undefined;
   Vault: undefined;
   Settings: undefined;
   AppearanceSettings: undefined;

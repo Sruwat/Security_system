@@ -163,7 +163,7 @@ export function VaultScreen() {
         />
       }>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>This is your private space. Hidden apps live here and follow the same flow you set during setup.</Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>This is your private space. Hidden apps stay here and follow the access rules you already chose.</Text>
 
         <FigmaBanner screen="vault" variant={variant} title="Banner ad" tone="surface" />
 
@@ -175,14 +175,14 @@ export function VaultScreen() {
             <Text style={[styles.pendingApp, {color: palette.textPrimary}]}>{pendingLabel}</Text>
             <Text style={[styles.pendingText, {color: palette.textSecondary}]}>
               {pendingMode === 'LOCK_HIDE'
-                ? 'A hidden + locked app is waiting for authentication before it can open.'
+                ? 'A hidden locked app is waiting for authentication before it can open.'
                 : pendingMode
                   ? `The app is waiting in ${pendingMode} mode.`
-                  : 'The app is waiting for vault access.'}
+                  : 'The app is waiting for private access.'}
             </Text>
             <FigmaActionButton
               variant={variant}
-              label={pendingMode === 'LOCK_HIDE' ? 'Continue to unlock' : 'Open hidden app'}
+              label={pendingMode === 'LOCK_HIDE' ? 'Continue to Unlock' : 'Open Hidden App'}
               onPress={() => void openPendingApp()}
             />
           </View>
@@ -244,7 +244,7 @@ export function VaultScreen() {
           )}
 
           <Pressable
-            onPress={() => navigation.navigate('AddApps')}
+            onPress={() => navigation.navigate('AddApps', {preset: 'HIDE', flow: 'APP_HIDE'})}
             style={({pressed}) => [
               styles.addCard,
               {backgroundColor: palette.accentSoft, borderColor: palette.accent, opacity: pressed ? 0.94 : 1},
@@ -255,7 +255,7 @@ export function VaultScreen() {
         </View>
 
         <Pressable onPress={() => navigation.navigate('ManageApps')} style={[styles.manageRow, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-          <Text style={[styles.manageText, {color: palette.textPrimary}]}>Manage Protected Apps</Text>
+          <Text style={[styles.manageText, {color: palette.textPrimary}]}>Manage Hidden and Locked Apps</Text>
         </Pressable>
 
         <FigmaBanner screen="vault" variant={variant} placement="native" title="Native advertisement" subtitle="Placed after functional content" tone="surfaceElevated" />

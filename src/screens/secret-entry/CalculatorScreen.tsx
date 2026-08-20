@@ -3,11 +3,11 @@ import {Alert, Pressable, StyleSheet, Text, View, useWindowDimensions} from 'rea
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
-import {launchCoordinator} from '../../services/launch/LaunchCoordinator';
+import type {RootStackParamList} from '../../navigation/routes';
 import {nativeBridge} from '../../native';
+import {launchCoordinator} from '../../services/launch/LaunchCoordinator';
 import {VAULT_SECRET_CREDENTIAL_REF} from '../../services/security/credentialTypes';
 import {secretAccessRouter} from '../../services/secret/SecretAccessRouter';
-import type {RootStackParamList} from '../../navigation/routes';
 
 const keypadRows = [
   ['7', '8', '9', '/'],
@@ -109,8 +109,8 @@ export function CalculatorScreen() {
       setExpression(result === 'Error' ? '' : result);
       setMessage(result === 'Error' ? 'That calculation could not be completed.' : 'Calculation complete.');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Unable to open the vault.');
-      Alert.alert('Calculator failed', error instanceof Error ? error.message : 'Unable to open the vault.');
+      setMessage(error instanceof Error ? error.message : 'Unable to open Hidden Apps.');
+      Alert.alert('Calculator failed', error instanceof Error ? error.message : 'Unable to open Hidden Apps.');
     } finally {
       setBusy(false);
     }
@@ -122,21 +122,23 @@ export function CalculatorScreen() {
         <View style={styles.topRow}>
           <Text style={[styles.time, {color: palette.textSecondary}]}>9:41</Text>
           <View style={[styles.stepPill, {backgroundColor: palette.accentSoft}]}>
-            <Text style={[styles.stepText, {color: palette.accent}]}>SECRET</Text>
+            <Text style={[styles.stepText, {color: palette.accent}]}>ACCESS</Text>
           </View>
         </View>
 
-        <Text style={[styles.title, compactLayout && styles.titleCompact, {color: palette.textPrimary}]}>Calculator</Text>
+        <Text style={[styles.title, compactLayout && styles.titleCompact, {color: palette.textPrimary}]}>Calculator Access</Text>
         <Text style={[styles.subtitle, compactLayout && styles.subtitleCompact, {color: palette.textSecondary}]}>
-          Use the calculator code to open the hidden vault.
+          Use your calculator code to open Hidden Apps.
         </Text>
 
         <View style={[styles.displayCard, compactLayout && styles.displayCardCompact, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-          <Text style={[styles.displayLabel, {color: palette.textSecondary}]}>Code</Text>
+          <Text style={[styles.displayLabel, {color: palette.textSecondary}]}>Secret code</Text>
           <Text style={[styles.displayValue, compactLayout && styles.displayValueCompact, {color: palette.textPrimary}]} numberOfLines={2}>
             {expression || '0'}
           </Text>
-          <Text style={[styles.displayMessage, compactLayout && styles.displayMessageCompact, {color: palette.textSecondary}]}>{message}</Text>
+          <Text style={[styles.displayMessage, compactLayout && styles.displayMessageCompact, {color: palette.textSecondary}]}>
+            {message}
+          </Text>
         </View>
 
         <View style={styles.keypadWrap}>
@@ -200,7 +202,7 @@ export function CalculatorScreen() {
         </View>
 
         <View style={styles.footer}>
-          <FigmaActionButton variant="light" label="Back to secret entry" onPress={() => navigation.navigate('SecretEntry')} />
+          <FigmaActionButton variant="light" label="Back to Smart Hide" onPress={() => navigation.navigate('SecretEntry', {flow: 'SMART_HIDE'})} />
         </View>
       </View>
     </FigmaPage>

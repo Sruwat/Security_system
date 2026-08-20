@@ -55,8 +55,8 @@ export function UnlockSuccessScreen() {
           </View>
         </View>
 
-        <Text style={[styles.title, {color: palette.textPrimary}]}>Unlock success</Text>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Your secure session is ready to continue.</Text>
+        <Text style={[styles.title, {color: palette.textPrimary}]}>Unlock Success</Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Your secure session is ready. We are taking you back to the right app flow.</Text>
 
         <View style={[styles.contextCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
           <View style={[styles.contextIcon, {backgroundColor: palette.accentSoft}]}>
@@ -67,7 +67,7 @@ export function UnlockSuccessScreen() {
               Private space
             </Text>
             <Text style={[styles.contextHint, {color: palette.textSecondary}]}>
-              {activeSession?.vaultUnlocked ? 'Returning to Hidden Apps' : 'Returning to the private launcher'}
+              {activeSession?.vaultUnlocked ? 'Returning to Hidden Apps' : 'Returning to your private launcher'}
             </Text>
           </View>
         </View>
@@ -83,8 +83,8 @@ export function UnlockSuccessScreen() {
           <Text style={[styles.statusTitle, {color: palette.textPrimary}]}>What happens next</Text>
           <Text style={[styles.statusBody, {color: palette.textSecondary}]}>
             {activeSession?.vaultUnlocked
-              ? 'The app returns to Hidden Apps after the secure handoff is complete.'
-              : 'The app returns to the private screen after the secure handoff is complete.'}
+              ? 'You will return to Hidden Apps after the secure handoff is complete.'
+              : 'You will return to your private launcher after the secure handoff is complete.'}
           </Text>
         </View>
 
@@ -153,13 +153,13 @@ export function RebootRestoredScreen() {
           </View>
         </View>
 
-        <Text style={[styles.title, {color: palette.textPrimary}]}>Reboot restored</Text>
+        <Text style={[styles.title, {color: palette.textPrimary}]}>Session Restored</Text>
         <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
           {hasPendingApp
-            ? `We found a protected app session for ${pendingPackageName}.`
+            ? `We found a protected app flow waiting for ${pendingPackageName}.`
             : activeSession?.vaultUnlocked
-              ? 'Your private space came back after the restart.'
-              : 'Temporary access is ready to continue.'}
+              ? 'Your hidden space came back after the restart.'
+              : 'Your temporary secure access is ready to continue.'}
         </Text>
 
         <View style={[styles.contextCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
@@ -171,7 +171,7 @@ export function RebootRestoredScreen() {
               {hasPendingApp ? pendingPackageName : 'Private space'}
             </Text>
             <Text style={[styles.contextHint, {color: palette.textSecondary}]}>
-              {hasPendingApp ? 'Return to authentication to resume the app' : 'Return to the private launcher'}
+              {hasPendingApp ? 'Return to authentication to resume the app' : 'Return to your private launcher'}
             </Text>
           </View>
         </View>
@@ -186,7 +186,7 @@ export function RebootRestoredScreen() {
         <View style={[styles.statusCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
           <Text style={[styles.statusTitle, {color: palette.textPrimary}]}>Next step</Text>
           <Text style={[styles.statusBody, {color: palette.textSecondary}]}>
-            {hasPendingApp ? 'Authenticate again to finish the protected app handoff.' : 'Open the private launcher and continue inside the vault.'}
+            {hasPendingApp ? 'Authenticate again to finish the protected app handoff.' : 'Open your private launcher and continue inside Hidden Apps.'}
           </Text>
         </View>
 

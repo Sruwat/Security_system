@@ -59,7 +59,7 @@ export function SettingsScreen() {
       <FigmaRootLayout
         variant="dark"
         title="Settings"
-        drawerTitle="Smart App Lock"
+        drawerTitle="VaultX"
         drawerOpen={drawerOpen}
         onDrawerOpen={openDrawer}
         onDrawerClose={closeDrawer}
@@ -82,7 +82,7 @@ export function SettingsScreen() {
     <FigmaRootLayout
       variant="dark"
       title="Settings"
-      drawerTitle="Smart App Lock"
+      drawerTitle="VaultX"
       drawerOpen={drawerOpen}
       onDrawerOpen={openDrawer}
       onDrawerClose={closeDrawer}
@@ -108,7 +108,7 @@ export function SettingsScreen() {
             {
               title: 'Primary Lock',
               subtitle: `Current default: ${lockTypeLabel(settings.defaultLockType)}`,
-              onPress: () => navigation.navigate('PrimaryLock'),
+              onPress: () => navigation.navigate('PrimaryLock', {flow: 'APP_LOCK'}),
             },
             {
               title: 'Auto-lock',
@@ -125,7 +125,7 @@ export function SettingsScreen() {
             {
               title: 'Secret Trigger',
               subtitle: settings.secretAccessType.replace(/_/g, ' '),
-              onPress: () => navigation.navigate('SecretEntry'),
+              onPress: () => navigation.navigate('SecretEntry', {flow: 'SMART_HIDE'}),
             },
             {
               title: 'Hidden Apps',
@@ -142,7 +142,7 @@ export function SettingsScreen() {
             {
               title: 'Current Disguise',
               subtitle: settings.disguiseType,
-              onPress: () => navigation.navigate('SecretEntry'),
+              onPress: () => navigation.navigate('SecretEntry', {flow: 'SMART_HIDE'}),
             },
             {
               title: 'Appearance',
@@ -158,18 +158,18 @@ export function SettingsScreen() {
           rows={[
             {
               title: 'Manage Protected Apps',
-              subtitle: sampleProtectedApp ? `${sampleProtectedApp.label}: ${describeProtection(sampleProtectedApp)}` : 'No protected apps yet',
+              subtitle: sampleProtectedApp ? `${sampleProtectedApp.label}: ${describeProtection(sampleProtectedApp)}` : 'Hide ON/OFF, Lock ON/OFF, Change Lock, Remove Protection',
               onPress: () => navigation.navigate('ManageApps'),
             },
             {
               title: 'Locked Apps',
               subtitle: `${lockedApps.length} app${lockedApps.length === 1 ? '' : 's'}`,
-              onPress: () => navigation.navigate('ManageApps'),
+              onPress: () => navigation.navigate('AddApps', {preset: 'LOCK', flow: 'APP_LOCK'}),
             },
             {
               title: 'Hide + Lock',
               subtitle: `${hideAndLockApps.length} app${hideAndLockApps.length === 1 ? '' : 's'}`,
-              onPress: () => navigation.navigate('ManageApps'),
+              onPress: () => navigation.navigate('AddApps', {preset: 'LOCK_HIDE', flow: 'LOCK_HIDE'}),
             },
           ]}
         />

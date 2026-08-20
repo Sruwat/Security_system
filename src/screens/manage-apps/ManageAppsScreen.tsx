@@ -1,5 +1,5 @@
 import React from 'react';
-import {Alert, Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions} from 'react-native';
+import {Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaBanner, FigmaInnerLayout, figmaPalette} from '../../components/FigmaKit';
@@ -16,11 +16,10 @@ function describeMode(mode: ProtectionMode): string {
 export function ManageAppsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const palette = figmaPalette.dark;
-  const {width} = useWindowDimensions();
   const [apps, setApps] = React.useState<AppProtection[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [busyPackage, setBusyPackage] = React.useState<string | null>(null);
-  const compactRow = width < 390;
+  const [selectedApp, setSelectedApp] = React.useState<AppProtection | null>(null);
 
   const loadApps = React.useCallback(async () => {
     setLoading(true);
@@ -56,6 +55,7 @@ export function ManageAppsScreen() {
           );
         }
         await loadApps();
+        setSelectedApp(current => (current?.packageName === app.packageName ? normalizeProtection({...app, ...nextFlags, enabled: nextMode !== 'NONE', mode: nextMode}) : current));
       } catch (error) {
         Alert.alert('Update failed', error instanceof Error ? error.message : 'Unable to change protection mode.');
       } finally {
@@ -101,6 +101,7 @@ export function ManageAppsScreen() {
           triggerType: app.triggerType,
         },
         onboarding: false,
+        flow: app.isHidden && app.isLocked ? 'LOCK_HIDE' : app.isHidden ? 'APP_HIDE' : 'APP_LOCK',
       });
     },
     [navigation],
@@ -108,6 +109,7 @@ export function ManageAppsScreen() {
 
   const removeProtection = React.useCallback(
     async (app: AppProtection) => {
+      setSelectedApp(null);
       navigation.navigate('RemoveApp', {
         app: {
           packageName: app.packageName,
@@ -133,7 +135,7 @@ export function ManageAppsScreen() {
         ) : apps.length === 0 ? (
             <View style={[styles.emptyCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
               <Text style={[styles.emptyText, {color: palette.textSecondary}]}>Nothing to manage yet</Text>
-              <Pressable onPress={() => navigation.navigate('AddApps')} style={[styles.emptyButton, {backgroundColor: palette.accentSoft}]}>
+              <Pressable onPress={() => navigation.navigate('AddApps', {preset: 'LOCK_HIDE', flow: 'LOCK_HIDE'})} style={[styles.emptyButton, {backgroundColor: palette.accentSoft}]}>
               <Text style={[styles.emptyButtonText, {color: palette.accent}]}>Start protection</Text>
               </Pressable>
             </View>
@@ -141,7 +143,7 @@ export function ManageAppsScreen() {
           <View style={styles.list}>
             {apps.map(app => (
               <View key={app.packageName} style={[styles.row, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-                <View style={styles.rowHeader}>
+                <Pressable onPress={() => setSelectedApp(app)} style={({pressed}) => [styles.rowHeader, {opacity: pressed ? 0.94 : 1}]}>
                   {app.iconUri ? (
                     <Image source={{uri: app.iconUri}} style={styles.appArtwork} resizeMode="contain" />
                   ) : (
@@ -172,34 +174,16 @@ export function ManageAppsScreen() {
                       <View style={[styles.modePill, {backgroundColor: palette.surfaceElevated}]}>
                         <Text style={[styles.modeText, {color: palette.textPrimary}]}>{describeMode(app.mode ?? protectionModeFromFlags(app))}</Text>
                       </View>
+                      <View style={[styles.modePill, {backgroundColor: palette.surfaceElevated}]}>
+                        <Text style={[styles.modeText, {color: palette.textSecondary}]}>Tap to manage</Text>
+                      </View>
                     </View>
                   </View>
-                </View>
-
-                <View style={[styles.actions, compactRow && styles.actionsCompact]}>
-                  <Pressable onPress={() => void toggleHide(app)} style={[styles.actionPill, {backgroundColor: app.isHidden ? palette.accentSoft : palette.surfaceElevated}]}>
-                    <Text style={[styles.actionText, {color: palette.accent}]}>
-                      {busyPackage === app.packageName ? 'Saving...' : app.isHidden ? 'Unhide' : 'Hide'}
-                    </Text>
-                  </Pressable>
-                  <Pressable onPress={() => void toggleLock(app)} style={[styles.actionPill, {backgroundColor: app.isLocked ? palette.accentSoft : palette.surfaceElevated}]}>
-                    <Text style={[styles.actionText, {color: palette.accent}]}>
-                      {busyPackage === app.packageName ? 'Saving...' : app.isLocked ? 'Unlock app' : 'Lock app'}
-                    </Text>
-                  </Pressable>
-                  <Pressable onPress={() => openChangeLock(app)} style={[styles.actionPill, {backgroundColor: palette.accentSoft}]}>
-                    <Text style={[styles.actionText, {color: palette.accent}]}>Change lock</Text>
-                  </Pressable>
-                  <Pressable onPress={() => void removeProtection(app)} style={[styles.actionPill, {backgroundColor: palette.accentSoft}]}>
-                    <Text style={[styles.actionText, {color: palette.accent}]}>
-                      {busyPackage === app.packageName ? 'Removing...' : 'Remove'}
-                    </Text>
-                  </Pressable>
-                </View>
+                </Pressable>
               </View>
             ))}
 
-            <Pressable onPress={() => navigation.navigate('AddApps')} style={[styles.addMoreRow, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+            <Pressable onPress={() => navigation.navigate('AddApps', {preset: 'LOCK_HIDE', flow: 'LOCK_HIDE'})} style={[styles.addMoreRow, {backgroundColor: palette.surface, borderColor: palette.border}]}>
               <Text style={[styles.addMoreText, {color: palette.textPrimary}]}>+ Protect more apps</Text>
             </Pressable>
           </View>
@@ -214,6 +198,57 @@ export function ManageAppsScreen() {
           tone="surfaceElevated"
         />
       </ScrollView>
+
+      <Modal visible={selectedApp !== null} transparent animationType="fade" onRequestClose={() => setSelectedApp(null)}>
+        <View style={styles.sheetOverlay}>
+          <Pressable style={styles.sheetScrim} onPress={() => setSelectedApp(null)} />
+          {selectedApp ? (
+            <View style={[styles.sheetCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+              <Text style={[styles.sheetTitle, {color: palette.textPrimary}]} numberOfLines={1}>
+                {selectedApp.label}
+              </Text>
+              <Text style={[styles.sheetSubtitle, {color: palette.textSecondary}]}>
+                {describeProtection(normalizeProtection(selectedApp))} • {describeMode(selectedApp.mode ?? protectionModeFromFlags(selectedApp))}
+              </Text>
+
+                <View style={styles.sheetActions}>
+                    <Pressable
+                      onPress={() => {
+                        setSelectedApp(null);
+                        navigation.navigate('PrivateHome');
+                      }}
+                      style={[styles.sheetAction, {backgroundColor: palette.accentSoft}]}>
+                      <Text style={[styles.sheetActionText, {color: palette.accent}]}>Open from Launcher</Text>
+                    </Pressable>
+                <Pressable onPress={() => void toggleHide(selectedApp)} style={[styles.sheetAction, {backgroundColor: selectedApp.isHidden ? palette.accentSoft : palette.surfaceElevated}]}>
+                  <Text style={[styles.sheetActionText, {color: palette.accent}]}>
+                    {busyPackage === selectedApp.packageName ? 'Saving...' : selectedApp.isHidden ? 'Hide OFF' : 'Hide ON'}
+                  </Text>
+                </Pressable>
+                <Pressable onPress={() => void toggleLock(selectedApp)} style={[styles.sheetAction, {backgroundColor: selectedApp.isLocked ? palette.accentSoft : palette.surfaceElevated}]}>
+                  <Text style={[styles.sheetActionText, {color: palette.accent}]}>
+                    {busyPackage === selectedApp.packageName ? 'Saving...' : selectedApp.isLocked ? 'Lock OFF' : 'Lock ON'}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    setSelectedApp(null);
+                    openChangeLock(selectedApp);
+                  }}
+                  style={[styles.sheetAction, {backgroundColor: palette.accentSoft}]}>
+                  <Text style={[styles.sheetActionText, {color: palette.accent}]}>Change Lock</Text>
+                </Pressable>
+                <Pressable onPress={() => void removeProtection(selectedApp)} style={[styles.sheetAction, {backgroundColor: '#2B1320'}]}>
+                  <Text style={[styles.sheetActionText, {color: '#FCA5A5'}]}>Remove Protection</Text>
+                </Pressable>
+                <Pressable onPress={() => setSelectedApp(null)} style={[styles.sheetAction, {backgroundColor: palette.surfaceElevated}]}>
+                  <Text style={[styles.sheetActionText, {color: palette.textPrimary}]}>Cancel</Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : null}
+        </View>
+      </Modal>
     </FigmaInnerLayout>
   );
 }
@@ -260,10 +295,9 @@ const styles = StyleSheet.create({
   row: {
     borderWidth: 1,
     borderRadius: 34,
-    minHeight: 164,
+    minHeight: 132,
     paddingHorizontal: 30,
     paddingVertical: 24,
-    gap: 20,
   },
   rowHeader: {
     flexDirection: 'row',
@@ -321,28 +355,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
   },
-  actions: {
-    flexDirection: 'row',
-    gap: 8,
-    justifyContent: 'flex-end',
-    flexWrap: 'wrap',
-  },
-  actionsCompact: {
-    flexDirection: 'column',
-  },
-  actionPill: {
-    minWidth: 112,
-    minHeight: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 18,
-  },
-  actionText: {
-    fontSize: 12,
-    fontWeight: '800',
-    lineHeight: 16,
-  },
   addMoreRow: {
     borderWidth: 1,
     borderRadius: 34,
@@ -354,5 +366,47 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     lineHeight: 22,
+  },
+  sheetOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(5, 10, 20, 0.32)',
+  },
+  sheetScrim: {
+    flex: 1,
+  },
+  sheetCard: {
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 28,
+  },
+  sheetTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    lineHeight: 28,
+  },
+  sheetSubtitle: {
+    marginTop: 8,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  sheetActions: {
+    marginTop: 18,
+    gap: 10,
+  },
+  sheetAction: {
+    minHeight: 54,
+    borderRadius: 20,
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+  },
+  sheetActionText: {
+    fontSize: 14,
+    fontWeight: '800',
+    lineHeight: 18,
   },
 });

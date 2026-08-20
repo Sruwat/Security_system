@@ -57,9 +57,16 @@ export function ProtectionModeScreen() {
 
   React.useEffect(() => {
     if (route.params.onboarding) {
-      void localDataRepository.setOnboardingResumeRoute('ProtectionMode');
+      void (async () => {
+        const settings = await localDataRepository.getSettings();
+        await localDataRepository.saveSettings({
+          ...settings,
+          onboardingResumeRoute: 'ProtectionMode',
+          onboardingFeatureFlow: route.params.flow ?? settings.onboardingFeatureFlow,
+        });
+      })();
     }
-  }, [route.params.onboarding]);
+  }, [route.params.flow, route.params.onboarding]);
 
   const updateDraft = React.useCallback((patch: Partial<AppProtection>) => {
     setDraft(current => normalizeProtection({...current, ...patch}));
@@ -86,7 +93,22 @@ export function ProtectionModeScreen() {
       );
 
       if (route.params.onboarding) {
-        await localDataRepository.setOnboardingResumeRoute('SecretEntry');
+        if (route.params.flow === 'APP_HIDE' || route.params.flow === 'APP_LOCK' || route.params.flow === 'LOCK_HIDE') {
+          await localDataRepository.saveSettings({
+            ...settings,
+            onboardingComplete: true,
+            onboardingResumeRoute: undefined,
+            onboardingFeatureFlow: undefined,
+          });
+          navigation.reset({index: 0, routes: [{name: 'PrivateHome'}]});
+          return;
+        }
+
+        await localDataRepository.saveSettings({
+          ...settings,
+          onboardingResumeRoute: 'SecretEntry',
+          onboardingFeatureFlow: settings.onboardingFeatureFlow,
+        });
         navigation.navigate('SecretEntry');
       } else {
         navigation.reset({index: 0, routes: [{name: 'PrivateHome'}]});
@@ -121,10 +143,10 @@ export function ProtectionModeScreen() {
           </Text>
           <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
             {draft.isHidden && draft.isLocked
-              ? 'Step 2: confirm both protection layers for the selected apps.'
+              ? 'Choose how these apps should stay hidden and locked.'
               : draft.isHidden
-                ? 'Step 2: confirm that these apps stay hidden inside your private launcher.'
-                : 'Step 2: confirm how these apps stay locked before opening.'}
+                ? 'Confirm that these apps stay hidden inside your private launcher.'
+                : 'Confirm how these apps stay locked before opening.'}
           </Text>
         </View>
 
@@ -164,11 +186,11 @@ export function ProtectionModeScreen() {
         <View style={[styles.notice, {backgroundColor: palette.accentSoft, borderColor: palette.border}]}>
           <Text style={[styles.noticeText, {color: palette.accent}]}>
             {draft.isHidden && draft.isLocked
-              ? 'Lock + Hide flow: Secret Trigger → Auth → Hidden Apps → App.'
+              ? 'Lock + Hide: Secret Trigger → Auth → Hidden Apps → App.'
               : draft.isHidden
-                ? 'Hide flow: Secret Trigger → Hidden Apps.'
+                ? 'Hide: Secret Trigger → Hidden Apps.'
                 : draft.isLocked
-                  ? 'Lock flow: Open App → Auth → App.'
+                  ? 'Lock: Open App → Auth → App.'
                   : 'This app is currently visible and unlocked.'}
           </Text>
         </View>

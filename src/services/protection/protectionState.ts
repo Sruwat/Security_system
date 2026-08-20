@@ -114,6 +114,7 @@ export function normalizeSettings(settings: AppSettings): AppSettings {
 
   return {
     ...settings,
+    onboardingFeatureFlow: settings.onboardingFeatureFlow,
     disguiseType,
     secretAccessType,
     defaultLockType,

@@ -58,7 +58,7 @@ export function GalleryScreen() {
     <FigmaRootLayout
       variant="dark"
       title="Gallery"
-      drawerTitle="Smart App Lock"
+      drawerTitle="VaultX"
       drawerOpen={drawerOpen}
       onDrawerOpen={openDrawer}
       onDrawerClose={closeDrawer}
@@ -73,7 +73,7 @@ export function GalleryScreen() {
         />
       }>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Private Gallery / protected media.</Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Private gallery and protected media access.</Text>
 
         <FigmaBanner screen="gallery" variant="dark" title="Banner ad" tone="surfaceElevated" />
 

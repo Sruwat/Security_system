@@ -1,13 +1,14 @@
 import React from 'react';
 import {Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useRoute} from '@react-navigation/native';
+import type {RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import {nativeBridge} from '../../native';
 import {APP_UNLOCK_CREDENTIAL_REF} from '../../services/security/credentialTypes';
 import type {RootStackParamList} from '../../navigation/routes';
 import {localDataRepository} from '../../storage/LocalDataRepository';
-import type {OnboardingResumeRoute} from '../../types/domain';
+import type {FeatureFlow, OnboardingResumeRoute} from '../../types/domain';
 
 type CredentialKind = 'PIN' | 'PASSWORD' | 'PATTERN';
 
@@ -21,6 +22,27 @@ function normalizeCredential(kind: CredentialKind, text: string): string {
   }
 
   return text.trim();
+}
+
+function navigateToNextCredentialStep(
+  navigation: NativeStackNavigationProp<RootStackParamList>,
+  nextRoute: 'BiometricSetup' | 'ProtectionSaved' | 'PrimaryLock',
+  featureFlow: FeatureFlow,
+) {
+  switch (nextRoute) {
+    case 'BiometricSetup':
+      navigation.navigate('BiometricSetup', {flow: featureFlow});
+      break;
+    case 'ProtectionSaved':
+      navigation.navigate('ProtectionSaved', {flow: featureFlow});
+      break;
+    case 'PrimaryLock':
+      navigation.navigate('PrimaryLock', {flow: featureFlow});
+      break;
+    default:
+      navigation.navigate(nextRoute);
+      break;
+  }
 }
 
 function PinKey(props: {label: string; sublabel?: string; onPress: () => void; accent?: boolean}) {
@@ -38,19 +60,26 @@ function CredentialSetupBase(props: {
   subtitle: string;
   hint: string;
   icon: string;
-  nextRoute: OnboardingResumeRoute;
+  nextRoute: 'BiometricSetup' | 'ProtectionSaved' | 'PrimaryLock';
 }) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const route = useRoute<RouteProp<RootStackParamList, 'PasswordSetup' | 'PatternSetup'>>();
   const palette = figmaPalette.dark;
   const [value, setValue] = React.useState('');
   const [confirmValue, setConfirmValue] = React.useState('');
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [featureFlow, setFeatureFlow] = React.useState<FeatureFlow>('APP_LOCK');
 
   React.useEffect(() => {
-    const resumeRoute = props.kind === 'PIN' ? 'PinSetup' : props.kind === 'PASSWORD' ? 'PasswordSetup' : 'PatternSetup';
-    void localDataRepository.setOnboardingResumeRoute(resumeRoute);
-  }, [props.kind]);
+    void (async () => {
+      const settings = await localDataRepository.getSettings();
+      const resumeRoute = props.kind === 'PIN' ? 'PinSetup' : props.kind === 'PASSWORD' ? 'PasswordSetup' : 'PatternSetup';
+      const activeFlow = route.params?.flow ?? settings.onboardingFeatureFlow ?? 'APP_LOCK';
+      setFeatureFlow(activeFlow);
+      await localDataRepository.saveSettings({...settings, primaryAuthMethod: props.kind, onboardingResumeRoute: resumeRoute, onboardingFeatureFlow: activeFlow});
+    })();
+  }, [props.kind, route.params?.flow]);
 
   const saveCredential = React.useCallback(async () => {
     const normalized = normalizeCredential(props.kind, value);
@@ -76,15 +105,15 @@ function CredentialSetupBase(props: {
     try {
       await nativeBridge.createCredential(APP_UNLOCK_CREDENTIAL_REF, props.kind, normalized);
       const settings = await localDataRepository.getSettings();
-      await localDataRepository.saveSettings({...settings, primaryAuthMethod: props.kind, onboardingResumeRoute: props.nextRoute});
-      navigation.navigate(props.nextRoute as never);
+      await localDataRepository.saveSettings({...settings, primaryAuthMethod: props.kind, onboardingResumeRoute: props.nextRoute, onboardingFeatureFlow: featureFlow});
+      navigateToNextCredentialStep(navigation, props.nextRoute, featureFlow);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to save the credential.');
       Alert.alert('Setup failed', e instanceof Error ? e.message : 'Unable to save the credential.');
     } finally {
       setSaving(false);
     }
-  }, [confirmValue, navigation, props.nextRoute, value]);
+  }, [confirmValue, featureFlow, navigation, props.nextRoute, props.kind, value]);
 
   return (
     <FigmaPage variant="dark">
@@ -154,7 +183,7 @@ function CredentialSetupBase(props: {
           </View>
         </View>
 
-        <Pressable onPress={() => navigation.navigate('PrimaryLock')} style={[styles.inlineLink, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+        <Pressable onPress={() => navigation.navigate('PrimaryLock', {flow: featureFlow})} style={[styles.inlineLink, {backgroundColor: palette.surface, borderColor: palette.border}]}>
           <Text style={[styles.inlineLinkText, {color: palette.textSecondary}]}>Go back</Text>
         </Pressable>
 
@@ -168,15 +197,22 @@ function CredentialSetupBase(props: {
 
 export function PinSetupScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const route = useRoute<RouteProp<RootStackParamList, 'PinSetup'>>();
   const [value, setValue] = React.useState('');
   const [confirmValue, setConfirmValue] = React.useState('');
   const [phase, setPhase] = React.useState<'create' | 'confirm'>('create');
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [featureFlow, setFeatureFlow] = React.useState<FeatureFlow>('APP_LOCK');
 
   React.useEffect(() => {
-    void localDataRepository.setOnboardingResumeRoute('PinSetup');
-  }, []);
+    void (async () => {
+      const settings = await localDataRepository.getSettings();
+      const activeFlow = route.params?.flow ?? settings.onboardingFeatureFlow ?? 'APP_LOCK';
+      setFeatureFlow(activeFlow);
+      await localDataRepository.saveSettings({...settings, onboardingResumeRoute: 'PinSetup', onboardingFeatureFlow: activeFlow});
+    })();
+  }, [route.params?.flow]);
 
   const activeValue = phase === 'create' ? value : confirmValue;
 
@@ -220,15 +256,15 @@ export function PinSetupScreen() {
     try {
       await nativeBridge.createCredential(APP_UNLOCK_CREDENTIAL_REF, 'PIN', value);
       const settings = await localDataRepository.getSettings();
-      await localDataRepository.saveSettings({...settings, primaryAuthMethod: 'PIN', onboardingResumeRoute: 'BiometricSetup'});
-      navigation.navigate('BiometricSetup');
+      await localDataRepository.saveSettings({...settings, primaryAuthMethod: 'PIN', onboardingResumeRoute: 'BiometricSetup', onboardingFeatureFlow: featureFlow});
+      navigation.navigate('BiometricSetup', {flow: featureFlow});
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to save the PIN.');
       Alert.alert('Setup failed', e instanceof Error ? e.message : 'Unable to save the PIN.');
     } finally {
       setSaving(false);
     }
-  }, [confirmValue, navigation, phase, value]);
+  }, [confirmValue, featureFlow, navigation, phase, value]);
 
   const digits = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
@@ -313,17 +349,23 @@ export function PatternSetupScreen() {
 
 export function BiometricSetupScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const route = useRoute<RouteProp<RootStackParamList, 'BiometricSetup'>>();
   const palette = figmaPalette.dark;
   const [available, setAvailable] = React.useState<boolean | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [featureFlow, setFeatureFlow] = React.useState<FeatureFlow>('APP_LOCK');
 
   React.useEffect(() => {
-    void localDataRepository.setOnboardingResumeRoute('BiometricSetup');
-    void nativeBridge.getDeviceCapabilities().then(capabilities => {
+    void (async () => {
+      const settings = await localDataRepository.getSettings();
+      const activeFlow = route.params?.flow ?? settings.onboardingFeatureFlow ?? 'APP_LOCK';
+      setFeatureFlow(activeFlow);
+      await localDataRepository.saveSettings({...settings, onboardingResumeRoute: 'BiometricSetup', onboardingFeatureFlow: activeFlow});
+      const capabilities = await nativeBridge.getDeviceCapabilities();
       setAvailable(capabilities.biometricsAvailable);
-    });
-  }, []);
+    })();
+  }, [route.params?.flow]);
 
   const continueNext = React.useCallback(async () => {
     setSaving(true);
@@ -342,14 +384,15 @@ export function BiometricSetupScreen() {
         }
       }
 
-      await localDataRepository.setOnboardingResumeRoute('ProtectionSaved');
-      navigation.navigate('ProtectionSaved');
+      const settings = await localDataRepository.getSettings();
+      await localDataRepository.saveSettings({...settings, onboardingResumeRoute: 'ProtectionSaved', onboardingFeatureFlow: featureFlow});
+      navigation.navigate('ProtectionSaved', {flow: featureFlow});
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to continue.');
     } finally {
       setSaving(false);
     }
-  }, [available, navigation]);
+  }, [available, featureFlow, navigation]);
 
   return (
     <FigmaPage variant="dark">
@@ -395,8 +438,11 @@ export function BiometricSetupScreen() {
 
         <Pressable
           onPress={() => {
-            void localDataRepository.setOnboardingResumeRoute('ProtectionSaved');
-            navigation.navigate('ProtectionSaved');
+            void (async () => {
+              const settings = await localDataRepository.getSettings();
+              await localDataRepository.saveSettings({...settings, onboardingResumeRoute: 'ProtectionSaved', onboardingFeatureFlow: featureFlow});
+              navigation.navigate('ProtectionSaved', {flow: featureFlow});
+            })();
           }}
           style={[styles.inlineLink, {backgroundColor: palette.surface, borderColor: palette.border}]}>
           <Text style={[styles.inlineLinkText, {color: palette.textSecondary}]}>Skip biometric for now</Text>
@@ -412,11 +458,18 @@ export function BiometricSetupScreen() {
 
 export function ProtectionSavedScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const route = useRoute<RouteProp<RootStackParamList, 'ProtectionSaved'>>();
   const palette = figmaPalette.dark;
+  const [featureFlow, setFeatureFlow] = React.useState<FeatureFlow>('APP_LOCK');
 
   React.useEffect(() => {
-    void localDataRepository.setOnboardingResumeRoute('ProtectionSaved');
-  }, []);
+    void (async () => {
+      const settings = await localDataRepository.getSettings();
+      const activeFlow = route.params?.flow ?? settings.onboardingFeatureFlow ?? 'APP_LOCK';
+      setFeatureFlow(activeFlow);
+      await localDataRepository.saveSettings({...settings, onboardingResumeRoute: 'ProtectionSaved', onboardingFeatureFlow: activeFlow});
+    })();
+  }, [route.params?.flow]);
 
   return (
     <FigmaPage variant="dark">
@@ -450,8 +503,12 @@ export function ProtectionSavedScreen() {
           variant="dark"
           label="Continue to app selection"
           onPress={() => {
-            void localDataRepository.setOnboardingResumeRoute('AddApps');
-            navigation.navigate('AddApps');
+            void (async () => {
+              const settings = await localDataRepository.getSettings();
+              const preset = featureFlow === 'LOCK_HIDE' ? 'LOCK_HIDE' : 'LOCK';
+              await localDataRepository.saveSettings({...settings, onboardingResumeRoute: 'AddApps', onboardingFeatureFlow: featureFlow});
+              navigation.navigate('AddApps', {preset, flow: featureFlow});
+            })();
           }}
         />
       </ScrollView>

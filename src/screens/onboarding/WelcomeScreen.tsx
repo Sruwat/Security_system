@@ -1,10 +1,11 @@
 import React from 'react';
-import {StyleSheet, Text, View} from 'react-native';
+import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {BlueFlowPage, BlueHero, BluePanel, BluePrimaryButton, blueFlowPalette} from '../../components/BlueFlow';
 import type {RootStackParamList} from '../../navigation/routes';
 import {localDataRepository} from '../../storage/LocalDataRepository';
+import type {FeatureFlow} from '../../types/domain';
 
 function FeatureChip(props: {label: string; accent: string}) {
   return (
@@ -14,8 +15,49 @@ function FeatureChip(props: {label: string; accent: string}) {
   );
 }
 
+const featureOptions: Array<{
+  label: string;
+  accent: string;
+  flow: FeatureFlow;
+  helper: string;
+}> = [
+  {label: 'Hide Apps', accent: '#7CC2FF', flow: 'APP_HIDE', helper: 'Disguise and move selected apps into Hidden Apps.'},
+  {label: 'Smart Hide', accent: '#93C5FD', flow: 'SMART_HIDE', helper: 'Choose the secret trigger that opens Hidden Apps.'},
+  {label: 'App Lock', accent: '#B7CCFF', flow: 'APP_LOCK', helper: 'Pick PIN, password, pattern, or biometric-backed lock.'},
+  {label: 'Lock + Hide', accent: '#60A5FA', flow: 'LOCK_HIDE', helper: 'Finish Smart Hide first, then add the app lock layer.'},
+];
+
 export function WelcomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const [selectedFlow, setSelectedFlow] = React.useState<FeatureFlow>('APP_HIDE');
+
+  const continueFlow = React.useCallback(async () => {
+    const nextRoute =
+      selectedFlow === 'SMART_HIDE'
+        ? 'SecretEntry'
+        : selectedFlow === 'APP_LOCK'
+          ? 'PrimaryLock'
+          : selectedFlow === 'LOCK_HIDE'
+            ? 'SecretEntry'
+            : 'LauncherSetup';
+
+    await localDataRepository.saveSettings({
+      ...(await localDataRepository.getSettings()),
+      onboardingComplete: false,
+      onboardingResumeRoute: nextRoute,
+      onboardingFeatureFlow: selectedFlow,
+    });
+
+    if (nextRoute === 'LauncherSetup') {
+      navigation.navigate('LauncherSetup', {flow: selectedFlow});
+      return;
+    }
+    if (nextRoute === 'PrimaryLock') {
+      navigation.navigate('PrimaryLock', {flow: selectedFlow});
+      return;
+    }
+    navigation.navigate('SecretEntry', {flow: selectedFlow});
+  }, [navigation, selectedFlow]);
 
   return (
     <BlueFlowPage contentContainerStyle={styles.scrollContent}>
@@ -31,17 +73,35 @@ export function WelcomeScreen() {
       </View>
 
       <BluePanel tone="soft" style={styles.notePanel}>
-        <Text style={styles.noteTitle}>Built for a simple private flow</Text>
-        <Text style={styles.noteCopy}>
-          Welcome → Permissions → Security Setup → Secret Trigger → Dashboard
-        </Text>
+        <Text style={styles.noteTitle}>Select Feature</Text>
+        <Text style={styles.noteCopy}>Choose one starting flow. The next screens now stay aligned to that exact feature path.</Text>
       </BluePanel>
+
+      <View style={styles.optionList}>
+        {featureOptions.map(option => {
+          const selected = selectedFlow === option.flow;
+          return (
+            <Pressable
+              key={option.flow}
+              onPress={() => setSelectedFlow(option.flow)}
+              style={[
+                styles.optionCard,
+                {
+                  borderColor: selected ? option.accent : '#1F3352',
+                  backgroundColor: selected ? `${option.accent}18` : '#0E1A31',
+                },
+              ]}>
+              <Text style={[styles.optionTitle, {color: selected ? option.accent : blueFlowPalette.textPrimary}]}>{option.label}</Text>
+              <Text style={styles.optionCopy}>{option.helper}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
 
       <BluePrimaryButton
         label="Let's Go"
         onPress={() => {
-          void localDataRepository.setOnboardingResumeRoute('LauncherSetup');
-          navigation.navigate('LauncherSetup');
+          void continueFlow();
         }}
       />
 
@@ -101,6 +161,26 @@ const styles = StyleSheet.create({
     color: blueFlowPalette.textSecondary,
     fontSize: 13,
     lineHeight: 18,
+  },
+  optionList: {
+    gap: 12,
+  },
+  optionCard: {
+    borderWidth: 1,
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  optionTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    lineHeight: 19,
+  },
+  optionCopy: {
+    marginTop: 6,
+    color: blueFlowPalette.textSecondary,
+    fontSize: 12,
+    lineHeight: 17,
   },
   footerText: {
     color: blueFlowPalette.textMuted,

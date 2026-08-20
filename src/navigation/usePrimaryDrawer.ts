@@ -23,17 +23,17 @@ export function usePrimaryDrawer() {
       {
         label: 'Hide Apps',
         description: 'Choose apps that should live only in the hidden area.',
-        onPress: () => navigation.navigate('AddApps', {preset: 'HIDE'}),
+        onPress: () => navigation.navigate('AddApps', {preset: 'HIDE', flow: 'APP_HIDE'}),
       },
       {
         label: 'App Lock',
         description: 'Choose apps that stay visible but require unlock.',
-        onPress: () => navigation.navigate('AddApps', {preset: 'LOCK'}),
+        onPress: () => navigation.navigate('AddApps', {preset: 'LOCK', flow: 'APP_LOCK'}),
       },
       {
         label: 'Hide + Lock',
         description: 'Choose apps that need both privacy protections.',
-        onPress: () => navigation.navigate('AddApps', {preset: 'LOCK_HIDE'}),
+        onPress: () => navigation.navigate('AddApps', {preset: 'LOCK_HIDE', flow: 'LOCK_HIDE'}),
       },
       {
         label: 'Hidden Apps',
@@ -43,7 +43,7 @@ export function usePrimaryDrawer() {
       {
         label: 'Smart Hide',
         description: 'Choose the secret trigger and disguise experience for Hidden Apps.',
-        onPress: () => navigation.navigate('SecretEntry'),
+        onPress: () => navigation.navigate('SecretEntry', {flow: 'SMART_HIDE'}),
       },
       {
         label: 'Settings',

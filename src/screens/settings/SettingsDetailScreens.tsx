@@ -152,6 +152,7 @@ export function PrivacyCenterScreen() {
         ...current,
         onboardingComplete: false,
         onboardingResumeRoute: 'PrimaryLock',
+        onboardingFeatureFlow: 'APP_LOCK',
       });
       navigation.reset({index: 0, routes: [{name: 'PrimaryLock'}]});
     } finally {
@@ -175,6 +176,7 @@ export function PrivacyCenterScreen() {
         ...current,
         onboardingComplete: false,
         onboardingResumeRoute: 'Welcome',
+        onboardingFeatureFlow: undefined,
         secretAccessType: 'triple_tap',
         secretEntryMethod: 'TRIPLE_TAP',
         disguiseType: 'default',
@@ -193,7 +195,7 @@ export function PrivacyCenterScreen() {
 
         <View style={[styles.heroCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
           <Text style={[styles.heroTitle, {color: palette.textPrimary}]}>Permissions and protection</Text>
-          <Text style={[styles.heroBody, {color: palette.textSecondary}]}>Open the relevant Android settings, then return here to re-check the current state automatically.</Text>
+          <Text style={[styles.heroBody, {color: palette.textSecondary}]}>Open the needed Android settings here, then come back and check the current status.</Text>
         </View>
 
         <View style={styles.list}>
@@ -226,7 +228,7 @@ export function PrivacyCenterScreen() {
 
         <View style={[styles.heroCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
           <Text style={[styles.heroTitle, {color: palette.textPrimary}]}>On-device privacy settings</Text>
-          <Text style={[styles.heroBody, {color: palette.textSecondary}]}>These options stay local and affect which ad surfaces appear inside the app.</Text>
+          <Text style={[styles.heroBody, {color: palette.textSecondary}]}>These options stay local and control what appears inside the app.</Text>
         </View>
 
         {settings ? (

@@ -14,9 +14,9 @@ export function AppRemovedScreen() {
   const label = route.params.label;
 
   return (
-    <FigmaInnerLayout variant="dark" title="App Removed" onBackPress={() => navigation.goBack()}>
+    <FigmaInnerLayout variant="dark" title="Protection Removed" onBackPress={() => navigation.goBack()}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>{label} is no longer protected.</Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>{label} is no longer in your protected apps list.</Text>
 
         <View style={[styles.heroCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
           <View style={[styles.heroIcon, {backgroundColor: palette.accentSoft}]}>

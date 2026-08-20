@@ -1,31 +1,51 @@
 import React from 'react';
 import {StyleSheet, View} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useRoute} from '@react-navigation/native';
+import type {RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {BlueChoiceCard, BlueFlowPage, BlueHero, BluePrimaryButton, BlueProgressHeader} from '../../components/BlueFlow';
 import type {RootStackParamList} from '../../navigation/routes';
 import {localDataRepository} from '../../storage/LocalDataRepository';
+import type {FeatureFlow} from '../../types/domain';
 
 export function PrimaryLockScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const route = useRoute<RouteProp<RootStackParamList, 'PrimaryLock'>>();
   const [selectedRoute, setSelectedRoute] = React.useState<'PinSetup' | 'PasswordSetup' | 'PatternSetup' | 'BiometricSetup'>('PinSetup');
+  const [featureFlow, setFeatureFlow] = React.useState<FeatureFlow>('APP_LOCK');
 
   React.useEffect(() => {
-    void localDataRepository.setOnboardingResumeRoute('PrimaryLock');
-  }, []);
+    void (async () => {
+      const settings = await localDataRepository.getSettings();
+      const activeFlow = route.params?.flow ?? settings.onboardingFeatureFlow ?? 'APP_LOCK';
+      setFeatureFlow(activeFlow);
+      await localDataRepository.saveSettings({...settings, onboardingResumeRoute: 'PrimaryLock', onboardingFeatureFlow: activeFlow});
+    })();
+  }, [route.params?.flow]);
 
   const goTo = React.useCallback(
     (route: 'PinSetup' | 'PasswordSetup' | 'PatternSetup' | 'BiometricSetup') => {
-      void localDataRepository.setOnboardingResumeRoute(route);
-      navigation.navigate(route);
+      void (async () => {
+        const settings = await localDataRepository.getSettings();
+        await localDataRepository.saveSettings({...settings, onboardingResumeRoute: route, onboardingFeatureFlow: featureFlow});
+        navigation.navigate(route, {flow: featureFlow});
+      })();
     },
-    [navigation],
+    [featureFlow, navigation],
   );
+
+  const stepLabel = featureFlow === 'LOCK_HIDE' ? 'Step 2 of 4' : 'Step 1 of 3';
+  const progress = featureFlow === 'LOCK_HIDE' ? 0.5 : 0.33;
+  const title = featureFlow === 'LOCK_HIDE' ? 'Lock + Hide' : 'App Lock';
+  const subtitle =
+    featureFlow === 'LOCK_HIDE'
+      ? 'Step 2: choose the lock type that completes the combined flow.'
+      : 'Choose one lock type. This becomes the main security method for protected apps.';
 
   return (
     <BlueFlowPage contentContainerStyle={styles.scrollContent}>
-      <BlueProgressHeader stepLabel="Step 2 of 4" progress={0.5} onBackPress={() => navigation.goBack()} />
-      <BlueHero icon="🔒" title="App Lock" subtitle="Choose one lock type. This becomes the main security method for protected apps." />
+      <BlueProgressHeader stepLabel={stepLabel} progress={progress} onBackPress={() => navigation.goBack()} />
+      <BlueHero icon="🔒" title={title} subtitle={subtitle} />
 
       <View style={styles.grid}>
         <BlueChoiceCard
