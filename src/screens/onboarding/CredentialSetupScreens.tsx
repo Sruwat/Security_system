@@ -4,6 +4,7 @@ import {useNavigation, useRoute} from '@react-navigation/native';
 import type {RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
+import {PatternGrid, formatPatternValue} from '../../components/PatternGrid';
 import {nativeBridge} from '../../native';
 import {APP_UNLOCK_CREDENTIAL_REF} from '../../services/security/credentialTypes';
 import type {RootStackParamList} from '../../navigation/routes';
@@ -335,15 +336,154 @@ export function PasswordSetupScreen() {
 }
 
 export function PatternSetupScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const route = useRoute<RouteProp<RootStackParamList, 'PatternSetup'>>();
+  const palette = figmaPalette.dark;
+  const [phase, setPhase] = React.useState<'create' | 'confirm'>('create');
+  const [patternValues, setPatternValues] = React.useState<string[]>([]);
+  const [confirmPatternValues, setConfirmPatternValues] = React.useState<string[]>([]);
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [featureFlow, setFeatureFlow] = React.useState<FeatureFlow>('APP_LOCK');
+
+  React.useEffect(() => {
+    void (async () => {
+      const settings = await localDataRepository.getSettings();
+      const activeFlow = route.params?.flow ?? settings.onboardingFeatureFlow ?? 'APP_LOCK';
+      setFeatureFlow(activeFlow);
+      await localDataRepository.saveSettings({...settings, onboardingResumeRoute: 'PatternSetup', onboardingFeatureFlow: activeFlow});
+    })();
+  }, [route.params?.flow]);
+
+  const activePattern = phase === 'create' ? patternValues : confirmPatternValues;
+
+  const continueNext = React.useCallback(async () => {
+    if (phase === 'create') {
+      if (patternValues.length < 4) {
+        setError('At least 4 dots connect karo.');
+        return;
+      }
+      setPhase('confirm');
+      setError(null);
+      return;
+    }
+
+    const normalized = formatPatternValue(patternValues);
+    const confirmed = formatPatternValue(confirmPatternValues);
+    if (patternValues.length < 4 || confirmPatternValues.length < 4) {
+      setError('Pattern complete karo.');
+      return;
+    }
+    if (normalized !== confirmed) {
+      setError('Pattern confirmation match nahi hui.');
+      setConfirmPatternValues([]);
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    try {
+      await nativeBridge.createCredential(APP_UNLOCK_CREDENTIAL_REF, 'PATTERN', normalized);
+      const settings = await localDataRepository.getSettings();
+      await localDataRepository.saveSettings({...settings, primaryAuthMethod: 'PATTERN', onboardingResumeRoute: 'BiometricSetup', onboardingFeatureFlow: featureFlow});
+      navigation.navigate('BiometricSetup', {flow: featureFlow});
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unable to save the pattern.');
+      Alert.alert('Setup failed', e instanceof Error ? e.message : 'Unable to save the pattern.');
+    } finally {
+      setSaving(false);
+    }
+  }, [confirmPatternValues, featureFlow, navigation, patternValues, phase]);
+
   return (
-    <CredentialSetupBase
-      kind="PATTERN"
-      title="Create your pattern"
-      subtitle="Use an Android-style pattern as your primary credential."
-      hint="The pattern is stored locally and can be used for protected app launches."
-      icon="PAT"
-      nextRoute="BiometricSetup"
-    />
+    <FigmaPage variant="dark" style={styles.pinPage}>
+      <ScrollView contentContainerStyle={styles.pinScroll} showsVerticalScrollIndicator={false}>
+        <View style={styles.pinProgressRow}>
+          <Pressable
+            onPress={() => {
+              if (phase === 'confirm') {
+                setPhase('create');
+                setConfirmPatternValues([]);
+                setError(null);
+                return;
+              }
+              navigation.goBack();
+            }}
+            style={styles.pinBackButton}>
+            <Text style={styles.pinBackButtonText}>←</Text>
+          </Pressable>
+          <View style={styles.pinProgressTrack}>
+            <View style={[styles.pinProgressFill, {width: phase === 'create' ? '52%' : '74%'}]} />
+          </View>
+          <Text style={styles.pinProgressLabel}>Step 3 of 5</Text>
+        </View>
+
+        <View style={styles.pinHero}>
+          <View style={styles.pinHeroShell}>
+            <Text style={styles.pinHeroIcon}>◌</Text>
+          </View>
+          <Text style={styles.pinHeroTitle}>{phase === 'create' ? 'Create Pattern' : 'Confirm Pattern'}</Text>
+          <Text style={styles.pinHeroSubtitle}>
+            {phase === 'create'
+              ? 'Dots tap karke apna unlock pattern banao.'
+              : 'Same pattern dubara tap karke confirm karo.'}
+          </Text>
+        </View>
+
+        <View style={styles.patternPreviewCard}>
+          <Text style={styles.patternPreviewLabel}>Pattern preview</Text>
+          <Text style={styles.patternPreviewValue}>
+            {activePattern.length > 0 ? formatPatternValue(activePattern) : 'Tap 4 or more dots'}
+          </Text>
+        </View>
+
+        {error ? (
+          <View style={styles.pinErrorCard}>
+            <Text style={styles.pinErrorText}>{error}</Text>
+          </View>
+        ) : null}
+
+        <View style={styles.patternGridWrap}>
+          <PatternGrid
+            values={activePattern}
+            onChange={next => {
+              if (phase === 'create') {
+                setPatternValues(next);
+              } else {
+                setConfirmPatternValues(next);
+              }
+              if (error) {
+                setError(null);
+              }
+            }}
+            accentColor={palette.accent}
+            borderColor="#2F3B56"
+            textColor="#F8FAFC"
+            mutedColor="#1E2B4B"
+          />
+        </View>
+
+        <View style={styles.patternActionRow}>
+          <Pressable
+            onPress={() => {
+              if (phase === 'create') {
+                setPatternValues([]);
+              } else {
+                setConfirmPatternValues([]);
+              }
+              setError(null);
+            }}
+            style={styles.patternSecondaryButton}>
+            <Text style={styles.patternSecondaryButtonText}>Clear Pattern</Text>
+          </Pressable>
+        </View>
+
+        <Pressable onPress={() => void continueNext()} style={({pressed}) => [styles.pinContinueButton, {opacity: pressed ? 0.95 : 1}]}>
+          <Text style={styles.pinContinueText}>{saving ? 'Saving...' : phase === 'create' ? 'Continue' : 'Save and Continue'}</Text>
+          <Text style={styles.pinContinueArrow}>→</Text>
+        </Pressable>
+      </ScrollView>
+    </FigmaPage>
   );
 }
 
@@ -812,5 +952,52 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 20,
     fontWeight: '800',
+  },
+  patternPreviewCard: {
+    marginTop: 22,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: '#2F3B56',
+    backgroundColor: '#151636',
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+  },
+  patternPreviewLabel: {
+    color: '#A5B4FC',
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 14,
+  },
+  patternPreviewValue: {
+    marginTop: 10,
+    color: '#F8FAFC',
+    fontSize: 18,
+    fontWeight: '800',
+    lineHeight: 22,
+  },
+  patternGridWrap: {
+    marginTop: 24,
+    alignItems: 'center',
+  },
+  patternActionRow: {
+    marginTop: 18,
+    alignItems: 'center',
+  },
+  patternSecondaryButton: {
+    minHeight: 48,
+    minWidth: 164,
+    paddingHorizontal: 18,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#2F3B56',
+    backgroundColor: '#151636',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  patternSecondaryButtonText: {
+    color: '#A5B4FC',
+    fontSize: 13,
+    fontWeight: '800',
+    lineHeight: 16,
   },
 });

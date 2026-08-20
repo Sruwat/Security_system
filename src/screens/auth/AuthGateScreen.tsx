@@ -4,6 +4,7 @@ import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {FigmaPage, figmaPalette} from '../../components/FigmaKit';
+import {PatternGrid, formatPatternValue} from '../../components/PatternGrid';
 import {launchCoordinator} from '../../services/launch/LaunchCoordinator';
 import {nativeBridge} from '../../native';
 import {sessionManager} from '../../services/session/SessionManager';
@@ -55,6 +56,7 @@ export function AuthGateScreen() {
   const {width, height} = useWindowDimensions();
   const [pin, setPin] = React.useState('');
   const [manualValue, setManualValue] = React.useState('');
+  const [patternValues, setPatternValues] = React.useState<string[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [attempts, setAttempts] = React.useState(0);
   const [cooldownUntil, setCooldownUntil] = React.useState<number | null>(null);
@@ -246,6 +248,7 @@ export function AuthGateScreen() {
         }
         Alert.alert('Authentication failed', error instanceof Error ? error.message : 'Unable to verify the credential.');
         setManualValue('');
+        setPatternValues([]);
         setPin('');
       })
       .finally(() => {
@@ -383,19 +386,50 @@ export function AuthGateScreen() {
           </>
         ) : (
           <View style={[styles.manualCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-              <Text style={[styles.manualLabel, {color: palette.textSecondary}]}>
+            <Text style={[styles.manualLabel, {color: palette.textSecondary}]}>
               {activeAuthMethod === 'PASSWORD' ? 'Password' : 'Pattern'}
-              </Text>
-            <TextInput
-              value={manualValue}
-              onChangeText={setManualValue}
-              editable={cooldownRemaining === 0}
-              secureTextEntry={activeAuthMethod === 'PASSWORD'}
-              placeholder={activeAuthMethod === 'PASSWORD' ? 'Enter password' : 'Example: 1-2-3-4'}
-              placeholderTextColor={palette.textSecondary}
-              style={[styles.manualInput, {color: palette.textPrimary}]}
-            />
-            <Pressable onPress={submitManualCredential} style={[styles.manualSubmit, {backgroundColor: palette.accent}]}>
+            </Text>
+            {activeAuthMethod === 'PASSWORD' ? (
+              <TextInput
+                value={manualValue}
+                onChangeText={setManualValue}
+                editable={cooldownRemaining === 0}
+                secureTextEntry
+                placeholder="Enter password"
+                placeholderTextColor={palette.textSecondary}
+                style={[styles.manualInput, {color: palette.textPrimary}]}
+              />
+            ) : (
+              <>
+                <Text style={[styles.patternHelper, {color: palette.textSecondary}]}>
+                  Dots tap karke saved pattern repeat karo.
+                </Text>
+                <PatternGrid
+                  values={patternValues}
+                  onChange={next => {
+                    setPatternValues(next);
+                    setManualValue(formatPatternValue(next));
+                  }}
+                  accentColor={palette.accent}
+                  borderColor={palette.border}
+                  textColor={palette.textPrimary}
+                  mutedColor={palette.surfaceElevated}
+                  compact={compactLayout}
+                />
+                <Pressable
+                  onPress={() => {
+                    setPatternValues([]);
+                    setManualValue('');
+                  }}
+                  style={[styles.patternResetButton, {borderColor: palette.border, backgroundColor: palette.surfaceElevated}]}>
+                  <Text style={[styles.patternResetText, {color: palette.textSecondary}]}>Clear pattern</Text>
+                </Pressable>
+              </>
+            )}
+            <Pressable
+              onPress={submitManualCredential}
+              style={[styles.manualSubmit, {backgroundColor: palette.accent, opacity: activeAuthMethod === 'PATTERN' && patternValues.length < 4 ? 0.5 : 1}]}
+              disabled={activeAuthMethod === 'PATTERN' && patternValues.length < 4}>
               <Text style={styles.manualSubmitText}>{loading ? 'Checking...' : 'Submit'}</Text>
             </Pressable>
           </View>
@@ -661,6 +695,23 @@ const styles = StyleSheet.create({
   },
   manualSubmitText: {
     color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 13,
+  },
+  patternHelper: {
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  patternResetButton: {
+    minHeight: 42,
+    borderWidth: 1,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+  },
+  patternResetText: {
     fontSize: 11,
     fontWeight: '700',
     lineHeight: 13,

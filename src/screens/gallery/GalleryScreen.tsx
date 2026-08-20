@@ -1,63 +1,147 @@
 import React from 'react';
-import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {Alert, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {FigmaBanner, FigmaBottomNav, FigmaRootLayout, figmaPalette} from '../../components/FigmaKit';
-import {useTimedTapTrigger} from '../../hooks/useTimedTapTrigger';
+import {FigmaBottomNav, FigmaRootLayout, figmaPalette} from '../../components/FigmaKit';
 import type {RootStackParamList} from '../../navigation/routes';
 import {usePrimaryDrawer} from '../../navigation/usePrimaryDrawer';
 import {launchCoordinator} from '../../services/launch/LaunchCoordinator';
 import {secretAccessRouter} from '../../services/secret/SecretAccessRouter';
 import {localDataRepository} from '../../storage/LocalDataRepository';
+import type {AppProtection, SecretAccessType} from '../../types/domain';
+
+type AccessShortcut = {
+  key: string;
+  title: string;
+  subtitle: string;
+  glyph: string;
+  accent: string;
+  onPress: () => void;
+};
 
 export function GalleryScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const palette = figmaPalette.dark;
   const {drawerOpen, openDrawer, closeDrawer, drawerDestinations} = usePrimaryDrawer();
-  const recentTiles = Array.from({length: 6}, (_, index) => index);
-  const [secretAccessType, setSecretAccessType] = React.useState<'gallery' | 'triple_tap' | 'other'>('other');
+  const [settingsType, setSettingsType] = React.useState<SecretAccessType>('triple_tap');
+  const [hiddenCount, setHiddenCount] = React.useState(0);
+  const [lockedCount, setLockedCount] = React.useState(0);
 
   React.useEffect(() => {
-    void localDataRepository.getSettings().then(settings => {
-      if (settings.secretAccessType === 'gallery') {
-        setSecretAccessType('gallery');
+    let active = true;
+    const load = async () => {
+      const [settings, apps] = await Promise.all([
+        localDataRepository.getSettings(),
+        localDataRepository.getProtectedApps(),
+      ]);
+      if (!active) {
         return;
       }
-      if (settings.secretAccessType === 'triple_tap') {
-        setSecretAccessType('triple_tap');
-        return;
-      }
-      setSecretAccessType('other');
+      setSettingsType(settings.secretAccessType);
+      setHiddenCount(apps.filter(app => app.enabled && app.isHidden).length);
+      setLockedCount(apps.filter(app => app.enabled && app.isLocked).length);
+    };
+
+    void load();
+    const unsubscribeSettings = localDataRepository.subscribeToSettings(next => {
+      setSettingsType(next.secretAccessType);
     });
+    const unsubscribeApps = localDataRepository.subscribeToProtectedApps(nextApps => {
+      setHiddenCount(nextApps.filter(app => app.enabled && app.isHidden).length);
+      setLockedCount(nextApps.filter(app => app.enabled && app.isLocked).length);
+    });
+
+    return () => {
+      active = false;
+      unsubscribeSettings();
+      unsubscribeApps();
+    };
   }, []);
 
-  const triggerSecret = useTimedTapTrigger({
-    key: 'gallery-secret',
-    onTrigger: async () => {
-      const launchOutcome = await launchCoordinator.completeSecretEntry();
-      if (launchOutcome === 'app_launched') {
-        navigation.reset({index: 0, routes: [{name: 'PrivateHome'}]});
-        return;
-      }
-      if (launchOutcome === 'auth_required') {
-        navigation.reset({index: 0, routes: [{name: 'AuthGate'}]});
-        return;
-      }
-      const next = await secretAccessRouter.handleSecretAccess();
-      if (next === 'auth_required') {
-        navigation.reset({index: 0, routes: [{name: 'AuthGate'}]});
-        return;
-      }
-      if (next === 'vault') {
-        navigation.reset({index: 0, routes: [{name: 'Vault'}]});
-      }
-    },
-  });
+  const openHiddenApps = React.useCallback(async () => {
+    const outcome = await launchCoordinator.completeSecretEntry();
+    if (outcome === 'app_launched') {
+      navigation.reset({index: 0, routes: [{name: 'PrivateHome'}]});
+      return;
+    }
+    if (outcome === 'auth_required') {
+      navigation.reset({index: 0, routes: [{name: 'AuthGate'}]});
+      return;
+    }
+
+    const next = await secretAccessRouter.handleSecretAccess();
+    if (next === 'auth_required') {
+      navigation.reset({index: 0, routes: [{name: 'AuthGate'}]});
+      return;
+    }
+    if (next === 'vault') {
+      navigation.reset({index: 0, routes: [{name: 'Vault'}]});
+      return;
+    }
+
+    Alert.alert('Nothing hidden yet', 'Hidden Apps abhi configure nahi hui hain.');
+  }, [navigation]);
+
+  const accessShortcuts = React.useMemo<AccessShortcut[]>(
+    () => [
+      {
+        key: 'calculator',
+        title: 'Calculator',
+        subtitle: settingsType === 'calculator' ? 'Your secret code opens Hidden Apps' : 'Open calculator disguise',
+        glyph: '⌗',
+        accent: '#4F8CFF',
+        onPress: () => navigation.navigate('Calculator'),
+      },
+      {
+        key: 'clock',
+        title: 'Clock',
+        subtitle: settingsType === 'clock' ? 'Saved hour unlocks private area' : 'Open clock disguise',
+        glyph: '◔',
+        accent: '#A78BFA',
+        onPress: () => navigation.navigate('Clock'),
+      },
+      {
+        key: 'calendar',
+        title: 'Calendar',
+        subtitle: settingsType === 'calendar' ? 'Saved date opens private area' : 'Open calendar disguise',
+        glyph: '31',
+        accent: '#22C55E',
+        onPress: () => navigation.navigate('Calendar'),
+      },
+      {
+        key: 'gallery',
+        title: 'Gallery Trigger',
+        subtitle: settingsType === 'gallery' ? 'Gallery access is configured' : 'Visual shortcut for private access',
+        glyph: '▣',
+        accent: '#F59E0B',
+        onPress: () => Alert.alert('Access screen', 'Yahi aapka secret access hub hai. Yahan se calculator, clock, calendar aur Hidden Apps khulenge.'),
+      },
+      {
+        key: 'hidden',
+        title: 'Hidden Apps',
+        subtitle: hiddenCount > 0 ? `${hiddenCount} hidden app ready in Vault` : 'Open your private area',
+        glyph: '◇',
+        accent: '#8B5CF6',
+        onPress: () => {
+          void openHiddenApps();
+        },
+      },
+      {
+        key: 'dashboard',
+        title: 'Protected Dashboard',
+        subtitle: lockedCount > 0 ? `${lockedCount} locked app under protection` : 'Manage hide, lock, and pattern',
+        glyph: '▤',
+        accent: '#EC4899',
+        onPress: () => navigation.navigate('ManageApps'),
+      },
+    ],
+    [hiddenCount, lockedCount, navigation, openHiddenApps, settingsType],
+  );
 
   return (
     <FigmaRootLayout
       variant="dark"
-      title="Gallery"
+      title="VaultX"
       drawerTitle="VaultX"
       drawerOpen={drawerOpen}
       onDrawerOpen={openDrawer}
@@ -74,43 +158,55 @@ export function GalleryScreen() {
         />
       }>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Secret Access</Text>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Calculator, gallery, and hidden space.</Text>
+        <Text style={[styles.heroTitle, {color: palette.textPrimary}]}>Secret Access</Text>
+        <Text style={[styles.heroSubtitle, {color: palette.textSecondary}]}>
+          Yahin se calculator, clock, calendar, dashboard, aur Hidden Apps access hongi.
+        </Text>
 
-        <FigmaBanner screen="gallery" variant="dark" title="Banner ad" tone="surfaceElevated" />
-
-        <Pressable onPress={secretAccessType === 'triple_tap' ? triggerSecret : undefined} style={styles.heroCard}>
-          <View style={[styles.heroGlyphWrap, {borderColor: palette.accent}]}>
-            <View style={[styles.heroGlyphInner, {backgroundColor: palette.accent}]} />
+        <View style={[styles.heroCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+          <View style={[styles.heroGlyphShell, {backgroundColor: palette.accentSoft}]}>
+            <Text style={[styles.heroGlyph, {color: palette.accent}]}>◇</Text>
           </View>
           <View style={styles.heroCopy}>
-            <Text style={[styles.heroTitle, {color: palette.textPrimary}]}>Hidden Apps</Text>
-            <Text style={[styles.heroBody, {color: palette.textSecondary}]}>Open your private area</Text>
+            <Text style={[styles.heroCardTitle, {color: palette.textPrimary}]}>Private area shortcuts</Text>
+            <Text style={[styles.heroCardBody, {color: palette.textSecondary}]}>
+              Disguise access, hidden apps, aur protected dashboard sab ek hi screen par connected hain.
+            </Text>
           </View>
-        </Pressable>
-
-        <Pressable
-          onPress={secretAccessType === 'gallery' ? triggerSecret : undefined}
-          style={({pressed}) => [styles.openButton, {backgroundColor: '#A78BFA', opacity: pressed ? 0.92 : 1}]}>
-          <Text style={styles.openButtonText}>Open Vault</Text>
-        </Pressable>
-
-        <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Shortcuts</Text>
+        </View>
 
         <View style={styles.grid}>
-          {recentTiles.map(index => (
-            <View key={index} style={[styles.tile, {backgroundColor: index % 2 === 0 ? palette.surfaceElevated : palette.accentSoft}]} />
+          {accessShortcuts.map(shortcut => (
+            <Pressable
+              key={shortcut.key}
+              onPress={shortcut.onPress}
+              style={({pressed}) => [
+                styles.shortcutCard,
+                {
+                  backgroundColor: palette.surface,
+                  borderColor: palette.border,
+                  opacity: pressed ? 0.94 : 1,
+                },
+              ]}>
+              <View style={[styles.shortcutIcon, {backgroundColor: `${shortcut.accent}22`, borderColor: `${shortcut.accent}55`}]}>
+                <Text style={[styles.shortcutGlyph, {color: shortcut.accent}]}>{shortcut.glyph}</Text>
+              </View>
+              <Text style={[styles.shortcutTitle, {color: palette.textPrimary}]}>{shortcut.title}</Text>
+              <Text style={[styles.shortcutSubtitle, {color: palette.textSecondary}]}>{shortcut.subtitle}</Text>
+            </Pressable>
           ))}
         </View>
 
-        <FigmaBanner
-          screen="gallery"
-          variant="dark"
-          placement="native"
-          title="Native advertisement"
-          subtitle="Placed after functional content"
-          tone="surfaceElevated"
-        />
+        <Pressable
+          onPress={() => {
+            void openHiddenApps();
+          }}
+          style={({pressed}) => [
+            styles.primaryButton,
+            {backgroundColor: '#A78BFA', opacity: pressed ? 0.94 : 1},
+          ]}>
+          <Text style={styles.primaryButtonText}>Open Hidden Apps</Text>
+        </Pressable>
       </ScrollView>
     </FigmaRootLayout>
   );
@@ -118,78 +214,102 @@ export function GalleryScreen() {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingBottom: 17,
+    paddingBottom: 12,
   },
-  subtitle: {
-    marginTop: 6,
+  heroTitle: {
+    marginTop: 8,
+    fontSize: 28,
+    fontWeight: '900',
+    lineHeight: 34,
+  },
+  heroSubtitle: {
+    marginTop: 8,
     fontSize: 14,
-    lineHeight: 18,
+    lineHeight: 20,
   },
   heroCard: {
     marginTop: 18,
-    minHeight: 194,
-    borderRadius: 40,
-    backgroundColor: '#2B2146',
+    borderWidth: 1,
+    borderRadius: 28,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 42,
-    gap: 26,
+    gap: 16,
   },
-  heroGlyphWrap: {
-    width: 34,
-    height: 34,
-    borderWidth: 5,
-    transform: [{rotate: '45deg'}],
+  heroGlyphShell: {
+    width: 56,
+    height: 56,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  heroGlyphInner: {
-    width: 14,
-    height: 14,
+  heroGlyph: {
+    fontSize: 24,
+    fontWeight: '800',
   },
   heroCopy: {
-    gap: 8,
+    flex: 1,
   },
-  heroTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    lineHeight: 28,
-  },
-  heroBody: {
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  openButton: {
-    marginTop: 20,
-    minHeight: 100,
-    borderRadius: 32,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-    paddingHorizontal: 42,
-  },
-  openButtonText: {
-    color: '#FFFFFF',
+  heroCardTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
     lineHeight: 22,
   },
-  sectionTitle: {
-    marginTop: 40,
-    marginBottom: 24,
-    fontSize: 28,
-    fontWeight: '800',
-    lineHeight: 34,
-    letterSpacing: -0.4,
+  heroCardBody: {
+    marginTop: 8,
+    fontSize: 12,
+    lineHeight: 18,
   },
   grid: {
+    marginTop: 18,
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    rowGap: 24,
+    rowGap: 14,
   },
-  tile: {
-    width: '30.5%',
-    aspectRatio: 1,
-    borderRadius: 28,
+  shortcutCard: {
+    width: '48%',
+    minHeight: 166,
+    borderRadius: 24,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  shortcutIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shortcutGlyph: {
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  shortcutTitle: {
+    marginTop: 16,
+    fontSize: 16,
+    fontWeight: '800',
+    lineHeight: 20,
+  },
+  shortcutSubtitle: {
+    marginTop: 8,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  primaryButton: {
+    marginTop: 18,
+    minHeight: 64,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  primaryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '800',
+    lineHeight: 22,
   },
 });

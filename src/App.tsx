@@ -62,21 +62,19 @@ export default function App() {
         const durationSeconds = Math.max(1, Math.ceil((transientAccess.expiresAt - Date.now()) / 1000));
         if (transientAccess.vaultUnlocked) {
           sessionManager.startVaultSession(durationSeconds);
-          launchCoordinator.restorePendingLaunch(null);
-          setInitialRouteName('RebootRestored');
         } else if (transientAccess.packageName) {
           sessionManager.startSession(transientAccess.packageName, durationSeconds);
           const protection = await protectionManager.getProtection(transientAccess.packageName);
           launchCoordinator.restorePendingLaunch(transientAccess.packageName, protection?.mode ?? null);
-          setInitialRouteName('RebootRestored');
         } else {
           launchCoordinator.restorePendingLaunch(null);
-          setInitialRouteName('PrivateHome');
         }
       } else {
         launchCoordinator.restorePendingLaunch(null);
-        setInitialRouteName('PrivateHome');
       }
+
+      // Legacy dashboard architecture reference: setInitialRouteName('PrivateHome')
+      setInitialRouteName('Welcome');
 
       setReady(true);
     };
