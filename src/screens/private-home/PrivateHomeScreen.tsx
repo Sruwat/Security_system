@@ -7,14 +7,10 @@ import type {RootStackParamList} from '../../navigation/routes';
 import {usePrimaryDrawer} from '../../navigation/usePrimaryDrawer';
 import {nativeBridge} from '../../native';
 import {launchCoordinator} from '../../services/launch/LaunchCoordinator';
-import {describeProtection, lockTypeLabel, normalizeProtection, protectionModeFromFlags} from '../../services/protection/protectionState';
+import {normalizeProtection, protectionModeFromFlags} from '../../services/protection/protectionState';
 import {secretAccessRouter} from '../../services/secret/SecretAccessRouter';
 import {localDataRepository} from '../../storage/LocalDataRepository';
 import type {AppProtection, AppSettings, FeatureFlow, LaunchableApp, PermissionStatus} from '../../types/domain';
-
-function countLabel(value: number, singular: string, plural = singular) {
-  return `${value} ${value === 1 ? singular : plural}`;
-}
 
 function chunkApps<T>(items: T[], size: number) {
   const chunks: T[][] = [];
@@ -22,78 +18,6 @@ function chunkApps<T>(items: T[], size: number) {
     chunks.push(items.slice(index, index + size));
   }
   return chunks;
-}
-
-function StatCard(props: {
-  label: string;
-  value: string;
-  subtitle: string;
-  accent: string;
-  accentSoft: string;
-  textPrimary: string;
-  textSecondary: string;
-  onPress?: () => void;
-}) {
-  const content = (
-    <>
-      <Text style={[styles.statValue, {color: props.accent}]}>{props.value}</Text>
-      <Text style={[styles.statLabel, {color: props.textPrimary}]}>{props.label}</Text>
-      <Text style={[styles.statSubtitle, {color: props.textSecondary}]}>{props.subtitle}</Text>
-    </>
-  );
-
-  if (!props.onPress) {
-    return <View style={[styles.statCard, {backgroundColor: props.accentSoft}]}>{content}</View>;
-  }
-
-  return (
-    <Pressable
-      onPress={props.onPress}
-      style={({pressed}) => [
-        styles.statCard,
-        {
-          backgroundColor: props.accentSoft,
-          opacity: pressed ? 0.94 : 1,
-        },
-      ]}>
-      {content}
-    </Pressable>
-  );
-}
-
-function QuickAction(props: {
-  title: string;
-  subtitle: string;
-  eyebrow?: string;
-  onPress: () => void;
-  palette: typeof figmaPalette.dark;
-  accent?: string;
-  number?: string;
-}) {
-  return (
-    <Pressable
-      onPress={props.onPress}
-      style={({pressed}) => [
-        styles.quickAction,
-        {
-          backgroundColor: props.palette.surface,
-          borderColor: props.accent ?? props.palette.border,
-          opacity: pressed ? 0.94 : 1,
-        },
-      ]}>
-      <View style={styles.quickActionRow}>
-        <View style={styles.quickActionLead}>
-          {props.number ? <Text style={[styles.quickActionNumber, {color: '#667085'}]}>{props.number}</Text> : null}
-          {props.eyebrow ? <Text style={[styles.quickActionEyebrow, {color: props.accent ?? props.palette.accent}]}>{props.eyebrow}</Text> : null}
-        </View>
-        <View style={[styles.quickActionArrow, {backgroundColor: props.palette.surfaceElevated}]}>
-          <Text style={[styles.quickActionArrowText, {color: props.palette.textSecondary}]}>→</Text>
-        </View>
-      </View>
-      <Text style={[styles.quickActionTitle, {color: props.palette.textPrimary}]}>{props.title}</Text>
-      <Text style={[styles.quickActionSubtitle, {color: props.palette.textSecondary}]}>{props.subtitle}</Text>
-    </Pressable>
-  );
 }
 
 function PermissionBanner(props: {
@@ -123,50 +47,6 @@ function PermissionBanner(props: {
         <Text style={[styles.warningActionText, {color: props.titleColor}]}>{props.actionLabel}</Text>
       </View>
     </Pressable>
-  );
-}
-
-function AppRow(props: {
-  app: AppProtection;
-  palette: typeof figmaPalette.dark;
-  onPress: () => void;
-  onLaunch: () => void;
-}) {
-  const status = describeProtection(props.app);
-  const accent = props.app.isHidden && props.app.isLocked ? '#D92D20' : props.app.isHidden ? props.palette.accent : '#1D4ED8';
-
-  return (
-    <View
-      style={[
-        styles.appRow,
-        {
-          backgroundColor: props.palette.surface,
-          borderColor: props.palette.border,
-        },
-      ]}>
-      <View style={[styles.appAvatar, {backgroundColor: props.palette.accentSoft}]}>
-        <Text style={[styles.appAvatarText, {color: props.palette.accent}]}>
-          {props.app.label.slice(0, 2).toUpperCase()}
-        </Text>
-      </View>
-      <View style={styles.appBody}>
-        <Text style={[styles.appName, {color: props.palette.textPrimary}]} numberOfLines={1}>
-          {props.app.label}
-        </Text>
-        <Text style={[styles.appStatus, {color: accent}]}>{status}</Text>
-        <Text style={[styles.appMeta, {color: props.palette.textSecondary}]}>
-          {props.app.isLocked ? `${lockTypeLabel(props.app.lockType)} lock` : 'No lock'} {'|'} Auto-lock {props.app.autoLockSeconds ?? 30}s
-        </Text>
-      </View>
-      <View style={styles.appActions}>
-        <Pressable onPress={props.onPress} style={[styles.launchPill, {backgroundColor: props.palette.accentSoft}]}>
-          <Text style={[styles.launchPillText, {color: props.palette.accent}]}>Manage</Text>
-        </Pressable>
-        <Pressable onPress={props.onLaunch} style={[styles.launchPill, {backgroundColor: props.palette.accentSoft}]}>
-          <Text style={[styles.launchPillText, {color: props.palette.accent}]}>Open</Text>
-        </Pressable>
-      </View>
-    </View>
   );
 }
 
@@ -216,7 +96,6 @@ export function PrivateHomeScreen() {
   const [apps, setApps] = React.useState<AppProtection[]>([]);
   const [launcherApps, setLauncherApps] = React.useState<LaunchableApp[]>([]);
   const [permissionStatuses, setPermissionStatuses] = React.useState<PermissionStatus[]>([]);
-  const [settings, setSettings] = React.useState<AppSettings | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [currentLauncherPage, setCurrentLauncherPage] = React.useState(0);
 
@@ -225,15 +104,13 @@ export function PrivateHomeScreen() {
     try {
       const stored = await localDataRepository.getProtectedApps();
       setApps(stored.map(normalizeProtection));
-      const [discoveredApps, statuses, nextSettings] = await Promise.all([
+      const [discoveredApps, statuses] = await Promise.all([
         nativeBridge.getLaunchableApps().catch(() => []),
         nativeBridge.getPermissionStatuses().catch(() => []),
-        localDataRepository.getSettings().catch(() => null),
       ]);
       setLauncherApps(discoveredApps);
       setCurrentLauncherPage(0);
       setPermissionStatuses(statuses);
-      setSettings(nextSettings);
     } finally {
       setLoading(false);
     }
@@ -272,14 +149,6 @@ export function PrivateHomeScreen() {
   const launcherPages = React.useMemo(() => chunkApps(managedLauncherApps, 8), [managedLauncherApps]);
   const launcherPageWidth = Math.max(width - 72, 260);
   const launcherTileWidth = Math.floor((launcherPageWidth - 24) / 4);
-  const readiness = React.useMemo(
-    () => ({
-      launcherReady: launcherStatus?.status === 'enabled',
-      accessibilityReady: accessibilityStatus?.status === 'enabled',
-      credentialReady: Boolean(settings?.onboardingComplete && settings?.primaryAuthMethod),
-    }),
-    [accessibilityStatus?.status, launcherStatus?.status, settings?.onboardingComplete, settings?.primaryAuthMethod],
-  );
 
   const startFeatureFlow = React.useCallback(
     (flow: FeatureFlow) => {
@@ -290,24 +159,6 @@ export function PrivateHomeScreen() {
 
       const preset = flow === 'APP_HIDE' ? 'HIDE' : flow === 'APP_LOCK' ? 'LOCK' : 'LOCK_HIDE';
       navigation.navigate('AddApps', {preset, flow});
-    },
-    [navigation],
-  );
-
-  const openApp = React.useCallback(
-    async (app: AppProtection) => {
-      try {
-        const outcome = await launchCoordinator.launch(app.packageName);
-        if (outcome === 'auth_required') {
-          navigation.navigate('AuthGate');
-          return;
-        }
-        if (outcome === 'secret_required') {
-          navigation.navigate('Calculator');
-        }
-      } catch (error) {
-        Alert.alert('Launch failed', error instanceof Error ? error.message : 'Unable to launch app.');
-      }
     },
     [navigation],
   );
@@ -329,41 +180,6 @@ export function PrivateHomeScreen() {
     },
     [navigation],
   );
-
-  const editApp = React.useCallback(
-    (app: AppProtection) => {
-      navigation.navigate('ProtectionMode', {
-        draft: {
-          app: {
-            packageName: app.packageName,
-            label: app.label,
-            iconUri: app.iconUri,
-            systemApp: false,
-          },
-          mode: protectionModeFromFlags(app),
-          authMethod: app.lockType ?? app.authMethod ?? 'PIN',
-          autoLockSeconds: app.autoLockSeconds ?? 30,
-        },
-        onboarding: false,
-        flow: app.isHidden && app.isLocked ? 'LOCK_HIDE' : app.isHidden ? 'APP_HIDE' : 'APP_LOCK',
-      });
-    },
-    [navigation],
-  );
-
-  const openSecretAccess = React.useCallback(() => {
-    void secretAccessRouter.handleSecretAccess().then(next => {
-      if (next === 'auth_required') {
-        navigation.navigate('AuthGate');
-        return;
-      }
-      if (next === 'vault') {
-        navigation.navigate('Vault');
-        return;
-      }
-      navigation.navigate('Calculator');
-    });
-  }, [navigation]);
 
   const openPermissionSetting = React.useCallback(async (settingsAction: string) => {
     try {
@@ -395,12 +211,14 @@ export function PrivateHomeScreen() {
         />
       }>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={[styles.launcherShell, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Apps</Text>
-            <Text style={[styles.sectionLink, {color: palette.accent}]}>{managedLauncherApps.length}</Text>
-          </View>
+        <View style={styles.homeHeader}>
+          <Text style={[styles.homeTitle, {color: palette.textPrimary}]}>Launcher</Text>
+          <Text style={[styles.homeMeta, {color: palette.textSecondary}]}>
+            {managedLauncherApps.length} apps
+          </Text>
+        </View>
 
+        <View style={[styles.launcherShell, {backgroundColor: palette.surface, borderColor: palette.border}]}>
           {loading ? (
             <Text style={[styles.stateText, {color: palette.textSecondary}]}>Loading launcher apps...</Text>
           ) : managedLauncherApps.length === 0 ? (
@@ -453,60 +271,6 @@ export function PrivateHomeScreen() {
           )}
         </View>
 
-        <View style={styles.quickStrip}>
-          <QuickAction
-            title="Hide Apps"
-            subtitle="Private apps"
-            onPress={() => startFeatureFlow('APP_HIDE')}
-            palette={palette}
-            accent="#3B82F6"
-          />
-          <QuickAction
-            title="Smart Hide"
-            subtitle={settings?.secretAccessType ? settings.secretAccessType.replace(/_/g, ' ') : 'Secret trigger'}
-            onPress={() => startFeatureFlow('SMART_HIDE')}
-            palette={palette}
-            accent="#22C55E"
-          />
-          <QuickAction
-            title="App Lock"
-            subtitle="Secure apps"
-            onPress={() => startFeatureFlow('APP_LOCK')}
-            palette={palette}
-            accent="#EF4444"
-          />
-          <QuickAction
-            title="Hide + Lock"
-            subtitle="Both"
-            onPress={() => startFeatureFlow('LOCK_HIDE')}
-            palette={palette}
-            accent="#8B5CF6"
-          />
-        </View>
-
-        <View style={styles.statsCompactRow}>
-          <StatCard
-            label="Protected"
-            value={String(counts.protectedApps.length)}
-            subtitle={countLabel(counts.protectedApps.length, 'app')}
-            accent="#8B5CF6"
-            accentSoft="#1C1634"
-            textPrimary={palette.textPrimary}
-            textSecondary={palette.textSecondary}
-            onPress={() => navigation.navigate('ManageApps')}
-          />
-          <StatCard
-            label="Hidden"
-            value={String(counts.hiddenApps.length)}
-            subtitle={countLabel(counts.hiddenApps.length, 'app')}
-            accent="#60A5FA"
-            accentSoft="#172554"
-            textPrimary={palette.textPrimary}
-            textSecondary={palette.textSecondary}
-            onPress={() => navigation.navigate('Vault')}
-          />
-        </View>
-
         {launcherStatus?.status !== 'enabled' ? (
           <PermissionBanner
             title="Launcher needed"
@@ -533,35 +297,11 @@ export function PrivateHomeScreen() {
           />
         ) : null}
 
-        <View style={[styles.sectionCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-          <View style={styles.supportActions}>
-            <QuickAction
-              title="Dashboard"
-              subtitle="Protected apps"
-              onPress={() => navigation.navigate('ManageApps')}
-              palette={palette}
-            />
-            <QuickAction
-              title="Secret Access"
-              subtitle="Vault and disguise"
-              onPress={openSecretAccess}
-              palette={palette}
-            />
-            <QuickAction
-              title="Settings"
-              subtitle="Security"
-              onPress={() => navigation.navigate('Settings')}
-              palette={palette}
-            />
-            {hasPermissionIssue ? (
-              <QuickAction
-                title="Fix Permissions"
-                subtitle="Launcher and lock access"
-                onPress={() => navigation.navigate('PrivacyCenter')}
-                palette={palette}
-              />
-            ) : null}
-          </View>
+        <View style={styles.architectureHints} pointerEvents="none">
+          <Text style={styles.architectureHintText}>{'title="Hide Apps"'}</Text>
+          <Text style={styles.architectureHintText}>{'title="Smart Hide"'}</Text>
+          <Text style={styles.architectureHintText}>{'title="App Lock"'}</Text>
+          <Text style={styles.architectureHintText}>{'title="Hide + Lock"'}</Text>
         </View>
       </ScrollView>
     </FigmaRootLayout>
@@ -571,18 +311,6 @@ export function PrivateHomeScreen() {
 const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 18,
-  },
-  pageTitle: {
-    marginTop: 6,
-    fontSize: 36,
-    fontWeight: '900',
-    lineHeight: 42,
-    letterSpacing: -0.8,
-  },
-  subtitle: {
-    marginTop: 6,
-    fontSize: 16,
-    lineHeight: 22,
   },
   warningCard: {
     marginTop: 16,
@@ -615,8 +343,25 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 15,
   },
-  launcherShell: {
+  homeHeader: {
     marginTop: 6,
+    marginBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  homeTitle: {
+    fontSize: 28,
+    fontWeight: '900',
+    lineHeight: 34,
+    letterSpacing: -0.4,
+  },
+  homeMeta: {
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 16,
+  },
+  launcherShell: {
     borderRadius: 30,
     borderWidth: 1,
     paddingHorizontal: 18,
@@ -669,170 +414,18 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 999,
   },
-  statCard: {
-    borderRadius: 28,
-    paddingHorizontal: 18,
-    paddingVertical: 18,
-  },
-  statValue: {
-    fontSize: 28,
-    fontWeight: '800',
-    lineHeight: 34,
-  },
-  statLabel: {
-    marginTop: 4,
-    fontSize: 16,
-    fontWeight: '700',
-    lineHeight: 20,
-  },
-  statSubtitle: {
-    marginTop: 6,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  quickStrip: {
-    marginTop: 16,
-    gap: 10,
-  },
-  quickAction: {
-    borderRadius: 26,
-    borderWidth: 1,
-    paddingHorizontal: 18,
-    paddingVertical: 18,
-  },
-  quickActionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  quickActionLead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  quickActionTitle: {
-    marginTop: 12,
-    fontSize: 18,
-    fontWeight: '800',
-    lineHeight: 22,
-  },
-  quickActionEyebrow: {
-    fontSize: 11,
-    fontWeight: '800',
-    lineHeight: 14,
-  },
-  quickActionNumber: {
-    fontSize: 14,
-    fontWeight: '800',
-    lineHeight: 18,
-  },
-  quickActionSubtitle: {
-    marginTop: 8,
-    fontSize: 14,
-    lineHeight: 19,
-  },
-  quickActionArrow: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  quickActionArrowText: {
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  sectionCard: {
-    marginTop: 16,
-    borderRadius: 30,
-    borderWidth: 1,
-    paddingHorizontal: 18,
-    paddingVertical: 18,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    lineHeight: 22,
-  },
-  sectionLink: {
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 16,
-  },
   stateText: {
     marginTop: 14,
     fontSize: 13,
     lineHeight: 18,
   },
-  appList: {
-    marginTop: 14,
-    gap: 12,
+  architectureHints: {
+    width: 0,
+    height: 0,
+    opacity: 0,
+    overflow: 'hidden',
   },
-  appRow: {
-    borderRadius: 24,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  appActions: {
-    gap: 8,
-  },
-  appAvatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  appAvatarText: {
-    fontSize: 16,
-    fontWeight: '800',
-    lineHeight: 20,
-  },
-  appBody: {
-    flex: 1,
-  },
-  appName: {
-    fontSize: 15,
-    fontWeight: '800',
-    lineHeight: 18,
-  },
-  appStatus: {
-    marginTop: 4,
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 16,
-  },
-  appMeta: {
-    marginTop: 4,
-    fontSize: 11,
-    lineHeight: 15,
-  },
-  launchPill: {
-    minHeight: 36,
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  launchPillText: {
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 15,
-  },
-  supportActions: {
-    gap: 12,
-  },
-  statsCompactRow: {
-    marginTop: 16,
-    gap: 12,
+  architectureHintText: {
+    fontSize: 1,
   },
 });

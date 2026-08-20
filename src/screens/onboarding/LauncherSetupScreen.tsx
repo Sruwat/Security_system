@@ -37,12 +37,8 @@ export function LauncherSetupScreen() {
     <BlueFlowPage contentContainerStyle={styles.scrollContent}>
       <BlueProgressHeader stepLabel={featureFlow === 'APP_HIDE' ? 'Step 1 of 4' : 'Launcher Setup'} progress={0.25} onBackPress={() => navigation.goBack()} />
       <BlueSectionTitle
-        title={featureFlow === 'APP_HIDE' ? 'Inside App Hide' : 'Required Permissions'}
-        subtitle={
-          featureFlow === 'APP_HIDE'
-            ? 'Enable launcher access, then continue.'
-            : 'Enable access before you protect apps.'
-        }
+        title="Permissions"
+        subtitle="Turn on launcher access, then continue to home."
       />
 
       <ScrollView contentContainerStyle={styles.rows} showsVerticalScrollIndicator={false}>
@@ -69,45 +65,27 @@ export function LauncherSetupScreen() {
             void refreshLauncherState();
           }}
         />
-        {launcherState.isDefaultLauncher ? (
-          <BlueChoiceCard
-            title="Use Phone Launcher"
-            subtitle="Open Android Home settings and switch back to your OEM launcher at any time."
-            rightLabel="Open"
-            icon="↔️"
-            onPress={() => {
-              void nativeBridge.openSystemSetting('home').catch(error => {
-                Alert.alert('Home settings unavailable', error instanceof Error ? error.message : 'Unable to open Home settings.');
-              });
-            }}
-          />
-        ) : null}
-
         <BluePanel tone="soft" style={styles.noteCard}>
-          <Text style={styles.noteTitle}>How Hide works</Text>
+          <Text style={styles.noteTitle}>Home first</Text>
           <Text style={styles.noteBody}>
-            Hidden apps stay private inside this launcher. Your phone launcher can still be opened any time from Home settings.
+            After this step, VaultX opens directly into your app launcher. Hide, lock, and other setup flows start only when you choose them.
           </Text>
         </BluePanel>
 
         <View style={styles.spacer} />
 
         <BluePrimaryButton
-          label={featureFlow === 'APP_HIDE' ? 'Continue to Smart Hide' : 'Continue'}
+          label="Open Launcher"
           onPress={() => {
             void (async () => {
               const settings = await localDataRepository.getSettings();
-              const nextRoute = featureFlow === 'APP_HIDE' ? 'SecretEntry' : 'PrimaryLock';
               await localDataRepository.saveSettings({
                 ...settings,
-                onboardingResumeRoute: nextRoute,
-                onboardingFeatureFlow: featureFlow,
+                onboardingComplete: true,
+                onboardingResumeRoute: undefined,
+                onboardingFeatureFlow: undefined,
               });
-              if (featureFlow === 'APP_HIDE') {
-                navigation.navigate('SecretEntry', {flow: featureFlow});
-                return;
-              }
-              navigation.navigate('PrimaryLock', {flow: featureFlow});
+              navigation.reset({index: 0, routes: [{name: 'PrivateHome'}]});
             })();
           }}
         />
