@@ -3,6 +3,7 @@ import {Alert, FlatList, Image, Pressable, StyleSheet, Text, TextInput, View} fr
 import {useNavigation, useRoute} from '@react-navigation/native';
 import type {RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import type {RootStackParamList} from '../../navigation/routes';
 import {nativeBridge} from '../../native';
@@ -23,6 +24,7 @@ export function AddAppsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'AddApps'>>();
   const palette = figmaPalette.dark;
+  const insets = useSafeAreaInsets();
   const [apps, setApps] = React.useState<LaunchableApp[]>([]);
   const [selectedPackageNames, setSelectedPackageNames] = React.useState<string[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -281,17 +283,19 @@ export function AddAppsScreen() {
             ItemSeparatorComponent={() => <View style={styles.rowGap} />}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={styles.list}
+            contentContainerStyle={[styles.list, {paddingBottom: 24 + insets.bottom}]}
           />
         )}
 
         {!loading && !error ? <View style={styles.footerGap} /> : <View style={styles.spacer} />}
 
-        <FigmaActionButton
-          variant="dark"
-          label={saving ? 'Saving...' : `Continue with ${selectedPackageNames.length} app${selectedPackageNames.length === 1 ? '' : 's'}`}
-          onPress={() => void continueNext()}
-        />
+        <View style={[styles.footerActionWrap, {paddingBottom: Math.max(insets.bottom, 18)}]}>
+          <FigmaActionButton
+            variant="dark"
+            label={saving ? 'Saving...' : `Continue with ${selectedPackageNames.length} app${selectedPackageNames.length === 1 ? '' : 's'}`}
+            onPress={() => void continueNext()}
+          />
+        </View>
       </View>
     </FigmaPage>
   );
@@ -574,6 +578,9 @@ const styles = StyleSheet.create({
   },
   footerGap: {
     height: 16,
+  },
+  footerActionWrap: {
+    paddingTop: 12,
   },
   spacer: {
     flex: 1,

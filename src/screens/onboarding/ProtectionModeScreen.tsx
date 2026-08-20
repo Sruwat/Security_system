@@ -3,6 +3,7 @@ import {Image, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native
 import {useNavigation, useRoute} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {RouteProp} from '@react-navigation/native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {FigmaActionButton, FigmaPage, figmaPalette} from '../../components/FigmaKit';
 import type {RootStackParamList} from '../../navigation/routes';
 import type {AppProtection, AuthMethod} from '../../types/domain';
@@ -47,6 +48,7 @@ export function ProtectionModeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'ProtectionMode'>>();
   const palette = figmaPalette.dark;
+  const insets = useSafeAreaInsets();
   const [draft, setDraft] = React.useState<AppProtection>(() => normalizeProtection(buildProtectionPolicy(route.params.draft)));
   const [saving, setSaving] = React.useState(false);
   const selectedApps = route.params.draft.apps ?? [route.params.draft.app];
@@ -99,7 +101,7 @@ export function ProtectionModeScreen() {
 
   return (
     <FigmaPage variant="dark" style={styles.page}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, {paddingBottom: 24 + insets.bottom}]} showsVerticalScrollIndicator={false}>
         <View style={styles.progressRow}>
           <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
             <Text style={styles.backButtonText}>←</Text>
@@ -226,11 +228,13 @@ export function ProtectionModeScreen() {
 
         <View style={styles.spacer} />
 
-        <FigmaActionButton
-          variant="dark"
-          label={saving ? 'Saving...' : route.params.onboarding ? 'Save and continue' : 'Save protection'}
-          onPress={() => void saveProtection()}
-        />
+        <View style={styles.footerActionWrap}>
+          <FigmaActionButton
+            variant="dark"
+            label={saving ? 'Saving...' : route.params.onboarding ? 'Save and continue' : 'Save protection'}
+            onPress={() => void saveProtection()}
+          />
+        </View>
       </ScrollView>
     </FigmaPage>
   );
@@ -477,5 +481,8 @@ const styles = StyleSheet.create({
   },
   spacer: {
     flex: 1,
+  },
+  footerActionWrap: {
+    paddingTop: 12,
   },
 });
