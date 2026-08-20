@@ -163,7 +163,7 @@ export function VaultScreen() {
         />
       }>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Hidden apps and private content.</Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>This is your private space. Hidden apps live here and follow the same flow you set during setup.</Text>
 
         <FigmaBanner screen="vault" variant={variant} title="Banner ad" tone="surface" />
 
@@ -175,7 +175,7 @@ export function VaultScreen() {
             <Text style={[styles.pendingApp, {color: palette.textPrimary}]}>{pendingLabel}</Text>
             <Text style={[styles.pendingText, {color: palette.textSecondary}]}>
               {pendingMode === 'LOCK_HIDE'
-                ? 'A protected hidden app is waiting for authentication.'
+                ? 'A hidden + locked app is waiting for authentication before it can open.'
                 : pendingMode
                   ? `The app is waiting in ${pendingMode} mode.`
                   : 'The app is waiting for vault access.'}
@@ -188,7 +188,7 @@ export function VaultScreen() {
           </View>
         ) : null}
 
-        <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>My Private Apps</Text>
+        <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Hidden Apps</Text>
 
         <View style={styles.grid}>
           {loading ? (
@@ -255,7 +255,7 @@ export function VaultScreen() {
         </View>
 
         <Pressable onPress={() => navigation.navigate('ManageApps')} style={[styles.manageRow, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-          <Text style={[styles.manageText, {color: palette.textPrimary}]}>Manage Apps</Text>
+          <Text style={[styles.manageText, {color: palette.textPrimary}]}>Manage Protected Apps</Text>
         </Pressable>
 
         <FigmaBanner screen="vault" variant={variant} placement="native" title="Native advertisement" subtitle="Placed after functional content" tone="surfaceElevated" />

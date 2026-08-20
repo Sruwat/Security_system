@@ -116,10 +116,10 @@ export function AddAppsScreen() {
   const headline = presetMode === 'HIDE' ? 'Hide Apps' : presetMode === 'LOCK' ? 'App Lock' : 'Hide + Lock';
   const helperCopy =
     presetMode === 'HIDE'
-      ? 'Choose apps that should disappear from your managed launcher and stay in Hidden Apps.'
+      ? 'Step 1: choose apps that should disappear from your managed launcher and move into Vault.'
       : presetMode === 'LOCK'
-        ? 'Choose apps that should stay visible but require authentication before opening.'
-        : 'Choose apps that should stay hidden and require authentication before access.';
+        ? 'Step 1: choose apps that should stay visible but open only after authentication.'
+        : 'Step 1: choose apps that should be hidden from the launcher and locked before access.';
 
   const renderHeader = React.useCallback(
     () => (
@@ -131,7 +131,7 @@ export function AddAppsScreen() {
           <View style={styles.progressTrack}>
             <View style={[styles.progressFill, presetMode === 'HIDE' ? styles.progressFillHide : presetMode === 'LOCK' ? styles.progressFillLock : styles.progressFillCombined]} />
           </View>
-          <Text style={styles.progressLabel}>{presetMode === 'HIDE' ? 'Step 4 of 5' : 'Step 2 of 4'}</Text>
+          <Text style={styles.progressLabel}>{presetMode === 'HIDE' ? 'Step 1 of 3' : presetMode === 'LOCK' ? 'Step 1 of 3' : 'Step 1 of 4'}</Text>
         </View>
 
         <View style={styles.hero}>
@@ -139,7 +139,7 @@ export function AddAppsScreen() {
             <Text style={styles.heroIcon}>{presetMode === 'HIDE' ? '🙈' : presetMode === 'LOCK' ? '🔒' : '🛡️'}</Text>
           </View>
           <Text style={[styles.pageTitle, {color: palette.textPrimary}]}>
-            {presetMode === 'HIDE' ? 'Select Apps to Hide' : presetMode === 'LOCK' ? 'Select Apps to Lock' : 'Select Apps to Hide + Lock'}
+            {presetMode === 'HIDE' ? 'Choose Apps for Hide' : presetMode === 'LOCK' ? 'Choose Apps for Lock' : 'Choose Apps for Lock + Hide'}
           </Text>
         </View>
 
@@ -184,14 +184,14 @@ export function AddAppsScreen() {
           </View>
         ) : null}
 
-        <View style={[styles.helpCard, {backgroundColor: palette.accentSoft, borderColor: palette.border}]}>
-          <Text style={[styles.helpTitle, {color: palette.accent}]}>
-            {presetMode === 'HIDE' ? 'Hidden apps stay in Vault' : presetMode === 'LOCK' ? 'Lock uses your saved credential' : 'Both protections are applied together'}
-          </Text>
-          <Text style={[styles.helpText, {color: palette.textSecondary}]}>
-            Hide works inside this managed launcher experience. Lock protection continues through the app-auth flow after you save protection.
-          </Text>
-        </View>
+          <View style={[styles.helpCard, {backgroundColor: palette.accentSoft, borderColor: palette.border}]}>
+            <Text style={[styles.helpTitle, {color: palette.accent}]}>
+            {presetMode === 'HIDE' ? 'Next: choose disguise and hidden access' : presetMode === 'LOCK' ? 'Next: choose lock behavior' : 'Next: confirm both protections'}
+            </Text>
+            <Text style={[styles.helpText, {color: palette.textSecondary}]}>
+            This screen only selects apps. The next step defines whether they become hidden, locked, or both inside the same private flow.
+            </Text>
+          </View>
 
         <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Installed apps</Text>
       </View>

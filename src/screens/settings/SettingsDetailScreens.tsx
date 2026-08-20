@@ -9,7 +9,7 @@ import {localDataRepository} from '../../storage/LocalDataRepository';
 import type {AppSettings, PermissionStatus} from '../../types/domain';
 import type {RootStackParamList} from '../../navigation/routes';
 
-function ToggleRow(props: {label: string; value: boolean; onToggle: () => void; palette: typeof figmaPalette.light}) {
+function ToggleRow(props: {label: string; value: boolean; onToggle: () => void; palette: typeof figmaPalette.light | typeof figmaPalette.dark}) {
   return (
     <Pressable onPress={props.onToggle} style={({pressed}) => [styles.row, {backgroundColor: props.palette.surface, borderColor: props.palette.border, opacity: pressed ? 0.94 : 1}]}>
       <View style={styles.rowBody}>
@@ -48,7 +48,7 @@ const autoLockOptions = [30, 60, 300, 900];
 
 export function AppearanceSettingsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const palette = figmaPalette.light;
+  const palette = figmaPalette.dark;
   const {settings, update} = useSettings();
   const rows: Array<{label: string; subtitle: string; value: AppSettings['theme']}> = [
     {label: 'System', subtitle: 'Follow the device appearance', value: 'SYSTEM'},
@@ -57,7 +57,7 @@ export function AppearanceSettingsScreen() {
   ];
 
   return (
-    <FigmaPage variant="light">
+    <FigmaPage variant="dark">
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={[styles.title, {color: palette.textPrimary}]}>Appearance</Text>
         <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Switch between System, Light, and Dark presentation.</Text>
@@ -93,7 +93,7 @@ export function AppearanceSettingsScreen() {
 
         <View style={styles.spacer} />
 
-        <FigmaActionButton variant="light" label="Back to settings" onPress={() => navigation.navigate('Settings')} />
+        <FigmaActionButton variant="dark" label="Back to settings" onPress={() => navigation.navigate('Settings')} />
       </ScrollView>
     </FigmaPage>
   );
@@ -101,7 +101,7 @@ export function AppearanceSettingsScreen() {
 
 export function PrivacyCenterScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const palette = figmaPalette.light;
+  const palette = figmaPalette.dark;
   const {settings, update} = useSettings();
   const [permissionStatuses, setPermissionStatuses] = React.useState<PermissionStatus[]>([]);
   const [recoveryBusy, setRecoveryBusy] = React.useState<string | null>(null);
@@ -186,7 +186,7 @@ export function PrivacyCenterScreen() {
   }, [navigation, runRecoveryGate]);
 
   return (
-    <FigmaPage variant="light">
+    <FigmaPage variant="dark">
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={[styles.title, {color: palette.textPrimary}]}>Privacy Center</Text>
         <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Review the live Android setup state alongside the local privacy options that stay on this device.</Text>
@@ -264,7 +264,7 @@ export function PrivacyCenterScreen() {
 
         <View style={styles.spacer} />
 
-        <FigmaActionButton variant="light" label="Back to settings" onPress={() => navigation.navigate('Settings')} />
+        <FigmaActionButton variant="dark" label="Back to settings" onPress={() => navigation.navigate('Settings')} />
       </ScrollView>
     </FigmaPage>
   );
@@ -272,11 +272,11 @@ export function PrivacyCenterScreen() {
 
 export function AdManagerRulesScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const palette = figmaPalette.light;
+  const palette = figmaPalette.dark;
   const {settings, update} = useSettings();
 
   return (
-    <FigmaPage variant="light">
+    <FigmaPage variant="dark">
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={[styles.title, {color: palette.textPrimary}]}>AdManager Rules</Text>
         <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Review where banners and native ads can appear in the current flow.</Text>
@@ -295,7 +295,7 @@ export function AdManagerRulesScreen() {
 
         <View style={styles.spacer} />
 
-        <FigmaActionButton variant="light" label="Back to settings" onPress={() => navigation.navigate('Settings')} />
+        <FigmaActionButton variant="dark" label="Back to settings" onPress={() => navigation.navigate('Settings')} />
       </ScrollView>
     </FigmaPage>
   );
@@ -303,11 +303,11 @@ export function AdManagerRulesScreen() {
 
 export function AutoLockSettingsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const palette = figmaPalette.light;
+  const palette = figmaPalette.dark;
   const {settings, update} = useSettings();
 
   return (
-    <FigmaPage variant="light">
+    <FigmaPage variant="dark">
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={[styles.title, {color: palette.textPrimary}]}>Auto-lock</Text>
         <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Choose how long the private session stays open after authentication.</Text>
@@ -350,7 +350,7 @@ export function AutoLockSettingsScreen() {
 
         <View style={styles.spacer} />
 
-        <FigmaActionButton variant="light" label="Back to settings" onPress={() => navigation.navigate('Settings')} />
+        <FigmaActionButton variant="dark" label="Back to settings" onPress={() => navigation.navigate('Settings')} />
       </ScrollView>
     </FigmaPage>
   );

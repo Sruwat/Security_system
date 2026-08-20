@@ -13,7 +13,7 @@ import type {AppProtection, AppSettings, PermissionStatus} from '../../types/dom
 function GroupCard(props: {
   title: string;
   rows: Array<{title: string; subtitle: string; onPress: () => void}>;
-  palette: typeof figmaPalette.light;
+  palette: typeof figmaPalette.dark;
 }) {
   return (
     <View style={[styles.groupCard, {backgroundColor: props.palette.surface, borderColor: props.palette.border}]}>
@@ -35,7 +35,7 @@ function GroupCard(props: {
 
 export function SettingsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const palette = figmaPalette.light;
+  const palette = figmaPalette.dark;
   const {drawerOpen, openDrawer, closeDrawer, drawerDestinations} = usePrimaryDrawer();
   const [settings, setSettings] = React.useState<AppSettings | null>(null);
   const [protectedApps, setProtectedApps] = React.useState<AppProtection[]>([]);
@@ -57,7 +57,7 @@ export function SettingsScreen() {
   if (!settings) {
     return (
       <FigmaRootLayout
-        variant="light"
+        variant="dark"
         title="Settings"
         drawerTitle="Smart App Lock"
         drawerOpen={drawerOpen}
@@ -80,7 +80,7 @@ export function SettingsScreen() {
 
   return (
     <FigmaRootLayout
-      variant="light"
+      variant="dark"
       title="Settings"
       drawerTitle="Smart App Lock"
       drawerOpen={drawerOpen}
@@ -89,7 +89,7 @@ export function SettingsScreen() {
       drawerDestinations={drawerDestinations}
       bottomNav={
         <FigmaBottomNav
-          variant="light"
+          variant="dark"
           active="settings"
           onHomePress={() => navigation.navigate('PrivateHome')}
           onGalleryPress={() => navigation.navigate('Gallery')}
@@ -98,7 +98,7 @@ export function SettingsScreen() {
       }>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
-          Update security, secret access, disguise, and protected-app controls from one place.
+          Keep security, secret access, disguise, and recovery controls in one clean private space.
         </Text>
 
         <GroupCard

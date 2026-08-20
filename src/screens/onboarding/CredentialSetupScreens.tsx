@@ -41,7 +41,7 @@ function CredentialSetupBase(props: {
   nextRoute: OnboardingResumeRoute;
 }) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const palette = figmaPalette.light;
+  const palette = figmaPalette.dark;
   const [value, setValue] = React.useState('');
   const [confirmValue, setConfirmValue] = React.useState('');
   const [saving, setSaving] = React.useState(false);
@@ -87,7 +87,7 @@ function CredentialSetupBase(props: {
   }, [confirmValue, navigation, props.nextRoute, value]);
 
   return (
-    <FigmaPage variant="light">
+    <FigmaPage variant="dark">
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.topRow}>
           <Text style={[styles.time, {color: palette.textSecondary}]}>9:41</Text>
@@ -160,7 +160,7 @@ function CredentialSetupBase(props: {
 
         <View style={styles.spacer} />
 
-        <FigmaActionButton variant="light" label={saving ? 'Saving...' : 'Save and continue'} onPress={() => void saveCredential()} />
+        <FigmaActionButton variant="dark" label={saving ? 'Saving...' : 'Save and continue'} onPress={() => void saveCredential()} />
       </ScrollView>
     </FigmaPage>
   );
@@ -313,7 +313,7 @@ export function PatternSetupScreen() {
 
 export function BiometricSetupScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const palette = figmaPalette.light;
+  const palette = figmaPalette.dark;
   const [available, setAvailable] = React.useState<boolean | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -352,7 +352,7 @@ export function BiometricSetupScreen() {
   }, [available, navigation]);
 
   return (
-    <FigmaPage variant="light">
+    <FigmaPage variant="dark">
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.topRow}>
           <Text style={[styles.time, {color: palette.textSecondary}]}>9:41</Text>
@@ -404,7 +404,7 @@ export function BiometricSetupScreen() {
 
         <View style={styles.spacer} />
 
-        <FigmaActionButton variant="light" label={saving ? 'Checking...' : available === false ? 'Continue without biometric' : 'Enable biometric'} onPress={() => void continueNext()} />
+        <FigmaActionButton variant="dark" label={saving ? 'Checking...' : available === false ? 'Continue without biometric' : 'Enable biometric'} onPress={() => void continueNext()} />
       </ScrollView>
     </FigmaPage>
   );
@@ -412,14 +412,14 @@ export function BiometricSetupScreen() {
 
 export function ProtectionSavedScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const palette = figmaPalette.light;
+  const palette = figmaPalette.dark;
 
   React.useEffect(() => {
     void localDataRepository.setOnboardingResumeRoute('ProtectionSaved');
   }, []);
 
   return (
-    <FigmaPage variant="light">
+    <FigmaPage variant="dark">
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.topRow}>
           <Text style={[styles.time, {color: palette.textSecondary}]}>9:41</Text>
@@ -447,7 +447,7 @@ export function ProtectionSavedScreen() {
         <View style={styles.spacer} />
 
         <FigmaActionButton
-          variant="light"
+          variant="dark"
           label="Continue to app selection"
           onPress={() => {
             void localDataRepository.setOnboardingResumeRoute('AddApps');

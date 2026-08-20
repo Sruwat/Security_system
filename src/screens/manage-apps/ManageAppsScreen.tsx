@@ -122,7 +122,7 @@ export function ManageAppsScreen() {
   return (
     <FigmaInnerLayout variant="dark" title="Manage Apps" onBackPress={() => navigation.goBack()}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Turn Hide and Lock on or off for each protected app.</Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Review every protected app in one place and keep the same Hide, Lock, or Lock + Hide flow consistent.</Text>
 
         <FigmaBanner screen="manage-apps" variant="dark" title="Banner ad" tone="surfaceElevated" />
 
@@ -131,12 +131,12 @@ export function ManageAppsScreen() {
             <Text style={[styles.emptyText, {color: palette.textSecondary}]}>Loading managed apps...</Text>
           </View>
         ) : apps.length === 0 ? (
-          <View style={[styles.emptyCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-            <Text style={[styles.emptyText, {color: palette.textSecondary}]}>Nothing to manage yet</Text>
-            <Pressable onPress={() => navigation.navigate('AddApps')} style={[styles.emptyButton, {backgroundColor: palette.accentSoft}]}>
-              <Text style={[styles.emptyButtonText, {color: palette.accent}]}>Add apps</Text>
-            </Pressable>
-          </View>
+            <View style={[styles.emptyCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+              <Text style={[styles.emptyText, {color: palette.textSecondary}]}>Nothing to manage yet</Text>
+              <Pressable onPress={() => navigation.navigate('AddApps')} style={[styles.emptyButton, {backgroundColor: palette.accentSoft}]}>
+              <Text style={[styles.emptyButtonText, {color: palette.accent}]}>Start protection</Text>
+              </Pressable>
+            </View>
         ) : (
           <View style={styles.list}>
             {apps.map(app => (
@@ -200,7 +200,7 @@ export function ManageAppsScreen() {
             ))}
 
             <Pressable onPress={() => navigation.navigate('AddApps')} style={[styles.addMoreRow, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-              <Text style={[styles.addMoreText, {color: palette.textPrimary}]}>+ Add more apps</Text>
+              <Text style={[styles.addMoreText, {color: palette.textPrimary}]}>+ Protect more apps</Text>
             </Pressable>
           </View>
         )}

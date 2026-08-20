@@ -1,8 +1,8 @@
 import React from 'react';
-import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {StyleSheet, Text, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {FigmaPage, figmaPalette} from '../../components/FigmaKit';
+import {BlueFlowPage, BlueHero, BluePanel, BluePrimaryButton, blueFlowPalette} from '../../components/BlueFlow';
 import type {RootStackParamList} from '../../navigation/routes';
 import {localDataRepository} from '../../storage/LocalDataRepository';
 
@@ -16,141 +16,68 @@ function FeatureChip(props: {label: string; accent: string}) {
 
 export function WelcomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const palette = figmaPalette.dark;
 
   return (
-    <FigmaPage variant="dark" style={styles.page}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.heroWrap}>
-          <View style={styles.heroOrb}>
-            <View style={styles.heroRingOuter} />
-            <View style={styles.heroRingMid} />
-            <View style={styles.heroCenter}>
-              <Text style={styles.heroIcon}>􀎡</Text>
-            </View>
-          </View>
-
-          <Text style={[styles.brand, {color: palette.accent}]}>VaultX</Text>
-          <Text style={[styles.tagline, {color: '#D6BBFB'}]}>HIDE. LOCK. DISAPPEAR.</Text>
-          <Text style={[styles.copy, {color: '#98A2B3'}]}>
-            Military-grade privacy for your apps.{'\n'}No traces. Zero compromise.
-          </Text>
-
-          <View style={styles.featureWrap}>
-            <FeatureChip label="App Hide" accent="#60A5FA" />
-            <FeatureChip label="Smart Hide" accent="#F9A8D4" />
-            <FeatureChip label="App Lock" accent="#FBBF24" />
-            <FeatureChip label="Lock+Hide" accent="#FB923C" />
-          </View>
+    <BlueFlowPage contentContainerStyle={styles.scrollContent}>
+      <View style={styles.heroWrap}>
+        <BlueHero icon="🔐" title="VaultX" subtitle="Hide apps, lock apps, and manage everything from one clean private launcher." />
+        <Text style={styles.tagline}>PRIVATE. SECURE. SIMPLE.</Text>
+        <View style={styles.featureWrap}>
+          <FeatureChip label="Hide Apps" accent="#7CC2FF" />
+          <FeatureChip label="Smart Hide" accent="#93C5FD" />
+          <FeatureChip label="App Lock" accent="#B7CCFF" />
+          <FeatureChip label="Lock + Hide" accent="#60A5FA" />
         </View>
+      </View>
 
-        <Pressable
-          onPress={() => {
-            void localDataRepository.setOnboardingResumeRoute('LauncherSetup');
-            navigation.navigate('LauncherSetup');
-          }}
-          style={({pressed}) => [
-            styles.primaryButton,
-            {
-              opacity: pressed ? 0.95 : 1,
-            },
-          ]}>
-          <Text style={styles.primaryButtonText}>Let&apos;s Go</Text>
-          <Text style={styles.primaryButtonArrow}>→</Text>
-        </Pressable>
+      <BluePanel tone="soft" style={styles.notePanel}>
+        <Text style={styles.noteTitle}>Built for a simple private flow</Text>
+        <Text style={styles.noteCopy}>
+          Welcome → Permissions → Security Setup → Secret Trigger → Dashboard
+        </Text>
+      </BluePanel>
 
-        <Text style={[styles.footerText, {color: '#98A2B3'}]}>By continuing you agree to our Privacy Policy</Text>
-      </ScrollView>
-    </FigmaPage>
+      <BluePrimaryButton
+        label="Let's Go"
+        onPress={() => {
+          void localDataRepository.setOnboardingResumeRoute('LauncherSetup');
+          navigation.navigate('LauncherSetup');
+        }}
+      />
+
+      <Text style={styles.footerText}>By continuing you agree to our Privacy Policy</Text>
+    </BlueFlowPage>
   );
 }
 
 const styles = StyleSheet.create({
-  page: {
-    backgroundColor: '#090617',
-  },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'space-between',
-    paddingTop: 42,
-    paddingBottom: 28,
   },
   heroWrap: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 38,
-  },
-  heroOrb: {
-    width: 178,
-    height: 178,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroRingOuter: {
-    position: 'absolute',
-    width: 132,
-    height: 132,
-    borderRadius: 66,
-    borderWidth: 1,
-    borderColor: '#312E81',
-  },
-  heroRingMid: {
-    position: 'absolute',
-    width: 106,
-    height: 106,
-    borderRadius: 53,
-    borderWidth: 1,
-    borderColor: '#4338CA',
-  },
-  heroCenter: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    backgroundColor: '#1C1634',
-    borderWidth: 1,
-    borderColor: '#6D5BD0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#8B5CF6',
-    shadowOpacity: 0.25,
-    shadowRadius: 24,
-    shadowOffset: {width: 0, height: 12},
-  },
-  heroIcon: {
-    fontSize: 26,
-    color: '#A78BFA',
-    fontWeight: '700',
-  },
-  brand: {
-    marginTop: 16,
-    fontSize: 42,
-    fontWeight: '900',
-    lineHeight: 50,
-    letterSpacing: -1,
+    paddingTop: 26,
   },
   tagline: {
-    marginTop: 10,
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: 2.4,
-  },
-  copy: {
-    marginTop: 18,
+    marginTop: 2,
+    color: '#9FB4D2',
     fontSize: 14,
-    lineHeight: 22,
-    textAlign: 'center',
+    fontWeight: '800',
+    letterSpacing: 2.2,
   },
   featureWrap: {
-    marginTop: 24,
+    marginTop: 22,
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: 10,
   },
   featureChip: {
-    minHeight: 38,
-    borderRadius: 19,
+    minHeight: 40,
+    borderRadius: 20,
     borderWidth: 1,
     paddingHorizontal: 14,
     alignItems: 'center',
@@ -161,34 +88,22 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 15,
   },
-  primaryButton: {
-    minHeight: 56,
-    borderRadius: 28,
-    marginTop: 34,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#7C3AED',
-    shadowColor: '#A855F7',
-    shadowOpacity: 0.32,
-    shadowRadius: 24,
-    shadowOffset: {width: 0, height: 10},
+  notePanel: {
+    gap: 8,
   },
-  primaryButtonText: {
-    color: '#FFFFFF',
+  noteTitle: {
+    color: blueFlowPalette.textPrimary,
     fontSize: 16,
     fontWeight: '800',
     lineHeight: 20,
   },
-  primaryButtonArrow: {
-    marginLeft: 10,
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '800',
-    lineHeight: 22,
+  noteCopy: {
+    color: blueFlowPalette.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
   },
   footerText: {
-    marginTop: 14,
+    color: blueFlowPalette.textMuted,
     textAlign: 'center',
     fontSize: 12,
     lineHeight: 16,

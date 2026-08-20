@@ -272,29 +272,29 @@ export function AuthGateScreen() {
 
         <Text style={[styles.title, compactLayout && styles.titleCompact, {color: palette.textPrimary}]}>Unlock access</Text>
         <Text style={[styles.subtitle, compactLayout && styles.subtitleCompact, {color: palette.textSecondary}]}>
-          {pendingLaunchPackageName ? `Continue to ${pendingLabel}` : 'Authenticate to continue.'}
+          {pendingLaunchPackageName ? `Authenticate, then continue to ${pendingLabel}.` : 'Authenticate to continue.'}
         </Text>
 
         {sessionExpired ? (
           <View style={[styles.contextCard, compactLayout && styles.contextCardCompact, {backgroundColor: palette.surface, borderColor: palette.border}]}>
             <View style={styles.contextBody}>
               <Text style={[styles.contextLabel, {color: palette.textPrimary}]}>Session expired</Text>
-              <Text style={[styles.contextHint, {color: palette.textSecondary}]}>The previous temporary access is no longer valid. Authenticate again.</Text>
-            </View>
-          </View>
-        ) : null}
-
-        <View style={[styles.contextCard, compactLayout && styles.contextCardCompact, {backgroundColor: palette.surface, borderColor: palette.border}]}>
-          <View style={[styles.contextIcon, compactLayout && styles.contextIconCompact, {backgroundColor: palette.accentSoft}]}>
-            <Text style={[styles.contextIconText, {color: palette.accent}]}>AP</Text>
-          </View>
-          <View style={styles.contextBody}>
-            <Text style={[styles.contextLabel, {color: palette.textPrimary}]}>
-              {pendingLabel}
-            </Text>
-            <Text style={[styles.contextHint, {color: palette.textSecondary}]}>Biometric or PIN required</Text>
+            <Text style={[styles.contextHint, {color: palette.textSecondary}]}>The previous temporary access is no longer valid. Authenticate again.</Text>
           </View>
         </View>
+      ) : null}
+
+      <View style={[styles.contextCard, compactLayout && styles.contextCardCompact, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+        <View style={[styles.contextIcon, compactLayout && styles.contextIconCompact, {backgroundColor: palette.accentSoft}]}>
+            <Text style={[styles.contextIconText, {color: palette.accent}]}>GO</Text>
+        </View>
+        <View style={styles.contextBody}>
+          <Text style={[styles.contextLabel, {color: palette.textPrimary}]}>
+            {pendingLabel}
+          </Text>
+            <Text style={[styles.contextHint, {color: palette.textSecondary}]}>Auth screen follows the same private flow before the target app opens.</Text>
+        </View>
+      </View>
 
         <View style={[styles.centerArea, compactLayout && styles.centerAreaCompact]}>
           <UnlockGlyph />
@@ -532,14 +532,14 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 16,
     borderWidth: 4,
     borderBottomWidth: 0,
-    borderColor: '#A78BFA',
+    borderColor: '#4F8CFF',
     marginBottom: -1,
   },
   unlockBody: {
     width: 56,
     height: 52,
     borderRadius: 18,
-    backgroundColor: '#A78BFA',
+    backgroundColor: '#4F8CFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -649,7 +649,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#111827',
+    backgroundColor: '#0F1A2D',
     fontSize: 14,
     lineHeight: 18,
   },

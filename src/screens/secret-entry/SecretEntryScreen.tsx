@@ -45,7 +45,7 @@ function OptionCard(props: {
         styles.optionCard,
         {
           backgroundColor: props.palette.surface,
-          borderColor: props.selected ? '#22C55E' : props.palette.border,
+          borderColor: props.selected ? '#4F8CFF' : props.palette.border,
           opacity: pressed ? 0.94 : 1,
         },
       ]}>
@@ -53,7 +53,7 @@ function OptionCard(props: {
         <Text style={[styles.optionTitle, {color: props.palette.textPrimary}]}>{props.title}</Text>
         <Text style={[styles.optionSubtitle, {color: props.palette.textSecondary}]}>{props.subtitle}</Text>
       </View>
-      <View style={[styles.radioOuter, {borderColor: props.selected ? '#22C55E' : '#475467'}]}>
+      <View style={[styles.radioOuter, {borderColor: props.selected ? '#4F8CFF' : '#475467'}]}>
         {props.selected ? <View style={styles.radioInner} /> : null}
       </View>
       </Pressable>
@@ -153,7 +153,7 @@ export function SecretEntryScreen() {
 
         <View style={styles.hero}>
           <View style={styles.heroIconShell}>
-            <Text style={styles.heroIcon}>👻</Text>
+          <Text style={styles.heroIcon}>👻</Text>
           </View>
           <Text style={styles.heroTitleMain}>Smart Hide</Text>
           <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
@@ -168,7 +168,7 @@ export function SecretEntryScreen() {
         </Text>
 
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, {color: '#86EFAC'}]}>Trigger options</Text>
+          <Text style={[styles.sectionTitle, {color: '#93C5FD'}]}>Trigger options</Text>
           <View style={styles.cards}>
             {secretAccessOptions.map(option => (
               <OptionCard
@@ -333,7 +333,7 @@ export function SecretEntryScreen() {
 
 const styles = StyleSheet.create({
   page: {
-    backgroundColor: '#04150D',
+    backgroundColor: '#08111F',
   },
   scrollContent: {
     paddingBottom: 24,
@@ -348,8 +348,8 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: '#174B33',
-    backgroundColor: '#0B2218',
+    borderColor: '#223A63',
+    backgroundColor: '#111D33',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -362,16 +362,16 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 4,
     borderRadius: 999,
-    backgroundColor: '#173828',
+    backgroundColor: '#223A63',
     overflow: 'hidden',
   },
   progressFill: {
     width: '48%',
     height: '100%',
-    backgroundColor: '#22C55E',
+    backgroundColor: '#4F8CFF',
   },
   progressLabel: {
-    color: '#A7F3D0',
+    color: '#9FB4D2',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -385,8 +385,8 @@ const styles = StyleSheet.create({
     height: 110,
     borderRadius: 55,
     borderWidth: 1,
-    borderColor: '#166534',
-    backgroundColor: '#072315',
+    borderColor: '#3B82F6',
+    backgroundColor: '#10203B',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
   },
   heroTitleMain: {
     marginTop: 22,
-    color: '#86EFAC',
+    color: '#F8FBFF',
     fontSize: 28,
     fontWeight: '900',
     lineHeight: 34,
@@ -452,7 +452,7 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#22C55E',
+    backgroundColor: '#4F8CFF',
   },
   field: {
     marginTop: 12,

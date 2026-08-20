@@ -330,13 +330,13 @@ export function PrivateHomeScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={[styles.pageTitle, {color: palette.textPrimary}]}>Select a Feature</Text>
         <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
-          Choose how you want to protect your apps and privacy.
+          Move through one clean private flow: choose a mode, protect apps, then manage everything from this dashboard.
         </Text>
 
         <View style={styles.quickActions}>
           <QuickAction
             title="Hide Apps"
-            subtitle="Disguise & conceal apps with a fake icon"
+            subtitle="Pick apps that should disappear from your managed launcher and stay inside Vault."
             eyebrow="Inside App Hide"
             onPress={() => navigation.navigate('AddApps', {preset: 'HIDE'})}
             palette={palette}
@@ -345,7 +345,7 @@ export function PrivateHomeScreen() {
           />
           <QuickAction
             title="Smart Hide"
-            subtitle="Gesture-triggered instant disappear"
+            subtitle="Choose the secret trigger that opens your hidden space."
             eyebrow={settings?.secretAccessType ? settings.secretAccessType.replace(/_/g, ' / ') : 'Triple Tap / Shake'}
             onPress={() => navigation.navigate('SecretEntry')}
             palette={palette}
@@ -354,7 +354,7 @@ export function PrivateHomeScreen() {
           />
           <QuickAction
             title="App Lock"
-            subtitle="Lock apps with PIN, password or pattern"
+            subtitle="Keep apps visible but require authentication before they open."
             eyebrow="PIN / Pattern / Pass"
             onPress={() => navigation.navigate('AddApps', {preset: 'LOCK'})}
             palette={palette}
@@ -363,7 +363,7 @@ export function PrivateHomeScreen() {
           />
           <QuickAction
             title="Hide + Lock"
-            subtitle="Ultimate protection — lock and hide combined"
+            subtitle="Hide apps from the launcher and require authentication before access."
             eyebrow="Step 1→2 Combined"
             onPress={() => navigation.navigate('AddApps', {preset: 'LOCK_HIDE'})}
             palette={palette}
@@ -565,7 +565,7 @@ export function PrivateHomeScreen() {
           <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Current user flow</Text>
           <Text style={[styles.flowLine, {color: palette.textSecondary}]}>Hide only: Secret Trigger {'>'} Hidden Apps</Text>
           <Text style={[styles.flowLine, {color: palette.textSecondary}]}>Lock only: Open App {'>'} Lock Screen {'>'} App</Text>
-          <Text style={[styles.flowLine, {color: palette.textSecondary}]}>Hide + Lock: Secret Trigger {'>'} Lock Screen {'>'} Hidden Apps</Text>
+          <Text style={[styles.flowLine, {color: palette.textSecondary}]}>Hide + Lock: Secret Trigger {'>'} Lock Screen {'>'} Hidden Apps {'>'} App</Text>
         </View>
       </ScrollView>
     </FigmaRootLayout>

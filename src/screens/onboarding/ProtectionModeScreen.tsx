@@ -107,7 +107,7 @@ export function ProtectionModeScreen() {
           <View style={styles.progressTrack}>
             <View style={[styles.progressFill, draft.isHidden && draft.isLocked ? styles.progressFillCombined : draft.isHidden ? styles.progressFillHide : styles.progressFillLock]} />
           </View>
-          <Text style={styles.progressLabel}>{route.params.onboarding ? 'Step 4 of 5' : 'Edit Flow'}</Text>
+          <Text style={styles.progressLabel}>{route.params.onboarding ? 'Step 2 of 3' : 'Protection Setup'}</Text>
         </View>
 
         <View style={styles.hero}>
@@ -119,10 +119,10 @@ export function ProtectionModeScreen() {
           </Text>
           <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
             {draft.isHidden && draft.isLocked
-              ? 'Enable both layers of protection for the selected apps.'
+              ? 'Step 2: confirm both protection layers for the selected apps.'
               : draft.isHidden
-                ? 'Choose whether this app should stay hidden in your private launcher.'
-                : 'Choose how this app should stay locked before opening.'}
+                ? 'Step 2: confirm that these apps stay hidden inside your private launcher.'
+                : 'Step 2: confirm how these apps stay locked before opening.'}
           </Text>
         </View>
 
@@ -162,11 +162,11 @@ export function ProtectionModeScreen() {
         <View style={[styles.notice, {backgroundColor: palette.accentSoft, borderColor: palette.border}]}>
           <Text style={[styles.noticeText, {color: palette.accent}]}>
             {draft.isHidden && draft.isLocked
-              ? 'Hide + Lock: Secret Trigger opens the lock screen first, then Hidden Apps.'
+              ? 'Lock + Hide flow: Secret Trigger → Auth → Hidden Apps → App.'
               : draft.isHidden
-                ? 'Hide only: Secret Trigger opens Hidden Apps directly.'
+                ? 'Hide flow: Secret Trigger → Hidden Apps.'
                 : draft.isLocked
-                  ? 'Lock only: the app stays visible and opens through the lock screen.'
+                  ? 'Lock flow: Open App → Auth → App.'
                   : 'This app is currently visible and unlocked.'}
           </Text>
         </View>
@@ -219,7 +219,7 @@ export function ProtectionModeScreen() {
               : protectionModeFromFlags(draft) === 'LOCK'
                 ? 'Open App → Lock Screen → App'
                 : protectionModeFromFlags(draft) === 'LOCK_HIDE'
-                  ? 'Secret Trigger → Lock Screen → Hidden Apps'
+                  ? 'Secret Trigger → Lock Screen → Hidden Apps → App'
                   : 'Open App normally'}
           </Text>
         </View>
