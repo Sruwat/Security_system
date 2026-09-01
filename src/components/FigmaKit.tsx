@@ -17,14 +17,14 @@ export const figmaPalette = {
     border: '#C6D8F7',
   },
   dark: {
-    background: '#08111F',
-    surface: '#111D33',
-    surfaceElevated: '#152540',
-    textPrimary: '#F8FBFF',
-    textSecondary: '#9FB4D2',
-    accent: '#4F8CFF',
-    accentSoft: '#13294A',
-    border: '#223A63',
+    background: '#0A0F1D',
+    surface: '#11192E',
+    surfaceElevated: '#16213A',
+    textPrimary: '#FFFFFF',
+    textSecondary: '#CBD5E1',
+    accent: '#818CF8',
+    accentSoft: '#24234A',
+    border: 'rgba(255,255,255,0.12)',
   },
 } as const;
 
@@ -300,8 +300,8 @@ export function FigmaBottomNav(props: {
   return (
     <View style={[styles.bottomNav, {backgroundColor: palette.surface, borderColor: palette.border}]}>
       <View style={[styles.navPill, {backgroundColor: palette.accentSoft, left: pillOffsets[props.active]}]} />
-      <NavButton label="Apps" active={props.active === 'launcher'} onPress={props.onLauncherPress} />
-      <NavButton label="Board" active={props.active === 'dashboard'} onPress={props.onDashboardPress} />
+      <NavButton label="Home" active={props.active === 'launcher'} onPress={props.onLauncherPress} />
+      <NavButton label="Vault" active={props.active === 'dashboard'} onPress={props.onDashboardPress} />
       <NavButton label="Access" active={props.active === 'access'} onPress={props.onAccessPress} />
       <NavButton label="Settings" active={props.active === 'settings'} onPress={props.onSettingsPress} />
     </View>

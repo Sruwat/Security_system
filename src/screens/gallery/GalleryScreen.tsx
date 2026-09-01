@@ -110,11 +110,17 @@ export function GalleryScreen() {
       },
       {
         key: 'gallery',
-        title: 'Gallery Trigger',
-        subtitle: settingsType === 'gallery' ? 'Gallery access is configured' : 'Visual shortcut for private access',
+        title: 'Gallery',
+        subtitle: settingsType === 'gallery' ? 'Open Hidden Apps with your saved trigger' : 'Set Gallery as your secret access method',
         glyph: '▣',
         accent: '#F59E0B',
-        onPress: () => Alert.alert('Access screen', 'Yahi aapka secret access hub hai. Yahan se calculator, clock, calendar aur Hidden Apps khulenge.'),
+        onPress: () => {
+          if (settingsType === 'gallery') {
+            void openHiddenApps();
+            return;
+          }
+          navigation.navigate('SecretEntry', {flow: 'SMART_HIDE'});
+        },
       },
       {
         key: 'hidden',
@@ -151,8 +157,8 @@ export function GalleryScreen() {
         <FigmaBottomNav
           variant="dark"
           active="access"
-          onLauncherPress={() => navigation.navigate('PrivateHome')}
-          onDashboardPress={() => navigation.navigate('ManageApps')}
+          onLauncherPress={() => navigation.navigate('FeatureHub')}
+          onDashboardPress={() => navigation.navigate('Vault')}
           onAccessPress={() => navigation.navigate('Gallery')}
           onSettingsPress={() => navigation.navigate('Settings')}
         />

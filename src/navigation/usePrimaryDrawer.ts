@@ -21,6 +21,11 @@ export function usePrimaryDrawer() {
         onPress: () => navigation.navigate('PrivateHome'),
       },
       {
+        label: 'Features',
+        description: 'Hide, lock, and smart access',
+        onPress: () => navigation.navigate('FeatureHub'),
+      },
+      {
         label: 'Hide Apps',
         description: 'Private apps',
         onPress: () => navigation.navigate('AddApps', {preset: 'HIDE', flow: 'APP_HIDE'}),

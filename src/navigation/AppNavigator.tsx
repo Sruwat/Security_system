@@ -25,6 +25,7 @@ import {AdManagerRulesScreen, AppearanceSettingsScreen, AutoLockSettingsScreen, 
 import {SettingsScreen} from '../screens/settings/SettingsScreen';
 import {VaultScreen} from '../screens/vault/VaultScreen';
 import {WelcomeScreen} from '../screens/onboarding/WelcomeScreen';
+import {FeatureHubScreen} from '../screens/feature-hub/FeatureHubScreen';
 import type {RootStackParamList} from './routes';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -33,6 +34,7 @@ export function AppNavigator(props: {initialRouteName: keyof RootStackParamList}
   return (
     <Stack.Navigator initialRouteName={props.initialRouteName} screenOptions={{headerShown: false}}>
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
+      <Stack.Screen name="FeatureHub" component={FeatureHubScreen} />
       <Stack.Screen name="LauncherSetup" component={LauncherSetupScreen} />
       <Stack.Screen name="PrimaryLock" component={PrimaryLockScreen} />
       <Stack.Screen name="PinSetup" component={PinSetupScreen} />

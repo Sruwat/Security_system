@@ -136,15 +136,15 @@ export function ManageAppsScreen() {
         <FigmaBottomNav
           variant="dark"
           active="dashboard"
-          onLauncherPress={() => navigation.navigate('PrivateHome')}
-          onDashboardPress={() => navigation.navigate('ManageApps')}
+          onLauncherPress={() => navigation.navigate('FeatureHub')}
+          onDashboardPress={() => navigation.navigate('Vault')}
           onAccessPress={() => navigation.navigate('Gallery')}
           onSettingsPress={() => navigation.navigate('Settings')}
         />
       }>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.heading, {color: palette.textPrimary}]}>Dashboard</Text>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Protected apps and controls.</Text>
+        <Text style={[styles.heading, {color: palette.textPrimary}]}>Protected Apps</Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Tap any app to update its privacy.</Text>
 
         <FigmaBanner screen="manage-apps" variant="dark" title="Banner ad" tone="surfaceElevated" />
 
@@ -184,18 +184,12 @@ export function ManageAppsScreen() {
                     <Text style={[styles.rowTitle, {color: palette.textPrimary}]} numberOfLines={2}>
                       {app.label}
                     </Text>
-                    <Text style={[styles.rowPackage, {color: palette.textSecondary}]} numberOfLines={1}>
-                      {app.packageName}
-                    </Text>
                     <View style={styles.modeRow}>
                       <View style={[styles.modePill, {backgroundColor: palette.accentSoft}]}>
                         <Text style={[styles.modeText, {color: palette.accent}]}>{describeProtection(normalizeProtection(app))}</Text>
                       </View>
                       <View style={[styles.modePill, {backgroundColor: palette.surfaceElevated}]}>
                         <Text style={[styles.modeText, {color: palette.textPrimary}]}>{describeMode(app.mode ?? protectionModeFromFlags(app))}</Text>
-                      </View>
-                      <View style={[styles.modePill, {backgroundColor: palette.surfaceElevated}]}>
-                        <Text style={[styles.modeText, {color: palette.textSecondary}]}>Tap to manage</Text>
                       </View>
                     </View>
                   </View>

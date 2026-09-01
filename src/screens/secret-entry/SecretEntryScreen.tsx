@@ -77,6 +77,7 @@ export function SecretEntryScreen() {
   const [loading, setLoading] = React.useState(true);
   const [onboardingComplete, setOnboardingComplete] = React.useState(false);
   const [featureFlow, setFeatureFlow] = React.useState<FeatureFlow | undefined>(undefined);
+  const [stage, setStage] = React.useState<'hide_choice' | 'disguise' | 'trigger'>('trigger');
 
   React.useEffect(() => {
     void localDataRepository.getSettings().then(async settings => {
@@ -90,10 +91,22 @@ export function SecretEntryScreen() {
       setClockSecretValue(settings.clockSecretValue ?? '5');
       setCalendarSecretDate(settings.calendarSecretDate ?? '18');
       setGallerySecretConfig(settings.gallerySecretConfig ?? 'cover_tile');
+      setStage(activeFlow === 'APP_HIDE' ? 'hide_choice' : 'trigger');
       await localDataRepository.saveSettings({...settings, onboardingResumeRoute: 'SecretEntry', onboardingFeatureFlow: activeFlow});
       setLoading(false);
     });
   }, [route.params?.flow]);
+
+  const useOriginalAppearance = React.useCallback(() => {
+    setDisguiseType('default');
+    setStage('trigger');
+  }, []);
+
+  const selectDisguise = React.useCallback((value: DisguiseType) => {
+    setDisguiseType(value);
+    setStatusMessage(null);
+    setStage('trigger');
+  }, []);
 
   const saveAndFinish = React.useCallback(async () => {
     const normalizedCode = calculatorCode.trim();
@@ -197,46 +210,71 @@ export function SecretEntryScreen() {
           <Text style={styles.progressLabel}>{onboardingComplete ? 'Smart Hide' : featureFlow === 'LOCK_HIDE' ? 'Step 1 of 4' : featureFlow === 'APP_HIDE' ? 'Step 2 of 4' : 'Step 1 of 3'}</Text>
         </View>
 
-        <View style={styles.hero}>
-          <View style={styles.heroIconShell}>
-          <Text style={styles.heroIcon}>👻</Text>
-          </View>
-          <Text style={styles.heroTitleMain}>{featureFlow === 'APP_HIDE' ? 'App Hide' : 'Smart Hide'}</Text>
-          <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
-            {onboardingComplete
-              ? 'Update your secret trigger and disguise style.'
-              : featureFlow === 'APP_HIDE'
-                ? 'Choose hidden access and disguise before app selection'
-                : 'Choose your trigger gesture'}
-          </Text>
-        </View>
+        {stage === 'hide_choice' ? (
+          <>
+            <View style={styles.hero}>
+              <View style={styles.heroIconShell}><Text style={styles.heroIcon}>🙈</Text></View>
+              <Text style={styles.heroTitleMain}>App Hide</Text>
+              <Text style={[styles.heroLead, {color: palette.textSecondary}]}>Change the VaultX icon to disguise it?</Text>
+            </View>
+            <View style={styles.cards}>
+              <Pressable onPress={() => setStage('disguise')} style={[styles.choiceCard, styles.choiceCardActive]}>
+                <Text style={styles.choiceGlyph}>✨</Text>
+                <View style={styles.optionBody}>
+                  <Text style={styles.optionTitle}>Yes, Disguise It</Text>
+                  <Text style={styles.optionSubtitle}>Pick a fake Calculator, Clock, or Gallery icon</Text>
+                </View>
+                <Text style={styles.choiceArrow}>›</Text>
+              </Pressable>
+              <Pressable onPress={useOriginalAppearance} style={styles.choiceCard}>
+                <Text style={styles.choiceGlyph}>⚡</Text>
+                <View style={styles.optionBody}>
+                  <Text style={styles.optionTitle}>No, Keep Original</Text>
+                  <Text style={styles.optionSubtitle}>Use the VaultX icon and continue</Text>
+                </View>
+                <Text style={styles.choiceArrow}>›</Text>
+              </Pressable>
+            </View>
+          </>
+        ) : null}
 
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>
-          {onboardingComplete
-            ? 'Secret access remains local and opens Hidden Apps using your saved protection rules.'
-            : 'Pick how Hidden Apps should open, then optionally configure a disguise style.'}
-        </Text>
+        {stage === 'disguise' ? (
+          <>
+            <View style={styles.hero}>
+              <View style={styles.heroIconShell}><Text style={styles.heroIcon}>🎭</Text></View>
+              <Text style={styles.heroTitleMain}>Select Disguise</Text>
+              <Text style={[styles.heroLead, {color: palette.textSecondary}]}>Choose a fake icon for VaultX</Text>
+            </View>
+            <View style={styles.disguiseGrid}>
+              {disguiseOptions.map(option => {
+                const icon = option.value === 'calculator' ? '🧮' : option.value === 'clock' ? '🕘' : option.value === 'calendar' ? '🗓️' : option.value === 'gallery' ? '🖼️' : '✨';
+                return (
+                  <Pressable key={option.value} onPress={() => selectDisguise(option.value)} style={[styles.disguiseTile, {borderColor: disguiseType === option.value ? '#4F8CFF' : palette.border, backgroundColor: palette.surface}]}>
+                    <Text style={styles.disguiseTileIcon}>{icon}</Text>
+                    <Text style={[styles.disguiseTileText, {color: palette.textPrimary}]}>{option.title}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </>
+        ) : null}
 
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, {color: '#93C5FD'}]}>Trigger options</Text>
-          <View style={styles.cards}>
-            {secretAccessOptions.map(option => (
-              <OptionCard
-                key={option.value}
-                title={option.title}
-                subtitle={option.subtitle}
-                selected={secretAccessType === option.value}
-                onPress={() => {
-                  setSecretAccessType(option.value);
-                  setError(null);
-                }}
-                palette={palette}
-              />
-            ))}
-          </View>
-        </View>
+        {stage === 'trigger' ? (
+          <>
+            <View style={styles.hero}>
+              <View style={[styles.heroIconShell, featureFlow === 'SMART_HIDE' ? styles.greenHero : undefined]}><Text style={styles.heroIcon}>{featureFlow === 'SMART_HIDE' ? '👻' : '🔐'}</Text></View>
+              <Text style={[styles.heroTitleMain, featureFlow === 'SMART_HIDE' ? styles.greenTitle : undefined]}>{featureFlow === 'SMART_HIDE' ? 'Smart Hide' : 'Secret Access'}</Text>
+              <Text style={[styles.heroLead, {color: palette.textSecondary}]}>Choose how you open Hidden Apps</Text>
+            </View>
+            <View style={styles.cards}>
+              {secretAccessOptions.map(option => (
+                <OptionCard key={option.value} title={option.title} subtitle={option.subtitle} selected={secretAccessType === option.value} onPress={() => { setSecretAccessType(option.value); setError(null); }} palette={palette} />
+              ))}
+            </View>
+          </>
+        ) : null}
 
-        {secretAccessType === 'calculator' ? (
+        {stage === 'trigger' && secretAccessType === 'calculator' ? (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Calculator secret</Text>
             <View style={[styles.field, {backgroundColor: palette.surface, borderColor: palette.border}]}>
@@ -268,7 +306,7 @@ export function SecretEntryScreen() {
           </View>
         ) : null}
 
-        {secretAccessType === 'clock' ? (
+        {stage === 'trigger' && secretAccessType === 'clock' ? (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Clock secret</Text>
             <View style={[styles.field, {backgroundColor: palette.surface, borderColor: palette.border}]}>
@@ -286,7 +324,7 @@ export function SecretEntryScreen() {
           </View>
         ) : null}
 
-        {secretAccessType === 'calendar' ? (
+        {stage === 'trigger' && secretAccessType === 'calendar' ? (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Calendar secret</Text>
             <View style={[styles.field, {backgroundColor: palette.surface, borderColor: palette.border}]}>
@@ -304,7 +342,7 @@ export function SecretEntryScreen() {
           </View>
         ) : null}
 
-        {secretAccessType === 'gallery' ? (
+        {stage === 'trigger' && secretAccessType === 'gallery' ? (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Gallery secret</Text>
             <View style={[styles.field, {backgroundColor: palette.surface, borderColor: palette.border}]}>
@@ -323,44 +361,6 @@ export function SecretEntryScreen() {
           </View>
         ) : null}
 
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, {color: '#93C5FD'}]}>Select Disguise</Text>
-          <Text style={[styles.disguiseSubtitle, {color: palette.textSecondary}]}>Choose a fake icon to replace your app</Text>
-          <View style={styles.disguiseGrid}>
-            {disguiseOptions.map(option => {
-              const selected = disguiseType === option.value;
-              const icon =
-                option.value === 'calculator'
-                  ? '🧮'
-                  : option.value === 'clock'
-                    ? '🕘'
-                    : option.value === 'calendar'
-                      ? '🗓️'
-                      : option.value === 'gallery'
-                        ? '🖼️'
-                        : '✨';
-              return (
-                <Pressable
-                  key={option.value}
-                  onPress={() => {
-                    setDisguiseType(option.value);
-                    setStatusMessage(`App disguise changed to ${option.title}`);
-                  }}
-                  style={[
-                    styles.disguiseTile,
-                    {
-                      borderColor: selected ? '#2563EB' : palette.border,
-                      backgroundColor: palette.surface,
-                    },
-                  ]}>
-                  <Text style={styles.disguiseTileIcon}>{icon}</Text>
-                  <Text style={[styles.disguiseTileText, {color: palette.textPrimary}]}>{option.title}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
         {statusMessage ? (
           <View style={[styles.statusCard, {backgroundColor: palette.accentSoft, borderColor: palette.border}]}>
             <Text style={[styles.statusText, {color: palette.accent}]}>{statusMessage}</Text>
@@ -375,7 +375,7 @@ export function SecretEntryScreen() {
 
         <View style={styles.spacer} />
 
-        <FigmaActionButton variant="dark" label={loading ? 'Loading...' : onboardingComplete ? 'Save Smart Hide' : 'Continue to Confirm'} onPress={() => void saveAndFinish()} />
+        {stage === 'trigger' ? <FigmaActionButton variant="dark" label={loading ? 'Loading...' : onboardingComplete ? 'Save Smart Hide' : 'Continue'} onPress={() => void saveAndFinish()} /> : null}
       </ScrollView>
     </FigmaPage>
   );
@@ -450,6 +450,19 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     lineHeight: 34,
   },
+  heroLead: {
+    marginTop: 8,
+    fontSize: 16,
+    lineHeight: 22,
+    textAlign: 'center',
+  },
+  greenHero: {
+    borderColor: '#34D399',
+    backgroundColor: '#0C2B22',
+  },
+  greenTitle: {
+    color: '#6EE7B7',
+  },
   subtitle: {
     marginTop: 6,
     fontSize: 14,
@@ -466,6 +479,31 @@ const styles = StyleSheet.create({
   cards: {
     marginTop: 12,
     gap: 12,
+  },
+  choiceCard: {
+    minHeight: 100,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#2B3150',
+    backgroundColor: '#111128',
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  choiceCardActive: {
+    borderColor: '#3B82F6',
+    backgroundColor: '#161B37',
+  },
+  choiceGlyph: {
+    fontSize: 28,
+  },
+  choiceArrow: {
+    color: '#818CF8',
+    fontSize: 32,
+    lineHeight: 32,
+    fontWeight: '300',
   },
   optionCard: {
     minHeight: 96,

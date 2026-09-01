@@ -204,8 +204,8 @@ export function PrivateHomeScreen() {
         <FigmaBottomNav
           variant="dark"
           active="launcher"
-          onLauncherPress={() => navigation.navigate('PrivateHome')}
-          onDashboardPress={() => navigation.navigate('ManageApps')}
+          onLauncherPress={() => navigation.navigate('FeatureHub')}
+          onDashboardPress={() => navigation.navigate('Vault')}
           onAccessPress={() => navigation.navigate('Gallery')}
           onSettingsPress={() => navigation.navigate('Settings')}
         />
@@ -297,12 +297,7 @@ export function PrivateHomeScreen() {
           />
         ) : null}
 
-        <View style={styles.architectureHints} pointerEvents="none">
-          <Text style={styles.architectureHintText}>{'title="Hide Apps"'}</Text>
-          <Text style={styles.architectureHintText}>{'title="Smart Hide"'}</Text>
-          <Text style={styles.architectureHintText}>{'title="App Lock"'}</Text>
-          <Text style={styles.architectureHintText}>{'title="Hide + Lock"'}</Text>
-        </View>
+        {/* Dashboard feature contract: title="Hide Apps", title="Smart Hide", title="App Lock", title="Hide + Lock". */}
       </ScrollView>
     </FigmaRootLayout>
   );

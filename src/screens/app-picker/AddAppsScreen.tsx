@@ -124,10 +124,10 @@ export function AddAppsScreen() {
 
   const helperCopy =
     presetMode === 'HIDE'
-      ? 'Choose the apps you want to keep private in Hidden Apps.'
+      ? 'Choose apps to move into your private space.'
       : presetMode === 'LOCK'
-        ? 'Choose the apps that should stay visible but always open behind a lock.'
-        : 'Choose the apps that should be hidden from the launcher and locked before access.';
+        ? 'Choose apps that should open behind your lock.'
+        : 'Choose apps to hide and protect together.';
 
   const renderHeader = React.useCallback(
     () => (
@@ -192,15 +192,6 @@ export function AddAppsScreen() {
           </View>
         ) : null}
 
-          <View style={[styles.helpCard, {backgroundColor: palette.accentSoft, borderColor: palette.border}]}>
-            <Text style={[styles.helpTitle, {color: palette.accent}]}>
-            {presetMode === 'HIDE' ? 'Next: choose hidden access' : presetMode === 'LOCK' ? 'Next: confirm your lock setup' : 'Next: confirm both protections'}
-            </Text>
-            <Text style={[styles.helpText, {color: palette.textSecondary}]}>
-            This screen only selects apps. The next screen finalizes how they should behave.
-            </Text>
-          </View>
-
         <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Installed apps</Text>
       </View>
     ),
@@ -247,9 +238,7 @@ export function AddAppsScreen() {
             <Text style={[styles.appName, {color: palette.textPrimary}]} numberOfLines={1}>
               {item.label}
             </Text>
-            <Text style={[styles.appMeta, {color: palette.textSecondary}]} numberOfLines={1}>
-              {item.systemApp ? 'System app' : 'Installed app'} {'|'} {item.packageName}
-            </Text>
+            <Text style={[styles.appMeta, {color: palette.textSecondary}]} numberOfLines={1}>{item.systemApp ? 'System app' : 'Installed app'}</Text>
           </View>
           <View style={[styles.statusPill, {backgroundColor: isSelected ? palette.accent : palette.accentSoft}]}>
             <Text style={[styles.statusText, {color: isSelected ? '#FFFFFF' : palette.accent}]}>

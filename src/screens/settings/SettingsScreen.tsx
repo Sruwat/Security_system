@@ -91,8 +91,8 @@ export function SettingsScreen() {
         <FigmaBottomNav
           variant="dark"
           active="settings"
-          onLauncherPress={() => navigation.navigate('PrivateHome')}
-          onDashboardPress={() => navigation.navigate('ManageApps')}
+          onLauncherPress={() => navigation.navigate('FeatureHub')}
+          onDashboardPress={() => navigation.navigate('Vault')}
           onAccessPress={() => navigation.navigate('Gallery')}
           onSettingsPress={() => navigation.navigate('Settings')}
         />

@@ -2,7 +2,7 @@ import React from 'react';
 import {Alert, Image, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {FigmaActionButton, FigmaBanner, FigmaBottomNav, FigmaRootLayout, figmaPalette} from '../../components/FigmaKit';
+import {FigmaActionButton, FigmaBottomNav, FigmaRootLayout, figmaPalette} from '../../components/FigmaKit';
 import {useAppVariant} from '../../hooks/useAppVariant';
 import type {RootStackParamList} from '../../navigation/routes';
 import {usePrimaryDrawer} from '../../navigation/usePrimaryDrawer';
@@ -60,9 +60,12 @@ function VaultCard(props: {
           <Text style={[styles.appIconText, {color: props.palette.accent}]}>{iconLabel}</Text>
         </View>
       )}
-      <Text style={[styles.appLabel, {color: props.palette.textPrimary}]}>{props.label}</Text>
-      <View style={[styles.badgePill, {backgroundColor: props.palette.accentSoft}]}>
-        <Text style={[styles.badgeText, {color: props.palette.accent}]}>{modeLabel(props.app.mode)}</Text>
+      <View style={styles.appCopy}>
+        <Text style={[styles.appLabel, {color: props.palette.textPrimary}]}>{props.label}</Text>
+        <Text style={[styles.appMeta, {color: props.palette.textSecondary}]}>Private access configured</Text>
+      </View>
+      <View style={[styles.badgePill, {backgroundColor: props.app.isLocked ? '#3A1722' : props.palette.accentSoft}]}>
+        <Text style={[styles.badgeText, {color: props.app.isLocked ? '#FDA4AF' : props.palette.accent}]}>{modeLabel(props.app.mode)}</Text>
       </View>
     </Pressable>
   );
@@ -157,16 +160,14 @@ export function VaultScreen() {
         <FigmaBottomNav
           variant={variant}
           active="access"
-          onLauncherPress={() => navigation.navigate('PrivateHome')}
-          onDashboardPress={() => navigation.navigate('ManageApps')}
+          onLauncherPress={() => navigation.navigate('FeatureHub')}
+          onDashboardPress={() => navigation.navigate('Vault')}
           onAccessPress={() => navigation.navigate('Gallery')}
           onSettingsPress={() => navigation.navigate('Settings')}
         />
       }>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>This is your private space. Hidden apps stay here and follow the access rules you already chose.</Text>
-
-        <FigmaBanner screen="vault" variant={variant} title="Banner ad" tone="surface" />
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Your protected apps, ready when you are.</Text>
 
         {pendingPackageName ? (
           <View style={[styles.pendingCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
@@ -189,7 +190,12 @@ export function VaultScreen() {
           </View>
         ) : null}
 
-        <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Hidden Apps</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Protected Apps</Text>
+          <Pressable onPress={() => navigation.navigate('AddApps', {preset: 'HIDE', flow: 'APP_HIDE'})}>
+            <Text style={[styles.addText, {color: palette.accent}]}>+ Add</Text>
+          </Pressable>
+        </View>
 
         <View style={styles.grid}>
           {loading ? (
@@ -244,22 +250,12 @@ export function VaultScreen() {
             </>
           )}
 
-          <Pressable
-            onPress={() => navigation.navigate('AddApps', {preset: 'HIDE', flow: 'APP_HIDE'})}
-            style={({pressed}) => [
-              styles.addCard,
-              {backgroundColor: palette.accentSoft, borderColor: palette.accent, opacity: pressed ? 0.94 : 1},
-            ]}>
-            <Text style={[styles.addGlyph, {color: palette.accent}]}>+</Text>
-            <Text style={[styles.addLabel, {color: palette.accent}]}>Add Apps</Text>
-          </Pressable>
         </View>
 
         <Pressable onPress={() => navigation.navigate('ManageApps')} style={[styles.manageRow, {backgroundColor: palette.surface, borderColor: palette.border}]}>
           <Text style={[styles.manageText, {color: palette.textPrimary}]}>Manage Hidden and Locked Apps</Text>
         </Pressable>
 
-        <FigmaBanner screen="vault" variant={variant} placement="native" title="Native advertisement" subtitle="Placed after functional content" tone="surfaceElevated" />
       </ScrollView>
     </FigmaRootLayout>
   );
@@ -310,97 +306,77 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
   },
-  sectionTitle: {
-    marginTop: 42,
-    marginBottom: 24,
-    fontSize: 28,
-    fontWeight: '800',
-    lineHeight: 34,
-    letterSpacing: -0.4,
-  },
+  sectionHeader: {marginTop: 28, marginBottom: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
+  sectionTitle: {fontSize: 19, fontWeight: '800', lineHeight: 24, letterSpacing: -0.2},
+  addText: {fontSize: 12, lineHeight: 16, fontWeight: '800'},
   grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
+    gap: 10,
   },
   appCard: {
-    width: '47.5%',
-    minHeight: 232,
+    width: '100%',
+    minHeight: 84,
     borderWidth: 1,
-    borderRadius: 34,
-    paddingHorizontal: 26,
-    paddingVertical: 26,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   loadingCard: {
     justifyContent: 'center',
     alignItems: 'center',
   },
   appIcon: {
-    width: 88,
-    height: 88,
-    borderRadius: 24,
+    width: 52,
+    height: 52,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   appArtwork: {
-    width: 88,
-    height: 88,
-    borderRadius: 24,
+    width: 52,
+    height: 52,
+    borderRadius: 16,
   },
   appIconText: {
-    fontSize: 20,
+    fontSize: 14,
     fontWeight: '700',
     lineHeight: 24,
   },
   appLabel: {
-    marginTop: 28,
-    fontSize: 18,
-    fontWeight: '700',
-    lineHeight: 22,
+    fontSize: 14,
+    fontWeight: '800',
+    lineHeight: 18,
+  },
+  appCopy: {flex: 1},
+  appMeta: {
+    marginTop: 4,
+    fontSize: 11,
+    lineHeight: 15,
   },
   badgePill: {
-    marginTop: 20,
-    alignSelf: 'flex-start',
-    minHeight: 40,
-    paddingHorizontal: 18,
-    borderRadius: 20,
+    minHeight: 28,
+    paddingHorizontal: 10,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   badgeText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
     lineHeight: 14,
   },
-  addCard: {
-    width: '47.5%',
-    minHeight: 232,
-    borderRadius: 34,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  addGlyph: {
-    fontSize: 56,
-    lineHeight: 60,
-    fontWeight: '300',
-  },
-  addLabel: {
-    marginTop: 32,
-    fontSize: 18,
-    fontWeight: '700',
-    lineHeight: 22,
-  },
   manageRow: {
-    marginTop: 30,
-    minHeight: 98,
-    borderRadius: 28,
+    marginTop: 18,
+    minHeight: 64,
+    borderRadius: 16,
     borderWidth: 1,
-    paddingHorizontal: 28,
+    paddingHorizontal: 16,
     justifyContent: 'center',
   },
   manageText: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '700',
     lineHeight: 19,
   },

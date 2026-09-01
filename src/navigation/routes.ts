@@ -3,6 +3,7 @@ import type {FeatureFlow, ProtectionMode} from '../types/domain';
 
 export type RootStackParamList = {
   Welcome: undefined;
+  FeatureHub: undefined;
   LauncherSetup: {flow?: FeatureFlow} | undefined;
   PrimaryLock: {flow?: FeatureFlow} | undefined;
   PinSetup: {flow?: FeatureFlow} | undefined;
