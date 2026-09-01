@@ -58,11 +58,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sdkmanager --install \
-            "platform-tools" \
-            "platforms;android-${COMPILE_SDK}" \
-            "build-tools;${BUILD_TOOLS_VERSION}" \
-            "ndk;${NDK_VERSION}"
+          for attempt in 1 2 3; do
+            rm -rf "${ANDROID_SDK_ROOT}/ndk/${NDK_VERSION}"
+            if sdkmanager --install \
+              "platform-tools" \
+              "platforms;android-${COMPILE_SDK}" \
+              "build-tools;${BUILD_TOOLS_VERSION}" \
+              "ndk;${NDK_VERSION}"; then
+              exit 0
+            fi
+            echo "SDK install attempt ${attempt} failed; retrying..."
+            sleep 10
+          done
+          exit 1
 
       - name: Verify NDK installation
         shell: bash
