@@ -98,10 +98,10 @@ export function SettingsScreen() {
         />
       }>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Security, access, and recovery.</Text>
+        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Keep your VaultX protection simple and personal.</Text>
 
         <GroupCard
-          title="Security"
+          title="Lock Options"
           palette={palette}
           rows={[
             {
@@ -118,16 +118,16 @@ export function SettingsScreen() {
         />
 
         <GroupCard
-          title="Smart Access"
+          title="Stealth & Decoy"
           palette={palette}
           rows={[
             {
-              title: 'Secret Trigger',
+              title: 'Smart Hide Trigger',
               subtitle: settings.secretAccessType.replace(/_/g, ' '),
               onPress: () => navigation.navigate('SecretEntry', {flow: 'SMART_HIDE'}),
             },
             {
-              title: 'Hidden Apps',
+              title: 'Hidden Apps in Vault',
               subtitle: `${hiddenApps.length} app${hiddenApps.length === 1 ? '' : 's'} in Vault`,
               onPress: () => navigation.navigate('Vault'),
             },
@@ -135,11 +135,11 @@ export function SettingsScreen() {
         />
 
         <GroupCard
-          title="App Disguise"
+          title="Appearance & Themes"
           palette={palette}
           rows={[
             {
-              title: 'Current Disguise',
+              title: 'App Disguise',
               subtitle: settings.disguiseType,
               onPress: () => navigation.navigate('SecretEntry', {flow: 'SMART_HIDE'}),
             },
@@ -152,7 +152,7 @@ export function SettingsScreen() {
         />
 
         <GroupCard
-          title="Protected Apps"
+          title="App Security"
           palette={palette}
           rows={[
             {

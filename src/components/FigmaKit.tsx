@@ -148,12 +148,21 @@ export function FigmaRootLayout(props: {
   drawerDestinations: DrawerDestination[];
   children: React.ReactNode;
   bottomNav?: React.ReactNode;
+  rightActionLabel?: string;
+  onRightActionPress?: () => void;
 }) {
   const palette = useFigmaPalette(props.variant);
   const insets = useSafeAreaInsets();
   return (
     <FigmaPage variant={props.variant}>
-      <FigmaTopBar variant={props.variant} title={props.title} mode="root" onMenuPress={props.onDrawerOpen} />
+      <FigmaTopBar
+        variant={props.variant}
+        title={props.title}
+        mode="root"
+        onMenuPress={props.onDrawerOpen}
+        rightActionLabel={props.rightActionLabel}
+        onRightActionPress={props.onRightActionPress}
+      />
       <View style={[styles.rootBody, props.bottomNav ? {paddingBottom: 126 + insets.bottom} : null]}>{props.children}</View>
       {props.bottomNav ? <View style={[styles.fixedBottomNav, {backgroundColor: palette.background, bottom: insets.bottom + 10}]}>{props.bottomNav}</View> : null}
       <FigmaDrawer
@@ -302,7 +311,7 @@ export function FigmaBottomNav(props: {
       <View style={[styles.navPill, {backgroundColor: palette.accentSoft, left: pillOffsets[props.active]}]} />
       <NavButton label="Home" active={props.active === 'launcher'} onPress={props.onLauncherPress} />
       <NavButton label="Vault" active={props.active === 'dashboard'} onPress={props.onDashboardPress} />
-      <NavButton label="Access" active={props.active === 'access'} onPress={props.onAccessPress} />
+      <NavButton label="Guide" active={props.active === 'access'} onPress={props.onAccessPress} />
       <NavButton label="Settings" active={props.active === 'settings'} onPress={props.onSettingsPress} />
     </View>
   );

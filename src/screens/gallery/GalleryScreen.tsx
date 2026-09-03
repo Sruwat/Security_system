@@ -147,7 +147,7 @@ export function GalleryScreen() {
   return (
     <FigmaRootLayout
       variant="dark"
-      title="VaultX"
+      title="How to Use"
       drawerTitle="VaultX"
       drawerOpen={drawerOpen}
       onDrawerOpen={openDrawer}
@@ -164,9 +164,10 @@ export function GalleryScreen() {
         />
       }>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.heroTitle, {color: palette.textPrimary}]}>Secret Access</Text>
+        <Text style={[styles.kicker, {color: '#FBBF24'}]}>Entry Methods</Text>
+        <Text style={[styles.heroTitle, {color: palette.textPrimary}]}>How to unlock your private apps</Text>
         <Text style={[styles.heroSubtitle, {color: palette.textSecondary}]}>
-          Yahin se calculator, clock, calendar, dashboard, aur Hidden Apps access hongi.
+          Choose a disguise or open your protected space directly.
         </Text>
 
         <View style={[styles.heroCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
@@ -174,9 +175,9 @@ export function GalleryScreen() {
             <Text style={[styles.heroGlyph, {color: palette.accent}]}>◇</Text>
           </View>
           <View style={styles.heroCopy}>
-            <Text style={[styles.heroCardTitle, {color: palette.textPrimary}]}>Private area shortcuts</Text>
+            <Text style={[styles.heroCardTitle, {color: palette.textPrimary}]}>Your private entry points</Text>
             <Text style={[styles.heroCardBody, {color: palette.textSecondary}]}>
-              Disguise access, hidden apps, aur protected dashboard sab ek hi screen par connected hain.
+              Calculator, Clock, Calendar, and Gallery connect to the same protected Vault.
             </Text>
           </View>
         </View>
@@ -211,7 +212,7 @@ export function GalleryScreen() {
             styles.primaryButton,
             {backgroundColor: '#A78BFA', opacity: pressed ? 0.94 : 1},
           ]}>
-          <Text style={styles.primaryButtonText}>Open Hidden Apps</Text>
+          <Text style={styles.primaryButtonText}>Open Vault</Text>
         </Pressable>
       </ScrollView>
     </FigmaRootLayout>
@@ -222,11 +223,18 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 12,
   },
-  heroTitle: {
+  kicker: {
     marginTop: 8,
-    fontSize: 28,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    lineHeight: 14,
+  },
+  heroTitle: {
+    marginTop: 7,
+    fontSize: 25,
     fontWeight: '900',
-    lineHeight: 34,
+    lineHeight: 30,
   },
   heroSubtitle: {
     marginTop: 8,

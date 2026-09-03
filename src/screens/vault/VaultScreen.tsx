@@ -150,12 +150,14 @@ export function VaultScreen() {
   return (
     <FigmaRootLayout
       variant={variant}
-      title="Vault"
+      title="My Vault"
       drawerTitle="Smart App Lock"
       drawerOpen={drawerOpen}
       onDrawerOpen={openDrawer}
       onDrawerClose={closeDrawer}
       drawerDestinations={drawerDestinations}
+      rightActionLabel="+ Add"
+      onRightActionPress={() => navigation.navigate('AddApps', {preset: 'HIDE', flow: 'APP_HIDE'})}
       bottomNav={
         <FigmaBottomNav
           variant={variant}
@@ -167,7 +169,22 @@ export function VaultScreen() {
         />
       }>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Your protected apps, ready when you are.</Text>
+        <View style={[styles.statsCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
+          <View style={styles.statItem}>
+            <Text style={[styles.statNumber, {color: palette.textPrimary}]}>{apps.filter(app => app.isLocked).length}</Text>
+            <Text style={[styles.statLabel, {color: palette.textSecondary}]}>Locked</Text>
+          </View>
+          <View style={[styles.statDivider, {backgroundColor: palette.border}]} />
+          <View style={styles.statItem}>
+            <Text style={[styles.statNumber, {color: palette.textPrimary}]}>{hiddenApps.length}</Text>
+            <Text style={[styles.statLabel, {color: palette.textSecondary}]}>Hidden</Text>
+          </View>
+          <View style={[styles.statDivider, {backgroundColor: palette.border}]} />
+          <View style={styles.statItem}>
+            <Text style={[styles.statNumber, {color: palette.textPrimary}]}>{apps.filter(app => app.enabled).length}</Text>
+            <Text style={[styles.statLabel, {color: palette.textSecondary}]}>Total</Text>
+          </View>
+        </View>
 
         {pendingPackageName ? (
           <View style={[styles.pendingCard, {backgroundColor: palette.surface, borderColor: palette.border}]}>
@@ -192,9 +209,6 @@ export function VaultScreen() {
 
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Protected Apps</Text>
-          <Pressable onPress={() => navigation.navigate('AddApps', {preset: 'HIDE', flow: 'APP_HIDE'})}>
-            <Text style={[styles.addText, {color: palette.accent}]}>+ Add</Text>
-          </Pressable>
         </View>
 
         <View style={styles.grid}>
@@ -203,8 +217,11 @@ export function VaultScreen() {
               <Text style={[styles.loadingText, {color: palette.textSecondary}]}>Loading...</Text>
             </View>
           ) : hiddenApps.length === 0 ? (
-            <View style={[styles.appCard, styles.loadingCard, {backgroundColor: propsBg(variant), borderColor: palette.border}]}>
-              <Text style={[styles.loadingText, {color: palette.textSecondary}]}>No hidden apps yet</Text>
+            <View style={[styles.emptyCard, {backgroundColor: propsBg(variant), borderColor: palette.border}]}>
+              <Text style={styles.emptyGlyph}>▣</Text>
+              <Text style={[styles.emptyTitle, {color: palette.textPrimary}]}>Vault is Empty</Text>
+              <Text style={[styles.emptyText, {color: palette.textSecondary}]}>Add your first protected app using the features on the Home tab</Text>
+              <FigmaActionButton variant={variant} label="Go to Home" onPress={() => navigation.navigate('FeatureHub')} />
             </View>
           ) : (
             <>
@@ -271,6 +288,35 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 18,
   },
+  statsCard: {
+    marginTop: 6,
+    minHeight: 78,
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 21,
+    lineHeight: 25,
+    fontWeight: '800',
+  },
+  statLabel: {
+    marginTop: 3,
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: '600',
+  },
+  statDivider: {
+    width: 1,
+    height: 34,
+  },
   subtitle: {
     marginTop: 6,
     fontSize: 14,
@@ -326,6 +372,33 @@ const styles = StyleSheet.create({
   loadingCard: {
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  emptyCard: {
+    minHeight: 230,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 26,
+    paddingVertical: 24,
+  },
+  emptyGlyph: {
+    color: '#A5B4FC',
+    fontSize: 34,
+    lineHeight: 38,
+  },
+  emptyTitle: {
+    marginTop: 13,
+    fontSize: 17,
+    lineHeight: 21,
+    fontWeight: '800',
+  },
+  emptyText: {
+    marginTop: 6,
+    marginBottom: 18,
+    textAlign: 'center',
+    fontSize: 11,
+    lineHeight: 16,
   },
   appIcon: {
     width: 52,
