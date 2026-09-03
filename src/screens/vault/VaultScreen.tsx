@@ -161,7 +161,7 @@ export function VaultScreen() {
       bottomNav={
         <FigmaBottomNav
           variant={variant}
-          active="access"
+          active="dashboard"
           onLauncherPress={() => navigation.navigate('FeatureHub')}
           onDashboardPress={() => navigation.navigate('Vault')}
           onAccessPress={() => navigation.navigate('Gallery')}
