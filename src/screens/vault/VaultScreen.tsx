@@ -156,6 +156,8 @@ export function VaultScreen() {
       onDrawerOpen={openDrawer}
       onDrawerClose={closeDrawer}
       drawerDestinations={drawerDestinations}
+      headerStyle="prototype"
+      headerDotColor="#34D399"
       rightActionLabel="+ Add"
       onRightActionPress={() => navigation.navigate('AddApps', {preset: 'HIDE', flow: 'APP_HIDE'})}
       bottomNav={

@@ -153,6 +153,8 @@ export function GalleryScreen() {
       onDrawerOpen={openDrawer}
       onDrawerClose={closeDrawer}
       drawerDestinations={drawerDestinations}
+      headerStyle="prototype"
+      headerDotColor="#FBBF24"
       bottomNav={
         <FigmaBottomNav
           variant="dark"

@@ -96,6 +96,31 @@ export function FigmaTopBar(props: {
   );
 }
 
+function PrototypeTabHeader(props: {
+  variant: FigmaVariant;
+  title: string;
+  dotColor: string;
+  rightActionLabel?: string;
+  onRightActionPress?: () => void;
+}) {
+  const palette = useFigmaPalette(props.variant);
+  return (
+    <View style={styles.prototypeTabHeader}>
+      <View style={styles.prototypeBrandBlock}>
+        <View style={[styles.prototypeBrandDot, {backgroundColor: props.dotColor}]} />
+        <Text style={[styles.prototypeBrandText, {color: palette.textPrimary}]}>{props.title}</Text>
+      </View>
+      {props.rightActionLabel ? (
+        <Pressable
+          onPress={props.onRightActionPress}
+          style={({pressed}) => [styles.prototypeHeaderAction, {borderColor: `${props.dotColor}66`, opacity: pressed ? 0.88 : 1}]}>
+          <Text style={[styles.prototypeHeaderActionText, {color: props.dotColor}]}>{props.rightActionLabel}</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
 export function FigmaDrawer(props: {
   open: boolean;
   variant: FigmaVariant;
@@ -150,19 +175,31 @@ export function FigmaRootLayout(props: {
   bottomNav?: React.ReactNode;
   rightActionLabel?: string;
   onRightActionPress?: () => void;
+  headerStyle?: 'default' | 'prototype';
+  headerDotColor?: string;
 }) {
   const palette = useFigmaPalette(props.variant);
   const insets = useSafeAreaInsets();
   return (
     <FigmaPage variant={props.variant}>
-      <FigmaTopBar
-        variant={props.variant}
-        title={props.title}
-        mode="root"
-        onMenuPress={props.onDrawerOpen}
-        rightActionLabel={props.rightActionLabel}
-        onRightActionPress={props.onRightActionPress}
-      />
+      {props.headerStyle === 'prototype' ? (
+        <PrototypeTabHeader
+          variant={props.variant}
+          title={props.title}
+          dotColor={props.headerDotColor ?? palette.accent}
+          rightActionLabel={props.rightActionLabel}
+          onRightActionPress={props.onRightActionPress}
+        />
+      ) : (
+        <FigmaTopBar
+          variant={props.variant}
+          title={props.title}
+          mode="root"
+          onMenuPress={props.onDrawerOpen}
+          rightActionLabel={props.rightActionLabel}
+          onRightActionPress={props.onRightActionPress}
+        />
+      )}
       <View style={[styles.rootBody, props.bottomNav ? {paddingBottom: 126 + insets.bottom} : null]}>{props.children}</View>
       {props.bottomNav ? <View style={[styles.fixedBottomNav, {backgroundColor: palette.background, bottom: insets.bottom + 10}]}>{props.bottomNav}</View> : null}
       <FigmaDrawer
@@ -468,6 +505,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  prototypeTabHeader: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  prototypeBrandBlock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+  },
+  prototypeBrandDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 9,
+  },
+  prototypeBrandText: {
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: '800',
+    letterSpacing: -0.25,
+  },
+  prototypeHeaderAction: {
+    minHeight: 31,
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  prototypeHeaderActionText: {
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: '800',
   },
   leadingAction: {
     width: 40,

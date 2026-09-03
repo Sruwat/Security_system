@@ -87,6 +87,8 @@ export function SettingsScreen() {
       onDrawerOpen={openDrawer}
       onDrawerClose={closeDrawer}
       drawerDestinations={drawerDestinations}
+      headerStyle="prototype"
+      headerDotColor="#818CF8"
       bottomNav={
         <FigmaBottomNav
           variant="dark"
